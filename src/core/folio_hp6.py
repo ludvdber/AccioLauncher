@@ -454,15 +454,24 @@ def _images_menu(system_txt: str) -> dict[str, tuple[int, int, bytes]]:
 def resume(fichiers: dict[str, Path]) -> folio.Resume | None:
     """L'unique partie écrite en dernier : ses écussons sur 125. Rien tant
     qu'aucun n'est trouvé : la description dit mieux le début du jeu."""
-    parties = [(p, chemin) for chemin in fichiers.values()
+    # Sans date lisible dans la partie, celle du fichier, AUSSI pour choisir :
+    # `datetime.min` faisait perdre une partie écrite en dernier contre toute
+    # partie datée (audit du 2026-11-16).
+    parties = [(p, p.ecrite or _date_du_fichier(chemin)) for chemin in fichiers.values()
                if (p := releve(chemin)) is not None]
     if not parties:
         return None
-    partie, chemin = max(parties, key=lambda pc: pc[0].ecrite or datetime.min)
+    partie, quand = max(parties, key=lambda pq: pq[1])
     if partie.ecussons <= 0:
         return None
-    quand = partie.ecrite or datetime.fromtimestamp(chemin.stat().st_mtime)
     return folio.Resume(partie, "", partie.ecussons, ECUSSONS, quand, "ecussons")
+
+
+def _date_du_fichier(chemin: Path) -> datetime:
+    try:
+        return datetime.fromtimestamp(chemin.stat().st_mtime)
+    except (OSError, OverflowError, ValueError):
+        return datetime.min
 
 
 def liberer() -> None:

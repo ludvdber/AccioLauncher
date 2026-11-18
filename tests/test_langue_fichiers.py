@@ -97,7 +97,7 @@ class TestCatalogue:
         assert _jeu(bloc).language_files is None
 
     def test_le_registre_l_emporte_s_il_est_declare(self):
-        jeu = _jeu(language_registry={"root": "HKCU", "key": "Software\\X", "languages": {
+        jeu = _jeu(language_registry={"root": "HKCU", "key": "Software\\Editeur\\X", "languages": {
             "fr": {"values": {"Language": "French"}}}})
         assert jeu.language_files is None
         assert jeu.langues is jeu.language_registry
@@ -107,7 +107,7 @@ class TestCatalogue:
         Tester `language_files` d'abord partait copier des fichiers absents,
         échouait, et ouvrait un modal que personne ne fermait — suite bloquée."""
         import dataclasses
-        registre = _jeu(language_registry={"root": "HKCU", "key": "Software\\X", "languages": {
+        registre = _jeu(language_registry={"root": "HKCU", "key": "Software\\Editeur\\X", "languages": {
             "fr": {"values": {"Language": "French"}}}}).language_registry
         jeu = dataclasses.replace(_jeu(), language_registry=registre)
         assert not jeu.langue_par_fichiers

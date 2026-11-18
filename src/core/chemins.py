@@ -15,10 +15,12 @@ l'appelle. Pure, sans Qt ni disque.
 
 # Noms de périphériques réservés par Windows : ouvrir « CON » ouvre la console,
 # pas un fichier — quel que soit le dossier et quelle que soit l'extension.
+# La liste de `ntpath.isreserved`, exposants compris (« COM¹ ») : Windows les
+# réserve aussi, comme `CONIN$` et `CONOUT$` (audit du 2026-11-16).
 _PERIPHERIQUES = frozenset(
-    ["con", "prn", "aux", "nul"]
-    + [f"com{i}" for i in range(1, 10)]
-    + [f"lpt{i}" for i in range(1, 10)]
+    ["con", "prn", "aux", "nul", "conin$", "conout$"]
+    + [f"com{c}" for c in "123456789¹²³"]
+    + [f"lpt{c}" for c in "123456789¹²³"]
 )
 
 # Au-delà, l'API Windows classique échoue de toute façon plus loin : autant

@@ -247,6 +247,21 @@ class TestCheminWindows:
             (pfx / "dosdevices" / lettre).symlink_to(maison)
         assert compat.chemin_windows(maison / "Games", pfx) == "D:" + B + "Games"
 
+    def test_un_lien_dans_le_lecteur_garde_son_lecteur(self, tmp_path):
+        """Audit du 2026-11-16 : Wine remonte le chemin TEL QU'ÉCRIT. Un jeu
+        atteint par `~/Jeux` → `/mnt/disque` est `X:\\Jeux\\HP7` pour lui ;
+        résoudre le lien d'abord donnait `Z:`, et HP7 quitte en silence."""
+        maison = tmp_path / "home" / "ludo"
+        disque = tmp_path / "mnt" / "disque"
+        (disque / "HP7").mkdir(parents=True)
+        maison.mkdir(parents=True)
+        (maison / "Jeux").symlink_to(disque)
+        pfx = maison / "umu"
+        (pfx / "dosdevices").mkdir(parents=True)
+        (pfx / "dosdevices" / "z:").symlink_to("/")
+        (pfx / "dosdevices" / "x:").symlink_to(maison)
+        assert compat.chemin_windows(maison / "Jeux" / "HP7", pfx) == "X:" + B + B.join(["Jeux", "HP7"])
+
     def test_sans_lecteur_plus_proche_reste_en_z(self, tmp_path):
         pfx = tmp_path / "umu"
         (pfx / "dosdevices").mkdir(parents=True)
@@ -567,6 +582,15 @@ class TestProcessusDuJeu:
     def test_par_le_premier_argument(self, tmp_path):
         _processus(tmp_path / "proc", 4243, "wine-preloader", "Z:" + B + "g" + B + "Game.exe")
         assert compat.processus_du_jeu("game.exe", proc=tmp_path / "proc")
+
+    def test_un_exe_au_meme_debut_n_est_pas_le_jeu(self, tmp_path):
+        """Audit du 2026-11-16 : `comm` garde 15 caractères ; le rapporteur de
+        plantage du jeu passait pour le jeu, qui semblait ne jamais finir."""
+        _processus(tmp_path / "proc", 4247, "MyGame-Win64-Sh",
+                   "C:" + B + "g" + B + "MyGame-Win64-ShippingCrashReporter.exe")
+        assert not compat.processus_du_jeu("MyGame-Win64-Shipping.exe", proc=tmp_path / "proc")
+        _processus(tmp_path / "proc", 4248, "MyGame-Win64-Sh", "C:" + B + "g" + B + "MyGame-Win64-Shipping.exe")
+        assert compat.processus_du_jeu("MyGame-Win64-Shipping.exe", proc=tmp_path / "proc")
 
     def test_le_lanceur_lui_meme_ne_compte_pas(self, tmp_path):
         """`umu-run /…/HP.exe` a l'exe en SECOND argument : ce n'est pas le jeu."""

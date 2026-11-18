@@ -1310,6 +1310,8 @@
     "Forêts et arbres lointains gardent leur feuillage au lieu de fondre dans la pente.": "Los bosques y árboles lejanos conservan su follaje en lugar de fundirse con la ladera.",
     "Ombres douces": "Sombras suaves",
     "Adoucit le bord des ombres portées, découpé en escalier dans le jeu livré, comme une vraie ombre au soleil. Leur forme ne change pas.": "Suaviza el borde de las sombras proyectadas, escalonado en el juego original, como una sombra real al sol. Su forma no cambia.",
+    "Bord des ombres flouté": "Borde de las sombras difuminado",
+    "Floute le contour des ombres portées avant que le jeu les pose sur le décor : toutes les ombres gagnent un bord plus doux, sans changer de forme. S'ajoute aux ombres douces.": "Difumina el contorno de las sombras proyectadas antes de que el juego las ponga sobre el decorado: todas las sombras ganan un borde más suave, sin cambiar de forma. Se suma a las sombras suaves.",
     "Braises et étincelles plus loin": "Brasas y chispas más lejos",
     "Le jeu ne dessine les petites particules (braises, étincelles, poussière) que tout près de la caméra. Ce réglage les montre plus loin : il en vole davantage autour des feux et des sorts.": "El juego solo dibuja las partículas pequeñas (brasas, chispas, polvo) muy cerca de la cámara. Este ajuste las muestra más lejos: vuelan más alrededor de los fuegos y hechizos.",
     "Trois fois plus loin": "Tres veces más lejos",

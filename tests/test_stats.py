@@ -395,6 +395,31 @@ class TestUnJsonValideDUnMauvaisType:
         chemin.write_text(json.dumps({"version": 1, champ: valeur}), encoding="utf-8")
         stats.charger(chemin)
 
+    @pytest.mark.parametrize("racine", [[], [1, 2], "x", 5])
+    def test_une_racine_qui_n_est_pas_un_objet_est_mise_de_cote(self, tmp_path, racine):
+        """Audit du 2026-11-16 : le démarrage suivant (`_muter_compteur`)
+        l'écrasait par un historique vide, sans copie `.corrompu`."""
+        chemin = tmp_path / "sessions.json"
+        chemin.write_text(json.dumps(racine), encoding="utf-8")
+        stats.enregistrer_demarrage(chemin)
+        assert len(list(tmp_path.glob("sessions.*.corrompu"))) == 1
+
+    def test_une_date_avec_fuseau_parmi_des_dates_sans(self, tmp_path):
+        """Audit du 2026-11-16 : le tri levait TypeError (dates naïves contre
+        une date à fuseau) et le journal entier tombait à chaque lecture."""
+        chemin = tmp_path / "sessions.json"
+        chemin.write_text(json.dumps({"version": 1, "sessions": [
+            {"jeu": "hp1", "debut": "2026-08-20T21:00:00", "duree": 3600},
+            {"jeu": "hp2", "debut": "2026-08-21T19:00:00+02:00", "duree": 3600},
+        ], "tentatives": [
+            {"jeu": "hp1", "debut": "2026-08-20T21:00:00", "duree": 5},
+            {"jeu": "hp2", "debut": "2026-08-21T19:00:00Z", "duree": 5},
+        ]}), encoding="utf-8")
+        hist = stats.charger(chemin)
+        assert [s.jeu for s in hist.sessions] == ["hp1", "hp2"]
+        assert all(s.debut.tzinfo is None for s in hist.sessions)
+        assert len(hist.tentatives) == 2
+
 
 class TestUnJournalVerrouilleNEstPasEcrase:
     """Audit du 2026-10-29 : un verrou passager faisait repartir le journal de

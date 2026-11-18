@@ -29,3 +29,14 @@ class TestCompareVersions:
 
     def test_patch(self):
         assert compare_versions("1.0.2", "1.0.1") > 0
+
+
+class TestComposantsDouteux:
+    """Audit du 2026-11-16."""
+
+    def test_un_chiffre_unicode_vaut_zero_sans_lever(self):
+        # « ² » passe `str.isdigit()`, mais `int("²")` lève ValueError.
+        assert compare_versions("1.²", "1.0") == 0
+
+    def test_un_suffixe_garde_le_numero_qui_le_precede(self):
+        assert compare_versions("1.0.5-rc1", "1.0.4") > 0

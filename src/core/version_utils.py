@@ -1,4 +1,7 @@
 """Utilitaires de comparaison de versions sémantiques."""
+import re
+
+_CHIFFRES = re.compile(r"[0-9]+")
 
 
 def compare_versions(a: str, b: str) -> int:
@@ -9,7 +12,10 @@ def compare_versions(a: str, b: str) -> int:
         # réduisait à [1, 5] et ressortait donc plus récent que « 1.0.5 »
         # (mesuré : +5). Le catalogue étant mis à jour à distance, une coquille
         # de ce genre ne doit pas inverser une comparaison de versions.
-        return [int(x) if x.isdigit() else 0 for x in v.lstrip("v").split(".")]
+        # Les chiffres ASCII EN TÊTE du composant (audit du 2026-11-16) :
+        # « 5-rc1 » valait 0, donc « 1.0.5-rc1 » < « 1.0.4 » ; et « ² »
+        # passe `isdigit()` mais fait lever `int()`.
+        return [int(m[0]) if (m := _CHIFFRES.match(x)) else 0 for x in v.lstrip("v").split(".")]
     pa, pb = _parts(a), _parts(b)
     while len(pa) < len(pb):
         pa.append(0)

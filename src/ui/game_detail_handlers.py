@@ -14,7 +14,7 @@ from PyQt6.QtGui import QAction, QCursor
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMenu, QMessageBox
 
 from src.core.formatting import format_size
-from src.core.game_data import GameData, GameVersion
+from src.core.game_data import GameData, GameVersion, composants_de_chemin, dossier_de
 from src.core.i18n import tr
 from src.core import compat, composants_windows
 from src.core import manette
@@ -808,7 +808,7 @@ def find_import_error(game: GameData, source: Path, install_path: Path) -> str |
     Retourne un message d'erreur utilisateur, ou None si l'import est possible.
     Fonction pure (testable sans Qt).
     """
-    parts = Path(game.executable).parts
+    parts = composants_de_chemin(game.executable)
     if len(parts) < 2:
         return tr("Ce jeu ne supporte pas l'import d'une installation existante.")
     rel_exe = Path(*parts[1:])  # ex: System/HP.exe (sans le dossier racine du jeu)
@@ -837,7 +837,7 @@ def on_import_existing(view: GameDetailView) -> None:
     if error is not None:
         _boite(QMessageBox.Icon.Warning, view, tr("Rien n'a été importé"), error)
         return
-    dest = view.manager.config.install_path / Path(game.executable).parts[0]
+    dest = view.manager.config.install_path / dossier_de(game.executable)
     reply = _boite(QMessageBox.Icon.Question,
         view, tr("Importer ce jeu"),
         tr("Le dossier va être déplacé :\n\n{}\n→ {}\n\nLe jeu sera marqué en version {} (version réelle "

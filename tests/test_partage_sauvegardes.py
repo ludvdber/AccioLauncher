@@ -224,6 +224,19 @@ class TestImporter:
         assert (base / "GameSaveInfo5").read_bytes() == b"resume importe"
         assert (base / "GameSaveInfo3").read_bytes() == b"resume 3"
 
+    def test_un_zip_au_nom_double_par_le_navigateur_garde_son_resume(self, tmp_path):
+        """Audit du 2026-11-16 : « Save0 (2).usa » donnait le numéro « 02 »,
+        le résumé `GameSaveInfo0` était jeté et l'ancien `GameSaveInfo3` effacé."""
+        base = sauvegardes.racines()["documents"] / "Harry Potter" / "Save"
+        _ecrire(base / "Save3.usa", b"ancienne 3")
+        _ecrire(base / "GameSaveInfo3", b"ancien resume 3")
+        with zipfile.ZipFile(tmp_path / "forum.zip", "w") as z:
+            z.writestr("Save0 (2).usa", b"importee")
+            z.writestr("GameSaveInfo0", b"resume importe")
+        assert ps.importer("hp1", HP1, ps.lire(tmp_path / "forum.zip", HP1), "Save3.usa")
+        assert (base / "Save3.usa").read_bytes() == b"importee"
+        assert (base / "GameSaveInfo3").read_bytes() == b"resume importe"
+
     def test_compagnon_d_une_autre_sauvegarde_pas_pose(self, tmp_path):
         base = sauvegardes.racines()["documents"] / "Harry Potter" / "Save"
         _ecrire(base / "GameSaveInfo7", b"resume 7")

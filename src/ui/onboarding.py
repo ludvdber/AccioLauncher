@@ -39,7 +39,7 @@ from src.core.choixpeau import QUESTIONS, question, reponses, repartir, verdict
 from src.core.config import ASSETS_DIR, DEFAULT_INSTALL_PATH, Config, cache_pour
 from src.core.echecs import cause_installation
 from src.core.formatting import format_bytes, format_size
-from src.core.game_data import GameData, load_catalog
+from src.core.game_data import GameData, load_catalog, composants_de_chemin, dossier_de
 from src.core.i18n import available_languages, detect_system_language, set_language, tr
 from src.ui.assistant_widgets import (
     STYLE, BarreDisque, CarteCouleur, CarteLangue, CarteReponse, LigneJeu, Progression,
@@ -93,7 +93,7 @@ def detect_installed_games(parent: Path, games: list[GameData]) -> list[tuple[Ga
     """
     found: list[tuple[GameData, Path]] = []
     for game in games:
-        parts = Path(game.executable).parts
+        parts = composants_de_chemin(game.executable)
         if len(parts) < 2:
             continue
         candidate = parent / parts[0]
@@ -988,7 +988,7 @@ class OnboardingDialog(QDialog):
             if error is not None:
                 errors.append(f"{game.name} : {error.splitlines()[0]}")
                 continue
-            dest = config.install_path / Path(game.executable).parts[0]
+            dest = config.install_path / dossier_de(game.executable)
             try:
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 src.rename(dest)  # même disque (validé) → instantané

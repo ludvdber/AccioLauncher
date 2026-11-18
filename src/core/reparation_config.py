@@ -24,7 +24,7 @@ from datetime import datetime
 from pathlib import Path
 
 from src.core import config as config_module
-from src.core.game_data import GameData
+from src.core.game_data import GameData, dossier_de
 from src.core.post_install import apply_config_files, destination_config
 
 log = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ class Resultat:
 
 
 def _dossier_du_jeu(game: GameData) -> str | None:
-    return Path(game.executable).parts[0] if game.executable else None
+    return dossier_de(game.executable) if game.executable else None
 
 
 def _modele(game: GameData, install_path: Path, source: str) -> Path:

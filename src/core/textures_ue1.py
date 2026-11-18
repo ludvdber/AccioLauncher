@@ -361,12 +361,12 @@ class Paquet:
         return None
 
     def texture(self, nom: str) -> TexturePaletee | None:
-        rang = self._par_nom.get(nom)
+        # Le premier export `nom` qui EST une texture : un homonyme d'une autre
+        # classe placé avant la cachait (audit du 2026-11-16).
+        rang = self._rang(nom, "Texture")
         if rang is None:
             return None
-        classe, _, taille, position, _ = self._exports[rang]
-        if self._classe(classe) != "Texture" or taille <= 0:
-            return None
+        _, _, taille, position, _ = self._exports[rang]
         fin = position + taille
         lec = _Lecteur(self._d, position)
         props = self._proprietes(lec, fin)

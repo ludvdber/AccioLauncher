@@ -248,6 +248,27 @@ class TestNotesDeVersion:
         lignes = notes.splitlines()
         assert len(lignes) == 6 and lignes[-1] == "…"
 
+    def test_tout_juste_le_plafond_n_est_pas_coupe(self):
+        """Audit du 2026-11-16 : douze lignes pile recevaient « … » comme si
+        quelque chose manquait."""
+        from src.core.updater import extract_release_notes
+        notes = extract_release_notes({"body": "\n".join(f"- ligne {i}" for i in range(5))},
+                                      max_lignes=5)
+        assert notes.splitlines() == [f"• ligne {i}" for i in range(5)]
+
+    def test_un_bloc_de_code_dans_un_commentaire_ne_cache_rien(self):
+        """Audit du 2026-11-16 : le « ``` » du commentaire ouvrait un bloc de
+        code jamais refermé, et toutes les notes disparaissaient."""
+        from src.core.updater import extract_release_notes
+        assert extract_release_notes({"body": "<!--\n```\n-->\n- a\n- b"}) == "• a\n• b"
+
+    def test_un_titre_souligne_n_arrete_pas_les_notes(self):
+        """Audit du 2026-11-16 : « === » sous un titre est un soulignement
+        Markdown, pas un trait horizontal ; tout ce qui suivait était perdu."""
+        from src.core.updater import extract_release_notes
+        notes = extract_release_notes({"body": "Nouveautés\n==========\n- a\n- b"})
+        assert notes.splitlines() == ["Nouveautés", "• a", "• b"]
+
     def test_les_notes_arrivent_dans_la_boite(self, qtbot, fenetre, monkeypatch):
         """Bout en bout : ce que GitHub publie doit se lire à l'écran."""
 

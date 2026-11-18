@@ -140,3 +140,24 @@ class TestUnSeulArrondi:
         from src.ui.stats_widgets import _duree
         assert format_duree_compacte(secondes) == attendu
         assert _duree(secondes) == attendu
+
+
+class TestSeuilsArrondis:
+    """Audit du 2026-11-16 : l'arrondi atteignait le seuil sans changer d'unité."""
+
+    @pytest.fixture(autouse=True)
+    def _francais(self):
+        set_language("fr")
+        yield
+        set_language("fr")
+
+    def test_juste_sous_mille_mo(self):
+        assert format_bytes(int(999.6 * 1024 * 1024)) == "1,0 Go"
+
+    def test_juste_sous_un_mo_par_seconde(self):
+        assert format_speed(1023.7 * 1024) == "1,0 Mo/s"
+
+    def test_les_valeurs_ordinaires_ne_bougent_pas(self):
+        assert format_bytes(500 * 1024 * 1024) == "500 Mo"
+        assert format_speed(512 * 1024) == "512 Ko/s"
+        assert format_speed(3 * 1024 * 1024) == "3,0 Mo/s"

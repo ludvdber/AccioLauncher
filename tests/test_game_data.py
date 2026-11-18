@@ -5,7 +5,7 @@ import pytest
 from src.core.i18n import set_language
 from src.core.game_data import (
     GameData, GameVersion, IniPatch,
-    _parse_catalog,
+    _parse_catalog, composants_de_chemin, dossier_de,
 )
 
 
@@ -205,6 +205,21 @@ class TestParseCatalog:
         cat = _parse_catalog({"games": []})
         assert cat.games == ()
 
+    @pytest.mark.parametrize("second", [
+        {"id": "HP_TEST", "executable": "Autre/Game.exe"},     # même identifiant
+        {"id": "hp_autre", "executable": "hptest\\Autre.exe"},  # même dossier
+    ])
+    def test_un_doublon_est_ecarte(self, second):
+        """Audit du 2026-11-16 : deux jeux sur le même dossier, et désinstaller
+        l'un effaçait l'autre."""
+        cat = _parse_catalog({"games": [MINIMAL_GAME, {**MINIMAL_GAME, **second}]})
+        assert [g.id for g in cat.games] == ["hp_test"]
+
+    def test_le_dossier_se_lit_quel_que_soit_le_separateur(self):
+        jeu = GameData.from_dict({**MINIMAL_GAME, "executable": r"HPTest\System\Game.exe"})
+        assert dossier_de(jeu.executable) == "HPTest"
+        assert composants_de_chemin(jeu.executable) == ("HPTest", "System", "Game.exe")
+
     def test_invalid_game_is_skipped_not_crashing(self):
         """Régression d'audit : un jeu mal typé dans un cache trafiqué est ignoré,
         les jeux valides restent — pas de TypeError qui remonte au boot."""
@@ -278,6 +293,34 @@ class TestVersionAvailability:
 
     def test_jeu_sans_version_non_telechargeable(self):
         assert GameData.from_dict(MINIMAL_GAME).is_downloadable is False
+
+    def test_recommandee_sans_archive_meme_si_une_ancienne_en_a(self):
+        """Audit du 2026-11-16 : la vignette disait « téléchargeable » (une
+        ancienne version a une archive) pendant que la fiche, qui ne télécharge
+        que la recommandée, affichait « Bientôt disponible »."""
+        data = {**FULL_GAME, "recommended_version": "1.2", "versions": [
+            {"version": "1.2", "date": "", "download_url": None, "size_mb": 1},
+            *FULL_GAME["versions"]]}
+        game = GameData.from_dict(data)
+        assert game.current_download.version == "1.2"
+        assert game.is_downloadable is False
+
+
+class TestVersionDeRepli:
+    """Audit du 2026-11-16 : une `recommended_version` sans entrée (coquille,
+    entrée écartée par la validation) faisait installer la PLUS ANCIENNE."""
+
+    @staticmethod
+    def _jeu(versions: list[str]) -> GameData:
+        return GameData.from_dict({**MINIMAL_GAME, "recommended_version": "9.9", "versions": [
+            {"version": v, "date": "", "download_url": f"https://x.test/{v}.7z", "size_mb": 1}
+            for v in versions]})
+
+    def test_la_plus_recente_dans_l_ordre_du_catalogue(self):
+        assert self._jeu(["1.7", "1.6", "1.0"]).current_download.version == "1.7"
+
+    def test_la_plus_recente_quel_que_soit_l_ordre(self):
+        assert self._jeu(["1.0", "1.10", "1.9"]).current_download.version == "1.10"
 
 
 class TestCatalogueTraduit:
@@ -519,6 +562,28 @@ class TestBlocDeLangue:
         g = self._bloc(root="HKCR")
         assert g.id == MINIMAL_GAME["id"]
         assert g.language_registry is None
+
+    @pytest.mark.parametrize("code", ["../../../../evil", "fr/en", "fr\n", ".fr", ""])
+    def test_un_code_de_langue_hors_jeton_rejette_tout_le_bloc(self, code):
+        """Audit du 2026-11-16 : le code finit dans un nom de dossier
+        (`game_language.dossier_remplacees`) ; « ../../../../evil » y aurait
+        écrit les copies de côté hors de leur dossier."""
+        langues = {code: {"values": {"Language": "French"}}}
+        assert self._bloc(languages=langues).language_registry is None
+
+
+class TestJetonSansSautDeLigne:
+    """Audit du 2026-11-16 : `$` accepte un saut de ligne final, et le jeton
+    finit dans un nom de fichier."""
+
+    def test_identifiant_avec_saut_de_ligne_refuse(self):
+        with pytest.raises(ValueError):
+            GameData.from_dict({**MINIMAL_GAME, "id": "hp_test\n"})
+
+    def test_version_avec_saut_de_ligne_ignoree(self):
+        game = GameData.from_dict({**MINIMAL_GAME, "versions": [
+            {"version": "1.0\n", "date": "", "download_url": "https://x.test/a.7z", "size_mb": 1}]})
+        assert game.versions == ()
 
 
 class TestSousDossierDeRangement:

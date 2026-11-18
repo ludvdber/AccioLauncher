@@ -136,6 +136,14 @@ class TestPose:
         pose = mu.poser(m, {0: quart})
         assert pose[2] == pytest.approx((0, 10, 0))     # la racine emporte l'enfant
 
+    def test_un_point_sans_os_garde_sa_place_de_repos(self):
+        """Audit du 2026-11-16 : un point sans influence finissait en
+        `-origine × échelle`, une pointe hors du modèle."""
+        import dataclasses
+        m = mu.lire(_Paquet(modele_brut()), "x")
+        seul = dataclasses.replace(m, influences=tuple(i for i in m.influences if i.point != 1))
+        assert mu.poser(seul)[1] == pytest.approx(m.points[1])
+
     def test_rotation_entre(self):
         q = mu.rotation_entre((1, 0, 0), (0, 1, 0))
         assert mu.tourner_point(q, (1, 0, 0)) == pytest.approx((0, 1, 0))

@@ -8,7 +8,7 @@ from PyQt6.QtCore import QObject, pyqtSignal
 from src.core import reglages_conserves, stats
 from src.core.downloader import Downloader
 from src.core.echecs import Echec, explication, explication_installation, reste
-from src.core.game_data import GameData, GameVersion
+from src.core.game_data import GameData, GameVersion, dossier_de
 from src.core.game_manager import GameManager, GameState
 from src.core.i18n import tr
 from src.core.installer import Installer, supprimer_archive
@@ -321,7 +321,7 @@ class GameOperations(QObject):
             (cf.source, cf.destination)
             for cf in game.post_install.config_files
         ]
-        game_dir = Path(game.executable.replace(chr(92), "/")).parts[0] if game.executable else None
+        game_dir = dossier_de(game.executable) if game.executable else None
         self._installer = Installer(
             archive_path, dest,
             config_files=config_files,

@@ -186,6 +186,21 @@ class TestAttribution:
         apres = {"a": sauvegardes.Etat(5.0, None), "b": sauvegardes.Etat(9.0, None)}
         assert sauvegardes.modifiee(avant, apres) == "b"
 
+    def test_un_emplacement_sans_date_ne_vole_pas_la_partie(self):
+        """Audit du 2026-11-16 (HP4, trois emplacements dans un fichier) : le #1,
+        sans date lisible, prenait celle du FICHIER ; écrire le #2 la faisait
+        bouger, et le #1, plus récent d'une fraction, emportait la partie."""
+        etat = sauvegardes.Etat
+        avant = {"HPGOF#1": etat(100.0, None, date_du_fichier=True), "HPGOF#2": etat(50.0, None)}
+        apres = {"HPGOF#1": etat(900.0, None, date_du_fichier=True), "HPGOF#2": etat(899.0, None)}
+        assert sauvegardes.modifiee(avant, apres) == "HPGOF#2"
+
+    def test_un_emplacement_qui_recoit_enfin_sa_date_a_change(self):
+        etat = sauvegardes.Etat
+        avant = {"HPGOF#1": etat(100.0, None, date_du_fichier=True)}
+        apres = {"HPGOF#1": etat(900.0, None)}
+        assert sauvegardes.modifiee(avant, apres) == "HPGOF#1"
+
     def test_un_fichier_illisible_est_mis_de_cote(self):
         chemin = sauvegardes.chemin_fichier()
         chemin.parent.mkdir(parents=True, exist_ok=True)

@@ -123,6 +123,13 @@ class TestLecture:
         (niveau,) = folio_hp3.lire(_partie()).etoiles
         assert (niveau.ident, niveau.trouves, niveau.total) == ("CR", 2, 4)
 
+    def test_sans_nombre_par_niveau_les_etoiles_comptent(self):
+        """Audit du 2026-11-16 : `NumInLevel` absent (lu 0), le filtre
+        `i < total` jetait toutes les étoiles."""
+        props = [("FoundStatus", 0, [("LevelID", 0, "CR"), ("Found", 0, 1), ("Found", 2, 1)])]
+        (niveau,) = folio_hp3._niveaux(props, etoiles=True)
+        assert (niveau.trouves, niveau.total) == (2, 0)
+
     def test_les_secrets(self):
         (niveau,) = folio_hp3.lire(_partie()).secrets
         assert (niveau.ident, niveau.trouves, niveau.total) == ("CRB", 2, 2)

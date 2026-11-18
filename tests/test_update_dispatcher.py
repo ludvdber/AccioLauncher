@@ -204,6 +204,12 @@ class TestCheminsDErreurDeLaMiseAJour:
         assert self.pret == [], "rien ne doit annoncer un redémarrage"
         assert self.ouvertes == ["https://exemple/release"]
 
+    def test_le_telechargement_est_plafonne(self, dispatcher):
+        """Audit du 2026-11-16 : sans plafond, un asset démesuré remplissait le
+        disque avant que l'empreinte, vérifiée à la fin, ne le refuse."""
+        dispatcher.download()
+        assert _FauxTelechargement.crees[0].kwargs.get("expected_size_mb", 0) > 0
+
     def test_un_remplacement_reussi_annonce_le_redemarrage(self, dispatcher, monkeypatch):
         import src.ui.update_dispatcher as mod
         monkeypatch.setattr(mod, "apply_update_and_restart", lambda _p: True)

@@ -23,6 +23,7 @@ délèguent — aucun appelant ne change.
 import filecmp
 import logging
 import os
+import re
 import shutil
 import time
 from pathlib import Path
@@ -300,7 +301,12 @@ def _mettre_de_cote(fichier: Path, dossier: Path) -> None:
     dossier.mkdir(parents=True, exist_ok=True)
     date = time.strftime("%Y%m%d-%H%M%S", time.localtime(fichier.stat().st_mtime))
     shutil.copy2(fichier, dossier / f"{fichier.stem}-{date}{fichier.suffix}")
-    anciennes = sorted(dossier.glob(f"{fichier.stem}-*{fichier.suffix}"), reverse=True)
+    # Les copies de CE fichier seulement : le joker de « Save-*.sav » prenait
+    # aussi celles de « Save-2.sav », qui partaient à sa rotation (audit du
+    # 2026-11-16) — parfois la seule trace d'une partie remplacée.
+    siennes = re.compile(re.escape(fichier.stem) + r"-\d{8}-\d{6}" + re.escape(fichier.suffix),
+                         re.IGNORECASE)
+    anciennes = sorted((p for p in dossier.iterdir() if siennes.fullmatch(p.name)), reverse=True)
     for vieille in anciennes[_COPIES_GARDEES:]:
         vieille.unlink(missing_ok=True)
 

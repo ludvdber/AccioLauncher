@@ -195,6 +195,24 @@ class TestMateriaux:
         assert m2._image_du_materiau(q, "S") is None
         assert m2._image_du_materiau(q, "absent") is None
 
+    def test_une_image_32_bits_suit_le_masque_du_materiau(self, tmp_path, monkeypatch):
+        """Audit du 2026-11-16 : sur une texture 32 bits, seul le masque du
+        SHADER coupait l'alpha ; celui du matériau était ignoré."""
+        from src.core import encyclopedie, textures_ue1
+
+        class _Q:
+            def texture(self, _nom):
+                return None
+
+            def texture_32(self, _nom):
+                return (2, 1, bytes([1, 2, 3, 40, 4, 5, 6, 200]))
+        monkeypatch.setattr(encyclopedie, "trouver", lambda racine, rel: tmp_path / rel)
+        monkeypatch.setattr(textures_ue1, "paquet", lambda _chemin: _Q())
+        monkeypatch.setattr(m2, "_image_du_materiau", lambda _q, nom: (nom, 0, 75))
+        modele = mu.Maillage(points=(), faces=(), materiaux=(mu.Materiau("Pq.Cheveux", mu.PF_MASQUE),))
+        _, images = m2.textures(tmp_path, modele)
+        assert images["Pq.Cheveux"][2] == bytes([1, 2, 3, 0, 4, 5, 6, 255])
+
     def test_transparence_tout_ou_rien(self):
         image = (2, 1, bytes([1, 2, 3, 40, 4, 5, 6, 200]))
         assert m2._transparence(image, 75)[2] == bytes([1, 2, 3, 0, 4, 5, 6, 255])

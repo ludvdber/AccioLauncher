@@ -185,7 +185,25 @@ def _lire_brut(chemin: Path) -> dict[str, Any]:
         log.warning("Journal de sessions illisible (%s) — mis de côté", exc)
         mettre_de_cote(chemin)
         return {}
-    return data if isinstance(data, dict) else {}
+    if not isinstance(data, dict):
+        # JSON valide d'une autre forme (une liste) : tout aussi illisible, et
+        # la prochaine écriture l'écrasait sans copie (audit du 2026-11-16).
+        log.warning("Journal de sessions d'une forme inattendue (%s) — mis de côté",
+                    type(data).__name__)
+        mettre_de_cote(chemin)
+        return {}
+    return data
+
+
+def _date(valeur: object) -> datetime:
+    """Une date du journal, en heure locale SANS fuseau ; lève ValueError ou TypeError.
+
+    Le journal s'écrit en heure locale naïve ; une date à fuseau (journal
+    retouché, importé) faisait lever le tri contre les autres, et tout le
+    journal tombait à chaque lecture (audit du 2026-11-16).
+    """
+    d = datetime.fromisoformat(str(valeur))
+    return d.astimezone().replace(tzinfo=None) if d.tzinfo is not None else d
 
 
 def _parse_session(brut: Any) -> Session | None:
@@ -200,7 +218,7 @@ def _parse_session(brut: Any) -> Session | None:
     if not isinstance(duree, int) or isinstance(duree, bool) or duree < DUREE_MINIMALE:
         return None
     try:
-        debut = datetime.fromisoformat(str(brut.get("debut")))
+        debut = _date(brut.get("debut"))
     except (ValueError, TypeError):
         return None
     autres = tuple((k, v) for k, v in brut.items() if k not in _CLES_SESSION)
@@ -221,7 +239,7 @@ def _parse_tentative(brut: Any) -> Tentative | None:
     if not isinstance(code, int) or isinstance(code, bool):
         code = None
     try:
-        debut = datetime.fromisoformat(str(brut.get("debut")))
+        debut = _date(brut.get("debut"))
     except (ValueError, TypeError):
         return None
     return Tentative(jeu=jeu, debut=debut, duree=duree, code=code)
@@ -429,7 +447,7 @@ def battre_session(vu_a: datetime, chemin: Path | None = None) -> None:
     if not isinstance(jeu, str) or not jeu or not isinstance(debut, str):
         return
     try:
-        _ecrire_en_cours(jeu, datetime.fromisoformat(debut), vu_a, chemin)
+        _ecrire_en_cours(jeu, _date(debut), vu_a, chemin)
     except ValueError:
         return
 
@@ -461,8 +479,8 @@ def recuperer_session_interrompue(chemin: Path | None = None) -> Session | None:
     if not isinstance(jeu, str) or not jeu:
         return None
     try:
-        debut = datetime.fromisoformat(str(data.get("debut")))
-        vu_a = datetime.fromisoformat(str(data.get("vu_a")))
+        debut = _date(data.get("debut"))
+        vu_a = _date(data.get("vu_a"))
     except (ValueError, TypeError):
         return None
     duree = int((vu_a - debut).total_seconds())

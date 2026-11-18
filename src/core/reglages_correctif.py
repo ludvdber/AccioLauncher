@@ -362,12 +362,17 @@ def _poser(lignes: list[str], section: str, cle: str, valeur: str | None) -> boo
         return False
     debut, fin = bornes
     active, commentee = _motif_cle(cle, False), _motif_cle(cle, True)
-    for i in range(debut, fin):
-        if active.match(lignes[i]) or commentee.match(lignes[i]):
-            lignes[i] = f"{cle}={valeur}" if valeur is not None else f";{cle}={_ancienne(lignes[i])}"
-            return True
+    # La ligne ACTIVE d'abord (celle que `_valeur` lit) : une ligne commentée
+    # placée avant elle ne doit pas recevoir la valeur.
+    actives = [i for i in range(debut, fin) if active.match(lignes[i])]
     if valeur is None:
-        return True   # rien à commenter
+        for i in actives:   # toutes : une seconde ligne active reprendrait la main
+            lignes[i] = f";{cle}={_ancienne(lignes[i])}"
+        return True
+    cibles = actives[:1] or [i for i in range(debut, fin) if commentee.match(lignes[i])][:1]
+    if cibles:
+        lignes[cibles[0]] = f"{cle}={valeur}"
+        return True
     # Clé absente : juste après la dernière ligne non vide de la section.
     j = fin
     while j > debut and not lignes[j - 1].strip():
@@ -479,7 +484,9 @@ def touche_capture(ini: Path) -> str:
         return f"F{code - 0x6F}"
     if code == 0x2C:
         return tr("Impr. écran")
-    if 0x30 <= code <= 0x5A:
+    # Chiffres et lettres seulement : 0x3A à 0x40 ne sont pas des touches
+    # Windows, et s'affichaient « : » à « @ » (audit du 2026-11-16).
+    if 0x30 <= code <= 0x39 or 0x41 <= code <= 0x5A:
         return chr(code)
     return ""
 

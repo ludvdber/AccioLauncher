@@ -50,10 +50,13 @@ def lire(dossier_exe: Path) -> Releve:
     try:
         with (dossier_exe / FICHIER).open("rb") as f:
             taille = f.seek(0, 2)
-            f.seek(max(0, taille - _OCTETS_MAX))
+            # Un octet AVANT la fenêtre : s'il est « \n », la première ligne
+            # est entière et n'est pas jetée avec la coupée (audit du 2026-11-16).
+            debut = max(0, taille - _OCTETS_MAX - 1)
+            f.seek(debut)
             brut = f.read()
     except OSError:
         return Releve()
-    if taille > _OCTETS_MAX:   # la première ligne lue est coupée
+    if debut > 0:   # la première ligne lue est coupée (ou n'est que la fin de la précédente)
         brut = brut.partition(b"\n")[2]
     return analyser(brut.decode("utf-8", errors="replace"))

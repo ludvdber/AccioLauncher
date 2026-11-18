@@ -11,6 +11,7 @@ de plusieurs gigaoctets.
 """
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -74,6 +75,20 @@ class TestMigration:
         data = json.loads(
             (racine / LAUNCHER_DIR_NAME / "config.json").read_text(encoding="utf-8"))
         assert data["cache_path"] == str(cache_pour(racine))
+
+    def test_jeux_sur_un_autre_disque_le_cache_suit_ses_fichiers(self, tmp_path):
+        """Audit du 2026-11-16 : la valeur partait sous `install_path` alors que
+        `.cache` venait d'être rangé sous la racine ; les `.part` en cours y
+        restaient orphelins, sans reprise."""
+        racine = tmp_path / "AccioLauncher"
+        _ancienne_arborescence(racine)
+        fichier = racine / "config.json"
+        data = json.loads(fichier.read_text(encoding="utf-8"))
+        fichier.write_text(json.dumps({**data, "install_path": str(tmp_path / "D" / "Jeux")}),
+                           encoding="utf-8")
+        migrer_arborescence(racine)
+        data = json.loads((racine / LAUNCHER_DIR_NAME / "config.json").read_text(encoding="utf-8"))
+        assert (Path(data["cache_path"]) / "hp2_v1.0.7z.part").exists()
 
     def test_idempotente(self, tmp_path):
         """Elle tourne a CHAQUE demarrage : le deuxieme passage ne fait rien."""

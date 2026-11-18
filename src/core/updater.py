@@ -108,37 +108,43 @@ def extract_release_notes(data: dict[str, Any], max_lignes: int = 12) -> str:
     dans_commentaire = False
     for brute in corps.replace("\r\n", "\n").split("\n"):
         ligne = brute.strip()
+        # Commentaire HTML, y compris sur PLUSIEURS lignes. Ne sauter que la
+        # ligne qui commence par `<!--` laissait passer les suivantes : le
+        # commentaire qui explique le modèle de release s'affichait dans la
+        # boîte de mise à jour, amputé de sa première ligne (constaté en
+        # rejouant le vrai `.github/release-notes.md`). Lu AVANT les blocs de
+        # code : un « ``` » dans un commentaire ouvrait un bloc jamais refermé,
+        # qui avalait toutes les notes suivantes (audit du 2026-11-16).
+        if dans_commentaire:
+            dans_commentaire = "-->" not in ligne
+            continue
         if ligne.startswith("```"):
             dans_bloc_code = not dans_bloc_code
             continue
         if dans_bloc_code or not ligne:
             continue
-        # Commentaire HTML, y compris sur PLUSIEURS lignes. Ne sauter que la
-        # ligne qui commence par `<!--` laissait passer les suivantes : le
-        # commentaire qui explique le modèle de release s'affichait dans la
-        # boîte de mise à jour, amputé de sa première ligne (constaté en
-        # rejouant le vrai `.github/release-notes.md`).
-        if dans_commentaire:
-            dans_commentaire = "-->" not in ligne
-            continue
         if ligne.startswith("<!--"):
             dans_commentaire = "-->" not in ligne
             continue
-        # Trait horizontal : fin des notes, pas une ligne à sauter.
-        if len(ligne) >= 3 and set(ligne) <= {"-", "=", "*", "_"}:
+        # Trait horizontal : fin des notes, pas une ligne à sauter. « === »
+        # n'en est pas un en Markdown : il souligne le titre qui le précède
+        # (et coupait toutes les notes sous ce titre).
+        if len(ligne) >= 3 and set(ligne) <= {"-", "*", "_"}:
             break
         if set(ligne) <= {"-", "=", "*", "_"}:
-            continue                      # « -- », trop court pour un trait
+            continue                      # « -- », trop court ; « === », soulignement
         ligne = ligne.lstrip("#").strip()
         if ligne.startswith(("- ", "* ", "+ ")):
             ligne = "• " + ligne[2:].strip()
         ligne = _sans_balisage(ligne)
         if not ligne:
             continue
-        lignes.append(ligne)
+        # La coupe se décide quand une ligne de TROP arrive : douze lignes
+        # tout juste ne sont pas coupées.
         if len(lignes) >= max_lignes:
             lignes.append("…")
             break
+        lignes.append(ligne)
     return "\n".join(lignes)
 
 
