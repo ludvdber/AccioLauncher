@@ -342,6 +342,10 @@ l'environnement est lisible — dont le `WINEPREFIX` est le nôtre. Même grâce
   sable, ou embarquer un runtime Wine comme le font Bottles et Lutris), et
   écrire dans `~/Games` (permission de système de fichiers à demander). À
   reconsidérer une fois le portage éprouvé.
+- **Flatpak, construit le 2026-11-18** : `build/flatpak/`, le même dossier gelé que
+  l'AppImage sur `org.freedesktop.Platform` 25.08 ; umu et Wine restent ceux de
+  l'hôte, par `flatpak-spawn --host` (comme Lutris). Démarrage prouvé, le reste à
+  essayer sur Bazzite : [`docs/linux/FLATPAK.md`](linux/FLATPAK.md).
 
 ### 4.9 DXVK : le gel du GPU Intel, et l'incrustation du correctif
 
