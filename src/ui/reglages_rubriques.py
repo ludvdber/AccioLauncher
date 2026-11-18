@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
 from src.core import (captures, difficulte_jeu, manette, preference_gpu, qualite_rendu,
                       reglages_correctif, reglages_graphiques, reprise, resolution_jeu, texte_ue1,
                       videos_lancement)
+from src.core import difficulte_presets as dp
 from src.core.i18n import tr
 from src.core.reglages_table import Reglage
 from src.ui.choix_jeux import espacee
@@ -655,7 +656,8 @@ class RubriquesDuJeu:
         Choisir un preset remet chaque contrôle sur le fichier ; changer un
         réglage déplace l'aiguille (`_maj_dependances`)."""
         panneau = PanneauDifficulte(self.game, self.manager.config, self._ini)
-        if not panneau.idents:
+        # HP3 n'a encore aucun réglage : Réaliste y est le seul preset qui change quelque chose.
+        if not panneau.idents and not dp.une_vie_proposee(self.game, self.manager.config):
             panneau.deleteLater()
             return False
         self._panneau = panneau

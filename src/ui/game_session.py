@@ -32,6 +32,7 @@ from PyQt6.QtCore import QObject, pyqtSignal
 
 from src.core import (
     captures,
+    compteur_morts,
     config_cassee,
     diagnostic_plantage,
     folio,
@@ -42,8 +43,12 @@ from src.core import (
     scolarite,
     stats,
     succes,
+    une_vie,
 )
+from src.core import difficulte_presets as dp
+from src.core.catalogue_blocs import Sauvegardes
 from src.core.discord_presence import DiscordPresence
+from src.core.game_data import dossier_de
 from src.core.game_manager import GameManager
 from src.core.i18n import get_language, tr
 from src.ui import resume_partie
@@ -84,6 +89,9 @@ class GameSession(QObject):
     # Une vraie partie s'est finie sans arrêt, mais le correctif a écrit qu'un réglage n'a pas pu
     # s'appliquer (`journal_correctif`) : identifiant du jeu, tuple d'`Echec`. Émis APRÈS `terminee`.
     correctif_en_echec = pyqtSignal(str, object)
+    # Une partie à une seule vie s'est terminée par la mort (`une_vie_fin` écrit pendant
+    # cette partie, `compteur_morts`) : identifiant du jeu. Émis APRÈS `terminee`.
+    vie_terminee = pyqtSignal(str)
 
     def __init__(self, manager: GameManager, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -104,6 +112,11 @@ class GameSession(QObject):
         # Les sauvegardes telles qu'elles étaient AU LANCEMENT : comparées à
         # celles de la fermeture, elles disent dans laquelle on a joué.
         self._avant: dict[str, sauvegardes.Etat] = {}
+        # Les sauvegardes que la partie joue (celles du mode à une seule vie quand il est
+        # actif, `une_vie.pour_la_partie`), et le preset qu'elle tient (`dp.au_lancement`).
+        self._spec_partie: Sauvegardes | None = None
+        self._prereglage = ""
+        self._une_vie = False
         # Les succès que la partie qui vient de finir a fait tomber
         # (`succes.constater`), posés AVANT `terminee` : la fenêtre les annonce.
         self.succes_obtenus: list[succes.Succes] = []
@@ -124,8 +137,13 @@ class GameSession(QObject):
         liberer_les_caches()
         # Notée DÈS MAINTENANT et non à la fin — raison dans l'en-tête du module.
         stats.ouvrir_session(game_id, self._debut)
-        self._avant = sauvegardes.releve(self._spec(game_id))
         jeu = self._manager.get_game_by_id(game_id)
+        config = self._manager.config
+        joue = une_vie.pour_la_partie(jeu, config.install_path) if jeu is not None else None
+        self._spec_partie = joue.sauvegardes if joue is not None else None
+        self._une_vie = joue is not jeu
+        self._prereglage = dp.au_lancement(jeu, config) if jeu is not None else ""
+        self._avant = sauvegardes.releve(self._spec_partie)
         self._monitor.start(process, game_name, relance=jeu is not None and jeu.relance)
         self._presence_debut = time.time()
         self._presence_releve = dict(self._avant)
@@ -185,10 +203,6 @@ class GameSession(QObject):
             parties.append(tr("{}ᵉ année").format(annee))
         return " · ".join(parties)
 
-    def _spec(self, game_id: str):
-        game = self._manager.get_game_by_id(game_id)
-        return game.sauvegardes if game is not None else None
-
     def _on_battement(self) -> None:
         """Le jeu tourne encore : on rafraîchit le filet de reprise, et la carte
         Discord si le jeu vient de sauvegarder (une minute au plus de retard)."""
@@ -196,7 +210,7 @@ class GameSession(QObject):
         config = self._manager.config
         if not config.discord_presence or not config.discord_partie or not self._game_id:
             return
-        releve = sauvegardes.releve(self._spec(self._game_id))
+        releve = sauvegardes.releve(self._spec_partie)
         if releve != self._presence_releve:
             self._presence_releve = releve
             self._presence_partie(self._monitor.game_name, self._game_id)
@@ -213,6 +227,7 @@ class GameSession(QObject):
         game_id = self._game_id
         a_diagnostiquer: tuple | None = None
         echecs_correctif: tuple[journal_correctif.Echec, ...] = ()
+        vie_finie = False
         self.succes_obtenus = []
         if self._game_id:
             game = self._manager.get_game_by_id(self._game_id)
@@ -223,7 +238,7 @@ class GameSession(QObject):
                 arret = config_cassee.apres_la_partie(game, self._debut)
             partie = self._manager.add_playtime(
                 self._game_id, int(duree), self._debut, code, arret is not None)
-            spec = self._spec(self._game_id)
+            spec = self._spec_partie
             # Sans emplacement déclaré, on ne regarde rien : noter la
             # partie « sans sauvegarde » serait affirmer ce qu'on n'a pas vu.
             if partie and self._debut is not None and spec is not None:
@@ -231,7 +246,7 @@ class GameSession(QObject):
                 rel = sauvegardes.attribuer(
                     jeu, self._avant, sauvegardes.releve(spec),
                     self._debut, int(duree),
-                    mesurer=lambda rel: progression.mesure(jeu, spec, rel))
+                    mesurer=lambda rel: progression.mesure(jeu, spec, rel), prereglage=self._prereglage)
                 if rel is not None:
                     self.succes_obtenus = succes.constater(
                         jeu, spec, rel, datetime.now(), nee=rel not in self._avant)
@@ -239,6 +254,11 @@ class GameSession(QObject):
             # hors de ce qu'une désinstallation emporterait.
             if game is not None:
                 captures.ramasser(game, self._manager.config.install_path)
+                # La DLL a vidé le dossier du mode : le joueur l'apprend en revenant.
+                if self._une_vie and self._debut is not None:
+                    fin = compteur_morts.lire(
+                        self._manager.config.install_path / dossier_de(game.executable)).derniere_fin
+                    vie_finie = fin is not None and fin >= self._debut
                 # La remise n'est proposée que si elle est POSSIBLE : sinon la
                 # question n'aurait pas de bonne réponse, et l'arrêt reçoit la
                 # boîte générale.
@@ -265,6 +285,9 @@ class GameSession(QObject):
         self._debut = None
         self._pid = None
         self._avant = {}
+        self._spec_partie = None
+        self._prereglage = ""
+        self._une_vie = False
         self._presence.clear()
         self.terminee.emit(game_name, partie, arret is not None)
         if cassee:
@@ -275,6 +298,8 @@ class GameSession(QObject):
         # ne doit pas taire la boîte d'un vrai plantage (le toast, lui, ne se redit pas).
         if echecs_correctif:
             self.correctif_en_echec.emit(game_id, echecs_correctif)
+        if vie_finie:
+            self.vie_terminee.emit(game_id)
         if a_diagnostiquer is not None:
             threading.Thread(target=self._diagnostiquer, args=(game_id, *a_diagnostiquer),
                              daemon=True, name=f"diagnostic-{game_id}").start()

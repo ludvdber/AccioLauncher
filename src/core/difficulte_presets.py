@@ -17,9 +17,12 @@ la partie (une leçon, un défi qui le demande). `sorts_retires` reste un régla
 à part, dans « Sur mesure ».
 
 Une seule vie (Ludo, 2026-10-30) : Réaliste = le jeu de base, Impardonnable =
-Hardcore, et dans les deux la première mort termine la partie. Ce mécanisme
-n'existe encore dans aucun jeu : ces presets se montrent « bientôt » tant que
-`UNE_VIE_POSSIBLE` est vide.
+Hardcore, et dans les deux la première mort termine la partie (`une_vie` : la
+partie se joue dans un dossier à part, ses sauvegardes sont effacées par la DLL
+à la première mort, C4). `UNE_VIE_POSSIBLE` ne nomme que les jeux où cette mort
+a été VUE en jeu ; le mode n'est proposé que si le correctif installé le connaît
+(`une_vie_proposee`). Il ne se lit pas aux valeurs : ce sont celles de Normal ou
+de Hardcore, plus les clés du mode (`courant(une_vie=…)`).
 
 Ce que dit un preset pour un jeu se CALCULE depuis les réglages (libellé et
 choix affichés) : une phrase écrite à la main finirait par mentir.
@@ -38,7 +41,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-from src.core import difficulte_jeu
+from src.core import difficulte_jeu, une_vie
 from src.core import reglages_correctif as rc
 from src.core.reglages_table import REGLAGES
 from src.core.config import Config
@@ -51,8 +54,12 @@ log = logging.getLogger(__name__)
 NATIVE = "difficulte_native"
 SUR_MESURE = "sur_mesure"
 
-# Les jeux où « une seule vie » existe vraiment (aucun en 1.4.0).
-UNE_VIE_POSSIBLE: frozenset[str] = frozenset()
+# Les jeux où la première mort a été VUE finir la vie (atelier,
+# `notes/IDEES_A_VOIR_EN_JEU.md` et `DIFFICULTE_1.4.md` § 8) : HP1, HP2, HP3
+# (2026-11-14 ; héros joué le 2026-11-18), HP4 (Harry choisi, 2026-11-18),
+# HP5 (KO forgé, 2026-11-14 ; `une_vie.MODES` le dit au joueur), HP6
+# (2026-11-14, relance et nouvelle vie le 2026-11-18).
+UNE_VIE_POSSIBLE: frozenset[str] = frozenset(une_vie.MODES)
 
 
 @dataclass(frozen=True)
@@ -142,13 +149,24 @@ def disponible(preset: Preset, game_id: str, idents: Iterable[str]) -> bool:
     return valeurs_pour(preset, idents) != valeurs_pour(PAR_IDENT["normal"], idents)
 
 
-def courant(valeurs: Mapping[str, object], idents: Iterable[str]) -> str:
+# Le preset dont chaque preset à une seule vie a les valeurs.
+BASE_UNE_VIE: Mapping[str, str] = {"realiste": "normal", "impardonnable": "hardcore"}
+_A_UNE_VIE = {base: vie for vie, base in BASE_UNE_VIE.items()}
+
+
+def courant(valeurs: Mapping[str, object], idents: Iterable[str], une_vie: bool = False) -> str:
     """Le preset que portent `valeurs` (identifiant → valeur lue), ou SUR_MESURE.
 
     Les presets à une seule vie ont les valeurs de Normal ou de Hardcore : ils se
-    reconnaîtront à leur partie à part, pas aux réglages. Normal passe en premier :
-    là où Détendu ne change rien (HP2), il a les mêmes valeurs que lui."""
+    reconnaissent à leur partie à part (`une_vie` : les clés du mode sont posées) ;
+    avec d'autres valeurs, le mode reste actif sous « Sur mesure ». Normal passe en
+    premier : là où Détendu ne change rien (HP2), il a les mêmes valeurs que lui.
+    Sans aucun réglage (HP3), le jeu est tel qu'il est sorti : Normal."""
     idents = frozenset(idents)
+    if une_vie:
+        return _A_UNE_VIE.get(courant(valeurs, idents), SUR_MESURE)
+    if not idents:
+        return "normal"
     normal = PAR_IDENT["normal"]
     for preset in (normal, *(p for p in PRESETS if p is not normal)):
         if preset.une_vie or (preset.exige and preset.exige not in idents):
@@ -331,11 +349,47 @@ def lire(game: GameData, config: Config, ini: Path | None, idents: Iterable[str]
     return valeurs
 
 
+def une_vie_proposee(game: GameData, config: Config) -> bool:
+    """Réaliste et Impardonnable se proposent dans ce jeu : sa mort est VUE, et
+    le correctif installé porte les clés du mode dans un dossier qu'il accepte."""
+    return game.id in UNE_VIE_POSSIBLE and une_vie.possible(game, une_vie.ini(game, config.install_path))
+
+
+def une_vie_active(game: GameData, config: Config) -> bool:
+    return game.id in UNE_VIE_POSSIBLE and une_vie.actif(une_vie.ini(game, config.install_path))
+
+
+def proposes(game: GameData, config: Config, idents: Iterable[str]) -> tuple[Preset, ...]:
+    """Les presets que ce jeu propose, dans l'ordre de `PRESETS`."""
+    idents = frozenset(idents)
+    vie = une_vie_proposee(game, config)
+    return tuple(p for p in PRESETS if disponible(p, game.id, idents) and (vie or not p.une_vie))
+
+
+def au_lancement(game: GameData, config: Config) -> str:
+    """Le preset que tient le jeu qu'on lance, "" si aucun (sur mesure,
+    réglages illisibles) : noté avec la partie (`sauvegardes.attribuer`), il
+    décide des médailles « Terminé en … » (`succes`)."""
+    dossier_exe = Path(config.install_path) / Path(game.executable).parent
+    ini = rc.ini_du_correctif(dossier_exe) if game.fix_settings else None
+    idents = idents_du_jeu(game, ini)
+    ident = courant(lire(game, config, ini, idents), idents, une_vie_active(game, config))
+    return "" if ident == SUR_MESURE else ident
+
+
 def appliquer(preset: Preset, game: GameData, config: Config, ini: Path | None,
               idents: Iterable[str]) -> list[str]:
-    """Écrit les valeurs du preset ; rend les réglages qui n'ont PAS pu l'être
-    (liste vide : tout est écrit). Rien n'est écrit au lancement du jeu."""
+    """Écrit les valeurs du preset, et entre dans le mode à une seule vie ou en
+    sort ; rend les réglages qui n'ont PAS pu l'être (liste vide : tout est
+    écrit, `"une_vie"` pour les clés du mode). Rien n'est écrit au lancement du jeu."""
     rates = []
+    vie = une_vie.ini(game, config.install_path) if game.id in UNE_VIE_POSSIBLE else None
+    if vie is not None:
+        if preset.une_vie:
+            if not une_vie.entrer(game, vie):
+                rates.append("une_vie")
+        elif une_vie.actif(vie) and not une_vie.sortir(vie):
+            rates.append("une_vie")
     for ident, valeur in valeurs_pour(preset, idents).items():
         if ident == NATIVE:
             if not difficulte_jeu.ecrire(game, config, int(str(valeur))):

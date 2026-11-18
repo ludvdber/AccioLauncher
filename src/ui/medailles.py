@@ -56,6 +56,8 @@ MEDAILLES: dict[str, dict[str, tuple[str, str]]] = {
 }
 # Les lignes pleines de l'écran « Informations sur le jeu » de HP5 (`complet_<n>`).
 _PAR_PREFIXE = {("hp5", "complet_"): ("decouverte", ARGENT)}
+# « Terminé en … » (`succes.FINS_PAR_PRESET`) : le métal dit le préréglage.
+_FIN_DU_JEU = {"normal": BRONZE, "difficile": ARGENT, "hardcore": OR, "realiste": ARGENT, "impardonnable": OR}
 
 _cache: dict[tuple[str, str, bool, int], QPixmap] = {}
 
@@ -65,6 +67,8 @@ def medaille(jeu: str, ident: str) -> tuple[str, str]:
     trouve = MEDAILLES.get(jeu, {}).get(ident)
     if trouve is not None:
         return trouve
+    if ident.startswith("fin_") and (metal := _FIN_DU_JEU.get(ident.removeprefix("fin_"))) is not None:
+        return ("avancement", metal)
     for (j, prefixe), valeur in _PAR_PREFIXE.items():
         if j == jeu and ident.startswith(prefixe):
             return valeur

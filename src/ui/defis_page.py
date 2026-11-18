@@ -18,23 +18,31 @@ en tête, en chiffre or avec sa jauge. Avant, deux colonnes de cartes de 912 px 
 une médaille de 84 px laissait 80 % de vide, et « 2 sur 7 » en petit gris.
 « Recommencer » est un lien discret : la confirmation existe, le geste n'a pas à
 être le seul bouton plein de la page.
+
+« Une seule vie » (1.4, `notes/DIFFICULTE_1.4.md` § 9, point 3) : sous les
+médailles, ce que le compteur de morts du correctif a écrit (`compteur_morts`,
+`accio_morts.tsv` à côté de l'exe) : morts, vies terminées, la plus longue vie.
+Rien ne s'écrit tant que le fichier ne porte rien, et un chiffre nul ne s'écrit
+pas. Le niveau atteint n'y est pas : la carte que la DLL écrit vaut souvent
+`Save0` (§ 8, défaut 5).
 """
 
 from datetime import datetime
+from pathlib import Path
 
 from PyQt6.QtCore import QPoint, Qt
 from PyQt6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QMessageBox, QScrollArea, QSizePolicy, QToolTip, QVBoxLayout, QWidget,
 )
 
-from src.core import sauvegardes, succes
+from src.core import compteur_morts, sauvegardes, succes
 from src.core.i18n import tr
 from src.ui.composants import feuille_de_style, lien
 from src.ui.flow_layout import FlowLayout
 from src.ui.folio_page import _tuile
 from src.ui.fenetre_message import message
 from src.ui.medailles import pixmap_medaille
-from src.ui.stats_widgets import _DISCRET, _Paragraphe, _texte
+from src.ui.stats_widgets import _DISCRET, _Paragraphe, _duree, _texte
 from src.ui.succes_widgets import _jour
 from src.ui.theme import RAYON_CARTE, themed
 from src.ui.utils import BARRE_DEFILEMENT
@@ -98,11 +106,14 @@ class _Defi(QFrame):
 class DefisPage(QWidget):
     """Les médailles d'un jeu du folio ; un mot quand le jeu n'en a pas."""
 
-    def __init__(self, game, parent: QWidget | None = None) -> None:
+    def __init__(self, game, parent: QWidget | None = None, dossier_exe: Path | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("defis")
         self.setStyleSheet(themed(_STYLE) + feuille_de_style())
         self.game = game
+        # Le dossier où le correctif écrit `accio_morts.tsv` ; None : rien à relire.
+        self.morts = compteur_morts.lire(dossier_exe) if dossier_exe is not None else compteur_morts.Releve()
+        self.tuiles_morts: list[QFrame] = []
         self.defis: list[_Defi] = []
         self._racine = QVBoxLayout(self)
         self._racine.setContentsMargins(0, 0, 0, 0)
@@ -159,6 +170,7 @@ class DefisPage(QWidget):
             flux.addWidget(carte)
             self.defis.append(carte)
         lay.addWidget(vitrine)
+        self._une_seule_vie(lay)
         lay.addStretch()
         if obtenus:
             pied = QHBoxLayout()
@@ -168,6 +180,34 @@ class DefisPage(QWidget):
             pied.addWidget(self.bouton_recommencer)
             lay.addSpacing(18)
             lay.addLayout(pied)
+
+    def _une_seule_vie(self, lay: QVBoxLayout) -> None:
+        """Les tuiles du compteur de morts, celles qui ont un chiffre."""
+        m = self.morts
+        self.tuiles_morts = []
+        tuiles = [t for t in (
+            (str(m.morts), tr("Morts")) if m.morts else None,
+            (str(m.fins_une_vie), tr("Vies terminées")) if m.fins_une_vie else None,
+            (_duree(m.plus_longue_vie), tr("La plus longue vie")) if m.plus_longue_vie else None,
+        ) if t is not None]
+        if not tuiles:
+            return
+        lay.addSpacing(26)
+        titre = _texte(tr("Une seule vie").upper(), 12, "#d6a72c")
+        titre.setObjectName("titreSection")
+        titre.setStyleSheet(themed(titre.styleSheet()))
+        lay.addWidget(titre)
+        lay.addSpacing(10)
+        rang = QHBoxLayout()
+        rang.setSpacing(12)
+        for chiffre, libelle in tuiles:
+            tuile = _tuile(chiffre, libelle)
+            tuile.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
+            tuile.setMaximumWidth(_LARGEUR_TUILE)
+            rang.addWidget(tuile)
+            self.tuiles_morts.append(tuile)
+        rang.addStretch()
+        lay.addLayout(rang)
 
     def recommencer(self) -> None:
         """Après confirmation, remet les défis du jeu à zéro et redessine la page."""

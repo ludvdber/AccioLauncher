@@ -16,6 +16,11 @@ tout dedans »). Ce panneau porte le haut de l'onglet (cadran, presets, en-tête
 fenêtre des réglages (`reglages_rubriques._page_difficulte`), et choisir un
 preset les remet sur ce que porte le fichier. Choisir écrit aussitôt ; rien
 n'est écrit au lancement.
+
+« Une seule vie » (Réaliste, Impardonnable) : deux cartes comme les autres,
+sous les réglages, avec ce que fait le jeu à la première mort et l'état de la
+vie (`core/une_vie`). Elles ne se montrent que là où le mode est proposé
+(`difficulte_presets.une_vie_proposee`).
 """
 
 from collections.abc import Callable
@@ -26,6 +31,7 @@ from PyQt6.QtGui import QColor, QFont, QFontMetricsF, QPainter, QPainterPath, QP
 from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget
 
 from src.core import difficulte_presets as dp
+from src.core import une_vie
 from src.core.config import Config
 from src.core.game_data import GameData
 from src.core.i18n import tr
@@ -35,7 +41,6 @@ from src.ui.fonts import cinzel
 from src.ui.theme import RAYON_CARTE, current as current_theme, themed
 
 _DOUX = "#a9a7c4"
-_ETEINT = "#6c6a88"
 _OR_CLAIR = "#f0d060"
 
 _STYLE = f"""
@@ -54,9 +59,6 @@ QFrame#surMesure {{
 QFrame#surMesure[actif="true"] {{
     background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 rgba(214, 167, 44, 0.08), stop:0.6 #0d0d1a);
     border: 1px solid #d6a72c;
-}}
-QFrame#bientot {{
-    background: rgba(13, 13, 26, 0.5); border: 1px solid rgba(169, 167, 196, 0.12); border-radius: {RAYON_CARTE}px;
 }}
 QFrame#filetLignes {{ background: rgba(214, 167, 44, 0.14); border: none; }}
 QFrame#filetSection {{
@@ -124,7 +126,6 @@ class _CartePreset(QFrame):
         self.voisines: list[_CartePreset] = []
         self._teinte = teinte(max(cran, 4))
         self.setProperty("actif", "false")
-        self.setProperty("bientot", "false")
         self.setAttribute(Qt.WidgetAttribute.WA_Hover)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -238,27 +239,6 @@ class _CartePreset(QFrame):
         return stylo
 
 
-class _TuileBientot(QFrame):
-    """Un preset à une seule vie, pas encore possible : ni bouton ni clic."""
-
-    def __init__(self, preset: dp.Preset) -> None:
-        super().__init__()
-        self.setObjectName("bientot")
-        self.ident = preset.ident
-        self.setProperty("actif", "false")
-        self.setProperty("bientot", "true")
-        lay = QVBoxLayout(self)
-        lay.setContentsMargins(18, 16, 18, 16)
-        lay.setSpacing(4)
-        tete = QHBoxLayout()
-        tete.addWidget(_nom(tr(preset.nom), 12, "#8f8daa"), stretch=1)
-        tete.addWidget(pastille(tr("Bientôt"), _DOUX, "rgba(169, 167, 196, 0.25)"),
-                       alignment=Qt.AlignmentFlag.AlignTop)
-        lay.addLayout(tete)
-        lay.addWidget(_sans_bord(texte(tr(preset.phrase), 13, _ETEINT, retour=True)))
-        lay.addStretch()
-
-
 def _titre_section(contenu: str) -> QWidget:
     """Un surtitre doré suivi d'un filet qui s'efface vers la droite."""
     bloc = QWidget()
@@ -291,6 +271,8 @@ class PanneauDifficulte(QWidget):
         self.ini = ini
         self.idents = dp.idents_du_jeu(game, ini)
         self.crans = dp.reperes(game.id, self.idents)
+        self.cartes_une_vie: list[_CartePreset] = []
+        self.etat_une_vie: QLabel | None = None
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(0)
@@ -327,7 +309,7 @@ class PanneauDifficulte(QWidget):
         return dp.lire(self.game, self.config, self.ini, self.idents)
 
     def courant(self) -> str:
-        return dp.courant(self.valeurs(), self.idents)
+        return dp.courant(self.valeurs(), self.idents, dp.une_vie_active(self.game, self.config))
 
     # ── Construire ────────────────────────────────────────────────────────
     def _bloc_cadran(self) -> QWidget:
@@ -360,13 +342,19 @@ class PanneauDifficulte(QWidget):
         return bloc
 
     def bloc_une_seule_vie(self) -> QWidget | None:
-        """Réaliste, et Impardonnable là où Hardcore change quelque chose, en
-        tuiles « Bientôt » : à poser par la fenêtre, sous les réglages."""
-        hardcore = dp.disponible(dp.PAR_IDENT["hardcore"], self.game.id, self.idents)
-        self.tuiles = [_TuileBientot(p) for p in dp.PRESETS
-                       if p.une_vie and (p.ident == "realiste" or hardcore)]
-        if not self.tuiles:
+        """Réaliste, et Impardonnable là où Hardcore change quelque chose, à poser
+        par la fenêtre sous les réglages ; None là où le mode n'est pas proposé."""
+        if not dp.une_vie_proposee(self.game, self.config):
             return None
+        vies = [p for p in dp.PRESETS if p.une_vie and dp.disponible(p, self.game.id, self.idents)]
+        crans = {p.ident: c for p, c in self.crans}
+        self.cartes_une_vie = [
+            _CartePreset(p, dp.changements(p, self.idents), crans.get(dp.BASE_UNE_VIE[p.ident], 40),
+                         self._choisir)
+            for p in vies]
+        for carte in self.cartes_une_vie:
+            carte.voisines = self.cartes_une_vie
+        mode = une_vie.MODES[self.game.id]
         bloc = QWidget()
         transparent(bloc, "uneSeuleVie")
         bloc.setStyleSheet(bloc.styleSheet() + themed(_STYLE))
@@ -374,27 +362,56 @@ class PanneauDifficulte(QWidget):
         v.setContentsMargins(0, 0, 0, 0)
         v.setSpacing(14)
         v.addWidget(_titre_section(tr("Une seule vie")))
-        explication = texte(tr("La première mort termine la partie : pas de retour à la dernière "
-                               "sauvegarde."), 14, _DOUX, retour=True)
-        v.addWidget(Rangee([explication, *self.tuiles], 1 + len(self.tuiles), seuil=640,
-                           etirements=(11, *(10,) * len(self.tuiles)), ecart=12))
+        phrases = [tr("La première mort efface la partie : elle se joue dans un dossier à part, et vos "
+                      "sauvegardes ne sont ni lues ni écrites."), tr(mode.apres)]
+        if mode.note:
+            phrases.append(tr(mode.note))
+        explication = texte("\n\n".join(phrases), 14, _DOUX, retour=True)
+        explication.setObjectName("explicationUneVie")
+        v.addWidget(Rangee([explication, *self.cartes_une_vie], 1 + len(self.cartes_une_vie), seuil=640,
+                           etirements=(11, *(10,) * len(self.cartes_une_vie)), ecart=12))
+        self.etat_une_vie = texte("", 14, _OR_CLAIR, retour=True)
+        self.etat_une_vie.setStyleSheet(themed(self.etat_une_vie.styleSheet()))
+        self.etat_une_vie.setObjectName("etatUneVie")
+        v.addWidget(self.etat_une_vie)
+        self._dire_etat()
         return bloc
+
+    def _dire_etat(self) -> None:
+        """Où en est la vie, seulement quand le mode est actif : rien à dire sinon."""
+        if self.etat_une_vie is None:
+            return
+        phrase = ""
+        if dp.une_vie_active(self.game, self.config):
+            etat = une_vie.etat(self.game)
+            phrase = (tr("Votre dernière vie s'est terminée : la prochaine partie en commence une nouvelle.")
+                      if etat.finie else
+                      tr("Une vie est en cours : JOUER la reprend.") if etat.en_cours else
+                      tr("La prochaine partie commence votre vie."))
+        self.etat_une_vie.setText(phrase)
+        self.etat_une_vie.setVisible(bool(phrase))
 
     # ── Réagir ────────────────────────────────────────────────────────────
     def rafraichir(self, anime: bool = True) -> None:
         """Marques, sceau et aiguille sur ce que portent les fichiers."""
         valeurs = self.valeurs()
-        courant = dp.courant(valeurs, self.idents)
-        for carte in self.cartes_presets:
+        vie = dp.une_vie_active(self.game, self.config)
+        courant = dp.courant(valeurs, self.idents, vie)
+        for carte in (*self.cartes_presets, *self.cartes_une_vie):
             carte.marquer(carte.ident == courant)
         sur_mesure = courant == dp.SUR_MESURE
         if self.sceau_sur_mesure is not None:
             self.sceau_sur_mesure.setVisible(sur_mesure)
         niveau = dp.niveau(valeurs, self.game.id, self.idents)
+        sous = tr("Une seule vie") if vie else ""
         if sur_mesure:
-            self.cadran.viser(niveau, tr("Sur mesure"), dp.situer(niveau, self.crans), anime=anime)
+            situe = dp.situer(niveau, self.crans)
+            self.cadran.viser(niveau, tr("Sur mesure"), " · ".join(filter(None, (situe, sous))), anime=anime)
         else:
-            self.cadran.viser(niveau, tr(dp.PAR_IDENT[courant].nom), actif=courant, anime=anime)
+            # Réaliste et Impardonnable allument le cran de Normal ou de Hardcore.
+            base = dp.courant(valeurs, self.idents)
+            self.cadran.viser(niveau, tr(dp.PAR_IDENT[courant].nom), sous, actif=base, anime=anime)
+        self._dire_etat()
 
     def _choisir(self, ident: str) -> None:
         if ident == self.courant():

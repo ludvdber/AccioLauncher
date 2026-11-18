@@ -1,6 +1,7 @@
 """Les presets de difficulté de la 1.4 (Normal, Détendu, Hardcore ; Réaliste et Impardonnable à une
 seule vie), tranchés par Ludo le 2026-10-30."""
 import itertools
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -93,15 +94,33 @@ class TestValeurs:
 
 class TestParJeu:
     def test_rien_pour_un_jeu_sans_reglage_de_difficulte(self):
+        """HP7 : ni réglage ni une seule vie."""
         idents = dp.idents_du_jeu(_jeu(fix_settings=["limite_fps"]))
         assert idents == frozenset()
-        assert [p.ident for p in dp.PRESETS if dp.disponible(p, "hp4", idents)] == ["normal"]
+        assert [p.ident for p in dp.PRESETS if dp.disponible(p, "hp7a", idents)] == ["normal"]
 
-    def test_hp6_tout_sauf_une_seule_vie(self, ini):
+    def test_hp6_tous_les_presets(self, ini):
         idents = dp.idents_du_jeu(_jeu(fix_settings=list(HP6)), ini)
         assert idents == HP6_PRESETS
         assert [p.ident for p in dp.PRESETS if dp.disponible(p, "hp6", idents)] == \
-            ["recit", "detendu", "normal", "difficile", "hardcore"]
+            ["recit", "detendu", "normal", "difficile", "hardcore", "realiste", "impardonnable"]
+
+    def test_une_seule_vie_dans_les_six_jeux_vus(self):
+        """Mort VUE finir la vie dans les six (atelier, IDEES_A_VOIR_EN_JEU.md) ; HP7 et HP8 de côté."""
+        assert dp.UNE_VIE_POSSIBLE == {"hp1", "hp2", "hp3", "hp4", "hp5", "hp6"}
+
+    def test_le_mode_se_reconnait_a_ses_cles_pas_aux_valeurs(self):
+        normal = dp.valeurs_pour(dp.PAR_IDENT["normal"], HP6_PRESETS)
+        dur = dp.valeurs_pour(dp.PAR_IDENT["hardcore"], HP6_PRESETS)
+        assert dp.courant(normal, HP6_PRESETS) == "normal"
+        assert dp.courant(normal, HP6_PRESETS, une_vie=True) == "realiste"
+        assert dp.courant(dur, HP6_PRESETS, une_vie=True) == "impardonnable"
+        assert dp.courant({**normal, "degats_recus": 2}, HP6_PRESETS, une_vie=True) == dp.SUR_MESURE
+
+    def test_un_jeu_sans_reglage_est_normal_et_realiste_avec_le_mode(self):
+        """HP3 : aucun réglage déclaré ; avec le mode, Réaliste."""
+        assert dp.courant({}, frozenset()) == "normal"
+        assert dp.courant({}, frozenset(), une_vie=True) == "realiste"
 
     def test_une_seule_vie_s_ouvre_jeu_par_jeu(self, monkeypatch):
         """Le jour où le mécanisme existe dans un jeu : Réaliste s'y offre même sans
@@ -166,7 +185,7 @@ class TestLireEtAppliquer:
 
     def test_sans_ini_rien_n_est_ecrit_et_tout_est_signale(self):
         jeu = _jeu(fix_settings=list(HP6))
-        config = SimpleNamespace(install_path=None)
+        config = SimpleNamespace(install_path=Path("introuvable"))
         rates = dp.appliquer(dp.PAR_IDENT["hardcore"], jeu, config, None, {"degats_recus"})
         assert rates == ["degats_recus"]
 
@@ -282,14 +301,13 @@ class TestOnglet:
 
     @staticmethod
     def _carte(panneau, ident):
-        return next(c for c in [*panneau.cartes_presets, *panneau.tuiles] if c.ident == ident)
+        return next(c for c in [*panneau.cartes_presets, *panneau.cartes_une_vie] if c.ident == ident)
 
     def test_cartes_reglages_et_une_seule_vie_dans_le_meme_onglet(self, qtbot, dossier_hp6):
+        """Un correctif sans les clés du mode (ou un jeu sans sauvegardes connues) : pas de bloc."""
         dlg, panneau = self._onglet(qtbot, dossier_hp6, fix_settings=list(HP6))
         assert [c.ident for c in panneau.cartes_presets] == ["recit", "detendu", "normal", "difficile", "hardcore"]
-        assert [t.ident for t in panneau.tuiles] == ["realiste", "impardonnable"]
-        for tuile in panneau.tuiles:
-            assert tuile.property("bientot") == "true" and tuile.focusPolicy() == Qt.FocusPolicy.NoFocus
+        assert panneau.bloc_une_seule_vie() is None and panneau.cartes_une_vie == []
         assert self._carte(panneau, "normal").property("actif") == "true", "un ini neuf : Normal"
         assert panneau.cadran.nom == "Normal" and panneau.cadran.valeur() == 40
         assert set(HP6) <= set(dlg._controles), "chaque réglage, sorts retirés compris, est dans l'onglet"
@@ -396,7 +414,7 @@ class TestBoutonDeLaFiche:
         monkeypatch.setattr(GameManager, "is_installed", lambda self, j: j == "hp2")
         monkeypatch.setattr(GameManager, "get_state", lambda self, j: GameState.INSTALLED
                             if j == "hp2" else GameState.NOT_INSTALLED)
-        monkeypatch.setattr(dp, "courant", lambda valeurs, idents: niveau)
+        monkeypatch.setattr(dp, "courant", lambda valeurs, idents, une_vie=False: niveau)
         bouton = self._bouton(make_window(), "hp2")
         assert bouton.toolTip() == bulle and bouton._vif is vif
 

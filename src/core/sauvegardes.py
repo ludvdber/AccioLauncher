@@ -34,6 +34,13 @@ l'histoire…). Si ces compteurs ont BAISSÉ depuis la fois précédente, ce n'e
 plus la même aventure : la date est ajoutée à `nouvelles`, et la carte de
 l'emplacement ne montre plus que ce qui la suit. Rien n'est effacé : les
 parties d'avant restent dans le fichier et sont résumées en une ligne.
+
+**Le preset tenu depuis le début** (`prereglage`, 1.4) : le preset de
+difficulté que tenait chaque partie (`difficulte_presets.au_lancement`). Une
+sauvegarde NÉE pendant une partie, ou une aventure qui recommence, prend celui
+de la partie ; une partie sous un autre preset (ou sur mesure) le perd pour de
+bon (""). Une sauvegarde d'avant ce suivi n'en a aucun. Les médailles
+« Terminé en … » le demandent (`succes`).
 """
 
 import fnmatch
@@ -411,7 +418,7 @@ def chemin_fichier() -> Path:
 
 def charger(chemin: Path | None = None) -> dict[tuple[str, str], dict[str, Any]]:
     """{(jeu, fichier): {"commencee": date | None, "parties": [(debut, duree)],
-    "mesure": tuple[int, ...] | None, "nouvelles": [datetime]}}.
+    "mesure": tuple[int, ...] | None, "nouvelles": [datetime], "prereglage": str | None}}.
 
     Un fichier illisible est mis de côté, jamais écrasé, comme le journal.
     """
@@ -459,16 +466,18 @@ def charger(chemin: Path | None = None) -> dict[tuple[str, str], dict[str, Any]]
                 nouvelles.append(datetime.fromisoformat(str(brut)))
             except (ValueError, TypeError):
                 continue
+        prereglage = e.get("prereglage")
         stock[(jeu, fichier)] = {"commencee": commencee,
                                  "parties": parties[-_MAX_PARTIES:],
                                  "mesure": tuple(mesure) if mesure else None,
-                                 "nouvelles": sorted(nouvelles)}
+                                 "nouvelles": sorted(nouvelles),
+                                 "prereglage": prereglage if isinstance(prereglage, str) else None}
     return stock
 
 
 def _entree(stock: dict[tuple[str, str], dict[str, Any]], cle: tuple[str, str]) -> dict[str, Any]:
     return stock.setdefault(cle, {"commencee": None, "parties": [], "mesure": None,
-                                  "nouvelles": []})
+                                  "nouvelles": [], "prereglage": None})
 
 
 def _date(brut: object) -> date | None:
@@ -491,6 +500,8 @@ def _ecrire(stock: dict[tuple[str, str], dict[str, Any]], chemin: Path) -> None:
             e["mesure"] = list(v["mesure"])
         if v.get("nouvelles"):
             e["nouvelles"] = [d.isoformat(timespec="seconds") for d in v["nouvelles"]]
+        if v.get("prereglage") is not None:
+            e["prereglage"] = v["prereglage"]
         return e
 
     data = {"version": 1, "sauvegardes": [
@@ -510,7 +521,8 @@ def _jour(horodatage: float | None) -> date | None:
 
 def attribuer(jeu: str, avant: dict[str, Etat], apres: dict[str, Etat],
               debut: datetime, duree: int, chemin: Path | None = None,
-              mesurer: Callable[[str], tuple[int, ...] | None] | None = None) -> str | None:
+              mesurer: Callable[[str], tuple[int, ...] | None] | None = None,
+              prereglage: str = "") -> str | None:
     """Donne la partie qui vient de finir à la sauvegarde qu'elle a écrite.
 
     Rend le fichier retenu, ou None si aucune sauvegarde n'a bougé : on a joué
@@ -522,6 +534,9 @@ def attribuer(jeu: str, avant: dict[str, Etat], apres: dict[str, Etat],
     elle a reculé depuis l'attribution précédente, cette partie ouvre une
     nouvelle aventure dans l'emplacement. La sauvegarde rapide n'en ouvre
     jamais : elle prend ce qu'on vient de charger, d'où qu'il vienne.
+
+    `prereglage` : le preset que tenait la partie ("" : aucun), suivi depuis
+    la naissance de la sauvegarde ou de son aventure (en-tête du module).
     """
     if duree <= 0:
         return None
@@ -542,16 +557,22 @@ def attribuer(jeu: str, avant: dict[str, Etat], apres: dict[str, Etat],
     if nee is not None and (entree["commencee"] is None or nee < entree["commencee"]):
         entree["commencee"] = nee
     entree["parties"].append((debut, int(duree)))
+    depart = rel not in avant
     if mesurer is not None and not est_rapide(jeu, rel):
         from src.core import progression
         maintenant = mesurer(rel)
         # Sans partie déjà comptée ici, il n'y a pas d'aventure d'avant à séparer.
         if len(entree["parties"]) > 1 and progression.recommencee(entree["mesure"], maintenant):
             entree["nouvelles"] = [*entree["nouvelles"], debut]
+            depart = True
             log.info("Sauvegardes : nouvelle aventure dans %s (%s), %s → %s",
                      rel, jeu, entree["mesure"], maintenant)
         if maintenant is not None:
             entree["mesure"] = maintenant
+    if depart:
+        entree["prereglage"] = prereglage
+    elif entree.get("prereglage") not in (None, prereglage):
+        entree["prereglage"] = ""
     try:
         _ecrire(stock, chemin)
     except OSError as exc:

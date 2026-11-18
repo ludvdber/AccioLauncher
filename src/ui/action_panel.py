@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (
     QApplication, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
 )
 
-from src.core import reprise
+from src.core import reprise, une_vie
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager, GameState
 from src.core.i18n import tr
@@ -445,9 +445,13 @@ class ActionPanel(QWidget):
 
     def _build_installed(self) -> None:
         # « REPRENDRE » seulement quand le clic reprend vraiment la partie (HP1 à
-        # HP3, option active) : ailleurs, le même bouton ouvre le menu du jeu.
-        reprend = bool(self._manager.config.reprise.get(self._game.id, False)
-                       and reprise.reprise_possible(self._game))
+        # HP3, option active ; en une seule vie, celle du mode, HP2 toujours) :
+        # ailleurs, le même bouton ouvre le menu du jeu.
+        config = self._manager.config
+        joue = une_vie.pour_la_partie(self._game, config.install_path)
+        impose = une_vie.arguments(joue)
+        reprend = (impose == une_vie.REPRISE_HP2 if impose is not None
+                   else bool(config.reprise.get(self._game.id, False) and reprise.reprise_possible(joue)))
         libelle = tr("Reprendre") if reprend else tr("Jouer")
         # Vert MAT : le `#2ecc71` vif d'avant était l'autre moitié du code des
         # faux boutons. 4,2 de contraste avec le blanc (gras 15 pt : seuil 3).
@@ -512,12 +516,13 @@ class ActionPanel(QWidget):
         ini = (reglages_correctif.ini_du_correctif(
             self._manager.config.install_path / Path(game.executable).parent)
             if game.fix_settings else None)
+        config = self._manager.config
         idents = dp.idents_du_jeu(game, ini)
-        if not any(dp.disponible(p, game.id, idents) for p in dp.PRESETS if p.ident != "normal"):
+        if not any(p.ident != "normal" for p in dp.proposes(game, config, idents)):
             return
         # L'épée dit le niveau quand il n'est pas Normal : une partie en Hardcore avait la même
         # fiche qu'en Normal (audit UI acc5, 2026-11-13). Au repos, elle reste discrète.
-        courant = dp.courant(dp.lire(game, self._manager.config, ini, idents), idents)
+        courant = dp.courant(dp.lire(game, config, ini, idents), idents, dp.une_vie_active(game, config))
         nom = tr("Sur mesure") if courant == dp.SUR_MESURE else tr(dp.PAR_IDENT[courant].nom)
         btn = _BoutonIcone("epee", vif=courant != "normal")
         btn.setObjectName("boutonDifficulte")

@@ -26,7 +26,9 @@ class TestMedailles:
         """Un succès ajouté sans médaille tomberait sur le bronze des cartes : le dire ici."""
         for jeu in folio.JEUX:
             for s in succes.du_jeu(jeu):
-                if not (jeu == "hp5" and s.ident.startswith("complet_")):
+                if s.prereglage:        # « Terminé en … » : le métal dit le preset
+                    assert s.prereglage in medailles._FIN_DU_JEU, (jeu, s.ident)
+                elif not (jeu == "hp5" and s.ident.startswith("complet_")):
                     assert s.ident in medailles.MEDAILLES.get(jeu, {}), (jeu, s.ident)
 
     def test_les_images_existent(self):

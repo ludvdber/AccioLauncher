@@ -16,7 +16,7 @@ from src.core import captures, compat, demarrage, incrustation_wine, manette
 from src.core.chemins import chemin_relatif_sur
 from src.core import game_language as langue
 from src.core import copies_sauvegardes, memoire_4go, reglages_correctif, reprise, resolution_jeu, stats
-from src.core import qualite_rendu, texte_ue1
+from src.core import qualite_rendu, texte_ue1, une_vie
 from src.core.catalogue_blocs import GameLanguage, LangueFichiers, Trailer
 from src.core.config import Config, cache_pour
 from src.core.game_registry import Confirmer
@@ -346,14 +346,20 @@ class GameManager:
         # (`copies_sauvegardes`). Sur un fil : la toute première fois, HP3 en a
         # 25 Mo à compresser, et le clic sur JOUER ne doit pas attendre. Le jeu
         # met plusieurs secondes à charger ; une sauvegarde réécrite pendant la
-        # copie est de toute façon détectée et sa copie jetée.
+        # copie est de toute façon détectée et sa copie jetée. Les parties
+        # du joueur seulement : une copie de celle d'une seule vie la rendrait
+        # après la mort (C4, `une_vie`).
         if self.config.copies_sauvegardes and game.sauvegardes is not None:
             threading.Thread(target=copies_sauvegardes.avant_partie,
                              args=(game.id, game.sauvegardes), daemon=True,
                              name=f"copies-{game.id}").start()
 
-        # Reprendre en un clic (HP1 à HP3) : la dernière partie, sans le menu du jeu.
-        arguments = reprise.arguments(game) if self.config.reprise.get(game.id, False) else ()
+        # Reprendre en un clic (HP1 à HP3) : la dernière partie, sans le menu du jeu ; en une
+        # seule vie, celle du dossier du mode, et HP2 toujours sur son emplacement (`une_vie`).
+        joue = une_vie.pour_la_partie(game, self.config.install_path)
+        arguments = une_vie.arguments(joue)
+        if arguments is None:
+            arguments = reprise.arguments(joue) if self.config.reprise.get(game.id, False) else ()
         log.info("Lancement de %s (%s) %s", game.name, exe_path, " ".join(arguments))
         popen_kwargs: dict[str, Any] = {"cwd": str(exe_path.parent)}
         if sys.platform != "win32":

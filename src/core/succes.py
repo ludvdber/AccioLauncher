@@ -20,6 +20,15 @@ la partie qui vient de finir date ce qu'elle porte déjà de cette partie.
 une ligne par (jeu, sauvegarde, succès). Une sauvegarde effacée ou une
 aventure recommencée dans le même emplacement n'efface rien : ce qui a été
 obtenu l'a été.
+
+**« Terminé en … » (1.4, `notes/DIFFICULTE_1.4.md` § 9, point 2)** : la fin du
+jeu, lue dans la sauvegarde, ET un preset OFFICIEL tenu depuis le début de la
+partie (`sauvegardes` : `prereglage`, noté à chaque partie). Une sauvegarde
+d'avant ce suivi, ou jouée un moment sous un autre preset, ne la donne pas.
+Fin du jeu PROUVÉE (§ 8) : HP1 `SNAPES_OFFICE`, ou le `Startup` que le jeu
+sauve après le générique (niveau vide) ; HP2 la Chambre (`Adv12Chamber`) ; HP3
+`GState100`. HP4, HP5 et HP6 n'en ont pas encore : leur critère est supposé.
+Récit et Détendu n'en ont pas : plus doux que le jeu, ils ne sont pas un défi.
 """
 
 import json
@@ -44,6 +53,8 @@ class Succes:
     titre: str          # clé tr()
     description: str    # clé tr()
     obtenu: Callable[[Any], bool]
+    # Le preset tenu depuis le début de la partie qu'il faut en plus ("" : aucun).
+    prereglage: str = ""
 
 
 @dataclass(frozen=True)
@@ -163,11 +174,46 @@ def _hp6() -> tuple[Succes, ...]:
 _DEFINITIONS: dict[str, Callable[[], tuple[Succes, ...]]] = {
     "hp1": _hp1, "hp2": _hp2, "hp3": _hp3, "hp4": _hp4, "hp5": _hp5, "hp6": _hp6}
 
+# La fin du jeu dans ce qu'en lit le folio (en-tête du module).
+_FINS: dict[str, Callable[[Any], bool]] = {
+    "hp1": lambda r: r.niveau.upper() in ("SNAPES_OFFICE", ""),
+    "hp2": lambda r: r.carte.casefold() == "adv12chamber",
+    "hp3": lambda r: r.histoire.casefold() == "gstate100",
+}
+# Les presets proposés dans chaque jeu, du plus doux au plus dur
+# (`difficulte_presets.proposes` ; `test_succes` les vérifie au catalogue).
+FINS_PAR_PRESET: dict[str, tuple[str, ...]] = {
+    "hp1": ("normal", "difficile", "hardcore", "realiste", "impardonnable"),
+    "hp2": ("normal", "difficile", "hardcore", "realiste", "impardonnable"),
+    "hp3": ("normal", "realiste"),
+}
+# Écrits en entier : ce sont des clés tr().
+_TEXTES_FIN = {
+    "normal": ("Terminé en Normal",
+               "Le jeu fini au préréglage Normal, tenu depuis le début de la partie."),
+    "difficile": ("Terminé en Difficile",
+                  "Le jeu fini au préréglage Difficile, tenu depuis le début de la partie."),
+    "hardcore": ("Terminé en Hardcore",
+                 "Le jeu fini au préréglage Hardcore, tenu depuis le début de la partie."),
+    "realiste": ("Terminé en Réaliste",
+                 "Le jeu fini en une seule vie, au préréglage Réaliste, tenu depuis le début de la partie."),
+    "impardonnable": ("Terminé en Impardonnable",
+                      "Le jeu fini en une seule vie, au préréglage Impardonnable, tenu depuis le début "
+                      "de la partie."),
+}
+
+
+def _fins(jeu: str) -> tuple[Succes, ...]:
+    fin = _FINS.get(jeu)
+    if fin is None:
+        return ()
+    return tuple(Succes(f"fin_{p}", *_TEXTES_FIN[p], fin, prereglage=p) for p in FINS_PAR_PRESET[jeu])
+
 
 def du_jeu(jeu: str) -> tuple[Succes, ...]:
     """Les succès d'un jeu, dans l'ordre d'affichage ; vide s'il n'en a pas."""
     definir = _DEFINITIONS.get(jeu)
-    return definir() if definir is not None else ()
+    return (*definir(), *_fins(jeu)) if definir is not None else ()
 
 
 # ─── Lecture d'une sauvegarde ───
@@ -208,8 +254,13 @@ def evaluer(jeu: str, spec: Sauvegardes | None, rel: str) -> set[str] | None:
         return None
     if partie is None:
         return None
+    from src.core import sauvegardes
+    tenu = (sauvegardes.charger().get((jeu, rel), {}).get("prereglage")
+            if any(s.prereglage for s in definitions) else None)
     porte = set()
     for s in definitions:
+        if s.prereglage and s.prereglage != tenu:
+            continue
         try:
             if s.obtenu(partie):
                 porte.add(s.ident)

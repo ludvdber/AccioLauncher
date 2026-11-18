@@ -45,7 +45,7 @@ class TestDefinitions:
             assert not sorted(t for t in textes if t not in cles), code
 
     def test_hp1_cartes_et_maisons(self):
-        defs = {s.ident: s for s in succes.du_jeu("hp1")}
+        defs = {s.ident: s for s in succes.du_jeu("hp1") if not s.prereglage}
         r = SimpleNamespace(cartes=frozenset(range(1, 14)),
                             points={folio.GRYFFONDOR: 185, folio.SERPENTARD: 222,
                                     folio.SERDAIGLE: 164, folio.POUFSOUFFLE: 104})
