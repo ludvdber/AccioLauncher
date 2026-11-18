@@ -110,3 +110,42 @@ class TestPasDeRelectureInutile:
         monkeypatch.setattr(Path, "read_bytes", interdit)
         m.appliquer("hp1", exe)
         assert m.a_le_drapeau(exe) is True
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="droits POSIX et liens symboliques : Linux")
+class TestDroitsEtLiensGardes:
+    """`poser` réécrit l'exe par `ecrire_octets_atomique` : avant l'audit Linux du
+    2026-11-17 (C2), un exe 0755 ressortait en 0600, et un lien symbolique était
+    remplacé par un fichier tandis que sa cible restait sans le drapeau."""
+
+    def test_0755_reste_0755(self, tmp_path):
+        exe = tmp_path / "hp1.exe"
+        exe.write_bytes(_exe())
+        os.chmod(exe, 0o755)
+        assert m.poser(exe) is True
+        assert m.a_le_drapeau(exe) is True
+        assert exe.stat().st_mode & 0o7777 == 0o755
+
+    def test_0644_reste_0644(self, tmp_path):
+        exe = tmp_path / "hp1.exe"
+        exe.write_bytes(_exe())
+        os.chmod(exe, 0o644)
+        assert m.poser(exe) is True
+        assert exe.stat().st_mode & 0o7777 == 0o644
+
+    def test_le_lien_reste_un_lien_et_sa_cible_est_patchee(self, tmp_path):
+        ailleurs = tmp_path / "disque" / "hp1.exe"
+        ailleurs.parent.mkdir()
+        ailleurs.write_bytes(_exe())
+        os.chmod(ailleurs, 0o755)
+        lien = tmp_path / "jeux" / "hp1.exe"
+        lien.parent.mkdir()
+        lien.symlink_to(ailleurs)
+        assert m.poser(lien) is True
+        assert lien.is_symlink()
+        assert os.readlink(lien) == str(ailleurs)
+        assert m.a_le_drapeau(ailleurs) is True
+        assert ailleurs.stat().st_mode & 0o7777 == 0o755
+        # Aucun temporaire laissé, ni à côté du lien ni à côté de la cible.
+        assert sorted(p.name for p in lien.parent.iterdir()) == ["hp1.exe"]
+        assert sorted(p.name for p in ailleurs.parent.iterdir()) == ["hp1.exe"]

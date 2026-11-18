@@ -52,8 +52,14 @@ echo "=== Accio Launcher - Build Linux ==="
 "$PY" --version
 echo
 
-echo "Installation des dépendances de build..."
-"$PY" -m pip install -r requirements-dev.txt --quiet || echec "installation des dépendances échouée."
+# En release (ACCIO_PY), le workflow a déjà installé tests.txt, vérifié par
+# empreinte : réinstaller ici prenait sur PyPI, sans empreinte, tout plancher
+# plus haut que la version figée (ruff 0.17.5 par-dessus 0.17.3, audit Linux du
+# 2026-11-17, docs/linux/AUDIT_LINUX_CLOUD_2026-11.md, C1).
+if [ -z "${ACCIO_PY:-}" ]; then
+    echo "Installation des dépendances de build..."
+    "$PY" -m pip install -r requirements-dev.txt --quiet || echec "installation des dépendances échouée."
+fi
 echo
 
 # L'icône n'est pas générée : c'est un asset dessiné (7 tailles), vérifié ici.
