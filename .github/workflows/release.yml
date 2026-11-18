@@ -111,8 +111,12 @@ jobs:
       # L'exe embarque les paquets que la CI a testés, vérifiés par empreinte.
       # Sans cette étape, build.bat installait requirements-dev.txt, qui ne
       # donne que des planchers : l'exe prenait ce que PyPI servait le jour du
-      # build, version piégée comprise. Le `pip install` de build.bat trouve
-      # ensuite tout déjà satisfait et n'y touche plus.
+      # build, version piégée comprise. Avec ACCIO_PY posé, build.bat et
+      # build.sh n'installent plus rien eux-mêmes : un plancher de
+      # requirements-dev.txt plus haut que la version figée y faisait prendre
+      # ce paquet sur PyPI sans empreinte (ruff 0.17.5 par-dessus 0.17.3, audit
+      # Linux du 2026-11-17). `tests/test_dependances.py` vérifie que
+      # tests.txt satisfait chaque plancher.
       - name: Paquets figés (empreintes vérifiées)
         run: python -m pip install --require-hashes -r .github/requirements/tests.txt
 
