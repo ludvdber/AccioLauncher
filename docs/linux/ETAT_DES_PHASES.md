@@ -71,8 +71,9 @@ conteneur), winetricks (absent, et Wine sans support 32 bits), un vrai jeu.
   (et son empreinte), plus jamais l'`.exe`.
 - **« Redémarrer maintenant »** attend désormais la fin du processus avant de
   relancer (la relance immédiate butait sur l'instance unique).
-- **Discord** : sockets natifs, **Flatpak** (`app/com.discordapp.Discord`) et
-  Snap.
+- **Discord** : sockets natifs, **Flatpak** (`app/com.discordapp.Discord`,
+  `app/com.discordapp.DiscordCanary`, Vesktop `.flatpak/dev.vencord.Vesktop/xdg-run`)
+  et Snap (`discord_presence.dossiers_ipc`).
 - **Environnement** : l'AppImage retire ses propres bibliothèques de
   `LD_LIBRARY_PATH` pour tout ce qu'elle lance (Wine, umu, `xdg-open`, le
   navigateur).
@@ -100,9 +101,13 @@ vraie carte graphique (le conteneur n'a ni `/sys/class/drm` ni `pci.ids`).
 
 ## 9. État : phase 4 — l'AppImage et la release commune
 
-- **`./build.sh`** : icône → lint → tests → géométrie (vraies polices, Xvfb
-  sans session graphique) → PyInstaller (dossier) → AppImage, arrêt au premier
-  échec. Hors d'un environnement virtuel, il crée `.venv-build`. Bazzite n'a
+- **`./build.sh`** : dépendances → icône → lint → tests → géométrie (vraies polices, Xvfb
+  sans session graphique) → PyInstaller (dossier) → AppImage (plafond 90 Mo),
+  arrêt au premier échec. Hors d'un environnement virtuel, il crée `.venv-build`.
+  Les dépendances (`pip install -r requirements-dev.txt`, sans empreintes) ne
+  s'installent que sur un poste : avec `ACCIO_PY` (release), il n'installe rien,
+  les paquets figés de `tests.txt` sont déjà là (audit du 2026-11-17, C1 ; avant,
+  il prenait ruff 0.17.5 sur PyPI par-dessus le 0.17.3 vérifié). Bazzite n'a
   pas Xvfb : l'audit passe par la session (`DISPLAY`), ou à défaut par le premier
   affichage de `/tmp/.X11-unix` (le Xwayland de gamescope). **Ne pas exporter
   `QT_QPA_PLATFORM`** en l'appelant : `conftest.py` ne fait qu'un `setdefault`,
@@ -110,8 +115,13 @@ vraie carte graphique (le conteneur n'a ni `/sys/class/drm` ni `pci.ids`).
 - **`build/linux/appimage.py`** assemble l'AppDir (`AppRun`, `.desktop`
   `be.acciolauncher.AccioLauncher`, icônes extraites des sept tailles de
   l'`.ico`, licence et avis tiers) et appelle appimagetool 1.9.1 avec le
-  runtime `type2-runtime` 20251108, **épinglés par empreinte**. Le runtime est
-  statique : pas de libfuse2 à installer.
+  runtime `type2-runtime` 20251108, **épinglés par empreinte**. Le binaire de la
+  release 1.9.1 se présente lui-même comme « continuous build (git version
+  8c8c91f), build 296 » : c'est bien lui, l'empreinte fait foi. Le runtime est
+  statique : pas de libfuse2 à installer. `StartupWMClass` du `.desktop` =
+  l'`app_id` Wayland `be.acciolauncher.AccioLauncher` (C3 de l'audit du
+  2026-11-17 : Gear Lever renomme le `.desktop`, et KDE relie alors la
+  fenêtre par cette clé).
 - **`build/linux/dependances.py`** : ce que la machine fournit n'est pas
   embarqué (liste d'exclusion AppImage), ce que plus rien n'atteint est
   élagué (la pile GTK du greffon `libqgtk3`, 23 bibliothèques), et un dossier

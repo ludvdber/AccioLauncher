@@ -102,7 +102,7 @@ travailles, demande avant de faire apparaître un jeu à l'écran.
 3. Venv : `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt -r requirements-dev.txt`
    (recrée-le s'il existe mais date d'avant le 2026-10-15).
 4. Contrôles, à recopier dans le rapport :
-   - `.venv/bin/python -m pytest -q` : sous Windows, 3331 réussis et 30 sautés. Sous Linux, le compte diffère
+   - `.venv/bin/python -m pytest -q` : sous Windows, 3331 réussis et 30 sautés à l'écriture de cette mission (5009 et 34 au 2026-11-17 ; sous Linux, 4995 et 48). Sous Linux, le compte diffère
      (les tests Windows sautent, les tests Linux tournent). **Tout échec est un résultat** : relève-le, cherche
      la cause, corrige si c'est un défaut du launcher sous Linux.
    - `.venv/bin/python -m ruff check .` et `.venv/bin/python -m mypy` : propres.

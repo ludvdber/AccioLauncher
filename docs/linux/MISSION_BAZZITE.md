@@ -233,7 +233,7 @@ Si Ludo utilise le portable pendant que tu travailles, demande-lui avant de fair
 
 1. Ferme l'AppImage 1.1.2 si elle tourne : instance unique, et elle partage la configuration.
 2. Depuis le dépôt : `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt -r requirements-dev.txt`
-3. `.venv/bin/python -m pytest` doit être vert. Sous Linux, les ~26 tests sautés sous Windows tournent :
+3. `.venv/bin/python -m pytest` doit être vert. Sous Linux, les tests sautés sous Windows tournent (34 sautés sous Windows au 2026-11-17, dont 30 propres à Linux) :
    c'est la première fois qu'ils tournent sur un vrai Linux avec Wine. Signale tout échec.
 4. `.venv/bin/python main.py` lance le launcher depuis les sources, sur les mêmes données
    (`~/Games/AccioLauncher`, `_Launcher/config.json`). Pour le détail du journal : `ACCIO_JOURNAL=debug`.
