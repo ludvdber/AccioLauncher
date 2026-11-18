@@ -20,6 +20,11 @@ build/output/
 # (appimagetool, runtime), vérifiés par empreinte à chaque build.
 build/appimage/
 build/linux/outils/
+# Flatpak (build/flatpak/construire.sh) : l'archive du dossier gelé, le
+# travail de flatpak-builder (dépôt local, état, dossier de l'application).
+build/flatpak/AccioLauncher-linux-x86_64.tar.gz
+build/flatpak-travail/
+.flatpak-builder/
 # Environnement créé par build.sh quand il n'est pas lancé dans un venv.
 .venv-build/
 # Ressource de version : régénérée depuis APP_VERSION à chaque build par

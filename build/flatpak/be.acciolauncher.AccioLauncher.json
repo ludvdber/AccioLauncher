@@ -1,0 +1,53 @@
+{
+    "id": "be.acciolauncher.AccioLauncher",
+    "runtime": "org.freedesktop.Platform",
+    "runtime-version": "25.08",
+    "sdk": "org.freedesktop.Sdk",
+    "command": "accio-launcher",
+    "finish-args": [
+        "--share=ipc",
+        "--share=network",
+        "--socket=wayland",
+        "--socket=fallback-x11",
+        "--socket=pulseaudio",
+        "--device=all",
+        "--filesystem=~/Games/AccioLauncher:create",
+        "--filesystem=xdg-data/Steam/compatibilitytools.d:ro",
+        "--filesystem=xdg-data/umu:ro",
+        "--filesystem=xdg-pictures/Accio Launcher:create",
+        "--filesystem=xdg-music/Accio:create",
+        "--filesystem=xdg-run/discord-ipc-0",
+        "--filesystem=xdg-run/app/com.discordapp.Discord:create",
+        "--talk-name=org.freedesktop.Flatpak",
+        "--talk-name=org.kde.StatusNotifierWatcher"
+    ],
+    "modules": [
+        {
+            "name": "accio-launcher",
+            "buildsystem": "simple",
+            "build-commands": [
+                "install -d /app/lib",
+                "cp -a AccioLauncher /app/lib/AccioLauncher",
+                "install -Dm755 accio-launcher /app/bin/accio-launcher",
+                "install -Dm755 accio-hote /app/bin/accio-hote",
+                "cp -a share /app/share",
+                "desktop-file-edit --set-key=Exec --set-value=accio-launcher /app/share/applications/be.acciolauncher.AccioLauncher.desktop"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "path": "AccioLauncher-linux-x86_64.tar.gz",
+                    "strip-components": 0
+                },
+                {
+                    "type": "file",
+                    "path": "accio-launcher"
+                },
+                {
+                    "type": "file",
+                    "path": "accio-hote"
+                }
+            ]
+        }
+    ]
+}
