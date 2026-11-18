@@ -6,14 +6,31 @@ plan, puis quitte immédiatement. Lancé par « Jouer à … » de l'icône Wind
 (`liste_saut`), il demande en plus de lancer ce jeu (`jouer:<id>`).
 """
 
+import getpass
+import hashlib
 import logging
 
 from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtNetwork import QLocalServer, QLocalSocket
 
+from src.core.catalogue_blocs import _JETON_SUR
+
 log = logging.getLogger(__name__)
 
-DEFAULT_KEY = "accio-launcher-single-instance"
+
+def _cle_par_utilisateur() -> str:
+    """Le nom du serveur, propre au compte : un nom fixe est COMMUN à tous les
+    comptes d'un poste (sous Linux, un socket de `/tmp`). Le launcher d'un
+    second compte s'y connectait, demandait l'activation… et quittait ; un
+    autre compte pouvait aussi y envoyer « jouer:<id> » (audit du 2026-11-16)."""
+    try:
+        compte = getpass.getuser()
+    except (OSError, KeyError):
+        compte = ""
+    return "accio-launcher-" + hashlib.sha256(compte.encode("utf-8")).hexdigest()[:12]
+
+
+DEFAULT_KEY = _cle_par_utilisateur()
 
 
 class SingleInstance(QObject):
@@ -37,7 +54,8 @@ class SingleInstance(QObject):
         sock = QLocalSocket()
         sock.connectToServer(self._key)
         if sock.waitForConnected(timeout_ms):
-            sock.write(f"jouer:{jouer}".encode("ascii") if jouer else b"activate")
+            # « \n » termine le message : l'instance ouverte sait qu'il est entier.
+            sock.write((f"jouer:{jouer}\n" if jouer else "activate\n").encode("ascii"))
             sock.flush()
             sock.waitForBytesWritten(timeout_ms)
             if jouer:
@@ -53,6 +71,9 @@ class SingleInstance(QObject):
         # (crash de la session précédente) avant d'écouter.
         QLocalServer.removeServer(self._key)
         self._server = QLocalServer(self)
+        # Le seul compte qui l'a ouvert peut s'y connecter (droits du socket
+        # sous Linux, du tube sous Windows).
+        self._server.setSocketOptions(QLocalServer.SocketOption.UserAccessOption)
         self._server.newConnection.connect(self._on_new_connection)
         if not self._server.listen(self._key):
             # Improbable (course entre deux lancements simultanés) : on laisse
@@ -70,15 +91,27 @@ class SingleInstance(QObject):
         self.activate_requested.emit()
         # Un « jouer:<id> » suit la connexion : lu quand il arrive, sans attendre dans
         # ce slot ; déjà là, lu tout de suite (readyRead ne repartirait pas pour lui).
-        conn.readyRead.connect(lambda: self._lire(conn))
+        # Accumulé jusqu'au « \n » (ou au raccroché d'un lancement plus ancien,
+        # qui n'en mettait pas) : un message arrivé en deux morceaux se perdait,
+        # le premier coupant la connexion (audit du 2026-11-16).
+        tampon = bytearray()
+        conn.readyRead.connect(lambda: self._lire(conn, tampon))
+        conn.disconnected.connect(lambda: self._lire(conn, tampon, fin=True))
         if conn.bytesAvailable():
-            self._lire(conn)
+            self._lire(conn, tampon)
 
-    def _lire(self, conn: QLocalSocket) -> None:
-        message = bytes(conn.readAll()).decode("ascii", errors="replace")
+    def _lire(self, conn: QLocalSocket, tampon: bytearray, fin: bool = False) -> None:
+        tampon += bytes(conn.readAll())
+        if b"\n" not in tampon and not fin:
+            return
+        message = bytes(tampon).split(b"\n", 1)[0].decode("ascii", errors="replace")
+        tampon.clear()
         if message.startswith("jouer:"):
-            self.jouer_requested.emit(message[len("jouer:"):])
-        conn.disconnectFromServer()   # le second lancement attend ce signe pour partir
+            jeu = message[len("jouer:"):]
+            if _JETON_SUR.match(jeu):
+                self.jouer_requested.emit(jeu)
+        if not fin:
+            conn.disconnectFromServer()   # le second lancement attend ce signe pour partir
 
     def release(self) -> None:
         """Ferme le serveur (tests / arrêt propre)."""

@@ -123,3 +123,19 @@ class TestSpeedTracker:
         t.update(100)
         t.reset()
         assert t.speed == 0.0
+
+    def test_des_mises_a_jour_plus_espacees_que_la_fenetre(self, monkeypatch):
+        """Audit du 2026-11-16 : à plus de 5 s d'écart, un seul échantillon
+        restait ; vitesse 0 et aucun temps restant en plein téléchargement."""
+        from types import SimpleNamespace
+
+        import src.core.speed_tracker as st
+        horloge = iter([0.0, 8.0, 16.0])
+        # Le module `time` du tracker seul : pytest lit aussi l'horloge.
+        monkeypatch.setattr(st, "time", SimpleNamespace(monotonic=lambda: next(horloge)))
+        t = SpeedTracker()
+        t.update(0)
+        t.update(8_000)
+        assert t.speed == 1000.0
+        t.update(16_000)
+        assert t.speed == 1000.0 and t.eta(16_000, 26_000) == 10.0

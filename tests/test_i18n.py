@@ -292,6 +292,24 @@ class TestDecouverte:
     def test_detection_systeme_retourne_une_langue_supportee(self):
         assert is_supported(detect_system_language())
 
+    @pytest.mark.parametrize(("env", "attendu"), [
+        # Ubuntu : `LANGUAGE` est la liste de préférences, `LANG` reste en anglais.
+        ({"LANG": "en_US.UTF-8", "LANGUAGE": "fr:en"}, "fr"),
+        # « C » ne dit aucune langue : on passe à la suivante.
+        ({"LC_ALL": "C.UTF-8", "LANG": "es_ES.UTF-8"}, "es"),
+        # Une langue non proposée ne coupe pas la liste.
+        ({"LANGUAGE": "kl:fr"}, "fr"),
+    ])
+    def test_l_ordre_de_gettext_sous_linux(self, monkeypatch, env, attendu):
+        """Audit du 2026-11-16 : `LANGUAGE` lu en dernier, `LC_ALL=C` qui arrêtait tout."""
+        import src.core.i18n as i18n
+        monkeypatch.setattr(i18n.sys, "platform", "linux")
+        for var in ("LANGUAGE", "LC_ALL", "LC_MESSAGES", "LANG"):
+            monkeypatch.delenv(var, raising=False)
+        for var, valeur in env.items():
+            monkeypatch.setenv(var, valeur)
+        assert detect_system_language() == attendu
+
     def test_la_langue_de_windows_sans_liste_codee(self):
         """Une liste {en, es, fr} ne pré-choisissait jamais un 4e paquet (règle 54)."""
         from src.core.i18n import langue_windows

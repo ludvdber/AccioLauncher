@@ -76,6 +76,9 @@ class Etat:
     modifie: float      # horodatage de la dernière écriture
     cree: float | None  # horodatage de création, None si le système l'ignore
     avancement: int | None = None   # pourcentage écrit par le jeu (HP5), sinon None
+    # Emplacement d'un fichier partagé (HP4) sans date lisible : `modifie` est
+    # celle du FICHIER, qui change dès qu'un AUTRE emplacement est écrit.
+    date_du_fichier: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -225,7 +228,7 @@ def releve(spec: Sauvegardes | None) -> dict[str, Etat]:
                 # Sans date lisible, celle du fichier : l'emplacement existe,
                 # et c'est le mieux qu'on sache de lui.
                 etats[f"{rel}#{n}"] = Etat(modifie=ecrit or st.st_mtime, cree=None,
-                                           avancement=avancement)
+                                           avancement=avancement, date_du_fichier=not ecrit)
     except (OSError, ValueError) as exc:
         log.debug("Relevé des sauvegardes impossible : %s", exc)
     return etats
@@ -353,9 +356,14 @@ def modifiee(avant: dict[str, Etat], apres: dict[str, Etat]) -> str | None:
     """La sauvegarde dans laquelle on vient de jouer, ou None.
 
     Nouvelle ou réécrite ; s'il y en a plusieurs, la plus récemment écrite.
+    Un emplacement resté sans date à lui (`date_du_fichier` avant et après)
+    n'a pas changé : seule la date du fichier qu'il partage a bougé, parce
+    qu'un AUTRE emplacement y a été écrit (audit du 2026-11-16).
     """
     changees = [(etat.modifie, rel) for rel, etat in apres.items()
-                if rel not in avant or avant[rel].modifie != etat.modifie]
+                if rel not in avant
+                or (avant[rel].modifie != etat.modifie
+                    and not (etat.date_du_fichier and avant[rel].date_du_fichier))]
     return max(changees)[1] if changees else None
 
 

@@ -356,25 +356,44 @@ def _lecteur_le_plus_proche(chemin: Path, pfx: Path) -> str | None:
     son dossier à `Install Dir` et, s'ils diffèrent, part en silence par le
     chemin « insérez le disque » (code 0, essai Bazzite du 2026-10-20) : la
     valeur écrite doit donc nommer le même lecteur.
+
+    Comme Wine : les parents du chemin TEL QU'ÉCRIT, du plus profond au plus
+    haut, chacun comparé aux racines des lecteurs par identité de fichier
+    (périphérique, inode). Résoudre d'abord le chemin perdait le lecteur d'un
+    jeu atteint par un lien posé DANS ce lecteur (`~/Jeux` → `/mnt/disque`) :
+    `Z:\mnt\…` là où Wine dit `X:\Jeux\…` (audit du 2026-11-16).
     """
     try:
         entrees = sorted((pfx / "dosdevices").iterdir())  # Wine essaie a: avant b:
     except OSError:
         return None
-    resolu = Path(os.path.realpath(chemin))
-    meilleur: tuple[int, str] | None = None
+    racines: list[tuple[tuple[int, int], str]] = []
     for entree in entrees:
         nom = entree.name.lower()
         if len(nom) != 2 or nom[1] != ":" or not "a" <= nom[0] <= "y":
             continue
         try:
-            racine = Path(os.path.realpath(entree))
-            relatif = resolu.relative_to(racine)
-        except (OSError, ValueError):
+            st = entree.stat()
+        except OSError:
             continue
-        if meilleur is None or len(racine.parts) > meilleur[0]:
-            meilleur = (len(racine.parts), nom[0].upper() + ":\\" + "\\".join(relatif.parts))
-    return meilleur[1] if meilleur is not None else None
+        racines.append(((st.st_dev, st.st_ino), nom[0].upper()))
+    if not racines:
+        return None
+    courant = Path(os.path.abspath(chemin))
+    reste: list[str] = []
+    while True:
+        try:
+            ici = courant.stat()
+            identite: tuple[int, int] | None = (ici.st_dev, ici.st_ino)
+        except OSError:
+            identite = None
+        lettre = next((lt for ident, lt in racines if ident == identite), None)
+        if lettre is not None:
+            return lettre + ":\\" + "\\".join(reversed(reste))
+        if courant.parent == courant:
+            return None
+        reste.append(courant.name)
+        courant = courant.parent
 
 
 def chemin_windows(chemin: Path, pfx: Path | None = None) -> str:
@@ -874,8 +893,11 @@ def processus_du_jeu(exe: str, pfx: Path | None = None, proc: Path = Path("/proc
             arg0 = (dossier / "cmdline").read_bytes().split(b"\0")[0]
         except OSError:
             continue
-        nom = arg0.decode("utf-8", "replace").replace("\\", "/").rsplit("/", 1)[-1]
-        if comm.lower() != cible[:15] and nom.lower() != cible:
+        nom = arg0.decode("utf-8", "replace").replace("\\", "/").rsplit("/", 1)[-1].lower()
+        # Un nom d'exe complet en premier argument décide seul : `comm` n'en
+        # garde que 15 caractères, et « …-ShippingCrashReporter.exe » passait
+        # pour le jeu, qui semblait tourner encore (audit du 2026-11-16).
+        if nom != cible if nom.endswith(".exe") else comm.lower() != cible[:15]:
             continue
         if pfx is not None:
             declare = _wineprefix_de(dossier)

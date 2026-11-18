@@ -284,6 +284,9 @@ class TestToucheDuCorrectif:
     @pytest.mark.parametrize("ligne, attendu", [
         ("ScreenshotKey=123", "F12"), ("ScreenshotKey=112", "F1"), ("ScreenshotKey=44", "Impr. écran"),
         ("ScreenshotKey=80", "P"), ("ScreenshotKey=0", ""), ("", "F12"), ("ScreenshotKey=abc", ""),
+        ("ScreenshotKey=55", "7"),
+        # Audit du 2026-11-16 : 0x3A à 0x40 ne sont pas des touches (« : » à « @ »).
+        ("ScreenshotKey=58", ""), ("ScreenshotKey=64", ""),
     ])
     def test_nom_de_la_touche(self, tmp_path, ligne, attendu):
         from src.core import reglages_correctif

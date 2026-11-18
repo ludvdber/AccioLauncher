@@ -50,17 +50,3 @@ def jaquette_a_refaire(largeur: int, hauteur: int) -> bool:
 
 def fond_a_refaire(largeur: int, hauteur: int) -> bool:
     return largeur < FOND_LARGEUR_MIN or hauteur <= 0
-
-
-def a_refaire(tailles: dict[str, tuple[tuple[int, int], tuple[int, int]]]) -> list[tuple[str, str]]:
-    """[(id du jeu, « jaquette » | « fond »)], dans l'ordre du catalogue.
-
-    `tailles` : id → ((largeur, hauteur) de la jaquette, (largeur, hauteur) du fond).
-    """
-    besoins: list[tuple[str, str]] = []
-    for jeu, (jaquette, fond) in tailles.items():
-        if jaquette_a_refaire(*jaquette):
-            besoins.append((jeu, "jaquette"))
-        if fond_a_refaire(*fond):
-            besoins.append((jeu, "fond"))
-    return besoins

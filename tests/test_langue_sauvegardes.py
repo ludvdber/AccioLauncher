@@ -149,3 +149,23 @@ class TestPorter:
         monkeypatch.setattr(game_registry, "disponible", lambda: False)
         _poser(f"{FR}/auto.sav", b"partie")
         assert game_language.porter_sauvegardes(game, Config()) == []
+
+
+class TestRotationDesCopiesDeCote:
+    def test_les_copies_d_un_fichier_voisin_survivent(self, tmp_path):
+        """Audit du 2026-11-16 : « Save-*.sav » prenait aussi les copies de
+        « Save-2.sav », supprimées à la rotation de celles de « Save.sav »."""
+        cote = tmp_path / "cote"
+        cote.mkdir()
+        voisines = {f"Save-2-2026010{k}-120000.sav" for k in range(1, 4)}
+        for nom in voisines:
+            (cote / nom).write_bytes(b"autre partie")
+        fichier = tmp_path / "Save.sav"
+        for k in range(game_language._COPIES_GARDEES + 2):
+            fichier.write_bytes(b"partie")
+            t = 1_700_000_000 + 86_400 * k
+            os.utime(fichier, (t, t))
+            game_language._mettre_de_cote(fichier, cote)
+        noms = {p.name for p in cote.iterdir()}
+        assert voisines <= noms
+        assert len(noms - voisines) == game_language._COPIES_GARDEES

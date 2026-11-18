@@ -29,6 +29,7 @@ import logging
 import os
 import re
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, NamedTuple
 
@@ -180,12 +181,23 @@ def detect_system_language() -> str:
         except (AttributeError, OSError) as exc:
             log.debug("Langue système Windows indéterminable : %s", exc)
     if not raw:
-        for var in ("LC_ALL", "LC_MESSAGES", "LANG", "LANGUAGE"):
-            value = os.environ.get(var, "")
-            if value:
-                raw = value.split(".")[0].split("_")[0].split(":")[0].lower()
-                break
+        raw = next((c for c in _langues_posix(os.environ) if is_supported(c)), "")
     return raw if raw and is_supported(raw) else DEFAULT_LANGUAGE
+
+
+def _langues_posix(env: Mapping[str, str]) -> list[str]:
+    """Les codes de langue que l'environnement propose, du préféré au dernier.
+
+    L'ordre de gettext : `LANGUAGE` d'abord, liste « fr:en » de préférences
+    (réglage courant d'Ubuntu, avec `LANG=en_US`), puis `LC_ALL`,
+    `LC_MESSAGES`, `LANG`. « C » et « POSIX » ne disent aucune langue : on
+    passe au suivant. Lu en dernier, `LANGUAGE` donnait « en » au lieu de
+    « fr », et `LC_ALL=C` arrêtait la recherche (audit du 2026-11-16).
+    """
+    valeurs = [*env.get("LANGUAGE", "").split(":"),
+               *(env.get(var, "") for var in ("LC_ALL", "LC_MESSAGES", "LANG"))]
+    codes = [v.split(".")[0].split("@")[0].split("_")[0].strip().lower() for v in valeurs]
+    return [c for c in codes if c and c not in ("c", "posix")]
 
 
 def set_language(lang: str) -> None:

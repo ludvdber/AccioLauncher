@@ -140,9 +140,13 @@ def destination_config(dest_tilde: str) -> Path:
     (`pre_launch.restaurer_configs_manquantes`) : deux résolutions jumelles
     finiraient par ne plus désigner le même fichier.
     """
-    docs_dir = get_documents_dir()
-    return Path(dest_tilde.replace("~/Documents", str(docs_dir))
-                .replace("~", str(_profil_windows())))
+    # Le PRÉFIXE seul : enchaîner deux `replace` réécrivait aussi le « ~ » d'un
+    # nom court 8.3 (« LUDOVI~1 ») que le premier venait d'insérer.
+    if dest_tilde.startswith("~/Documents"):
+        return Path(str(get_documents_dir()) + dest_tilde.removeprefix("~/Documents"))
+    if dest_tilde.startswith("~"):
+        return Path(str(_profil_windows()) + dest_tilde.removeprefix("~"))
+    return Path(dest_tilde)
 
 
 def apply_config_files(

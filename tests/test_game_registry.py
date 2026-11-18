@@ -54,6 +54,7 @@ class TestRefusDeCle:
         "",
         "   ",
         "Software",                                   # trop court
+        BS.join(["Software", "Electronic Arts"]),     # l'éditeur seul (audit du 2026-11-16)
         BS.join(["Windows", "X", "Y"]),               # hors Software
         BS.join(["Software", "..", "X"]),             # remontée
         "Software" + BS + "X\x00Y",                   # octet nul

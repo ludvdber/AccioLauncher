@@ -387,7 +387,10 @@ class Downloader(QThread):
         if self.expected_sha256 and not self.expected_sha256_parts:
             log.warning("sha256 global ignoré pour un téléchargement multi-parts — "
                         "utiliser sha256_parts dans le catalogue")
-        first_part = part_paths[0]
+        # Le volume .001, pas la première URL : un catalogue qui liste ses
+        # parts dans le désordre est admis (`_numero_volume`), et 7z.exe
+        # n'ouvre un multi-volumes que par son premier volume.
+        first_part = min(part_paths, key=lambda p: p.suffix)
         log.info("Téléchargement multi-parts terminé : %s (%d parts)", first_part, total_parts)
         self.download_finished.emit(str(first_part))
 

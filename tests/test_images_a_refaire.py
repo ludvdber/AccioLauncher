@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.core.images_a_refaire import a_refaire, fond_a_refaire, jaquette_a_refaire
+from src.core.images_a_refaire import fond_a_refaire, jaquette_a_refaire
 
 
 class TestLaRegle:
@@ -38,10 +38,6 @@ class TestLaRegle:
         assert taille_a_juger("hp5", (3840, 2160)) == (3840, 2160)
         assert not fond_a_refaire(*taille_a_juger("hp5", (3840, 2160)))
         assert taille_a_juger("hp5", (3396, 1096)) == (849, 274)
-
-    def test_dans_l_ordre_du_catalogue(self):
-        tailles = {"a": ((1024, 1024), (1920, 1080)), "b": ((1080, 1500), (900, 400))}
-        assert a_refaire(tailles) == [("a", "jaquette"), ("b", "fond")]
 
 
 pytest.importorskip("pytestqt")

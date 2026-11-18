@@ -18,6 +18,7 @@ rien. Noms communs aux deux parties : `Completed_ns01` … `Completed_ns27`
 """
 
 import logging
+import math
 import re
 import struct
 from dataclasses import dataclass, field
@@ -62,7 +63,11 @@ class Partie:
     def entier(self, nom: str) -> int | None:
         """La valeur, ou None si ce jeu n'a pas ce nom (HP8 n'a pas de combats)."""
         v = self.valeurs.get(nom)
-        return None if v is None else max(0, int(v))
+        if v is None:
+            return None
+        # Un réel de la sauvegarde peut être NaN ou infini (fichier abîmé) :
+        # `int()` levait, et la page tombait avec (audit du 2026-11-16).
+        return max(0, int(v)) if math.isfinite(v) else 0
 
 
 def _noms(contenu: bytes) -> list[str]:

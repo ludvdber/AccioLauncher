@@ -55,3 +55,9 @@ class TestCheminsRefuses:
 def test_peripheriques():
     assert est_peripherique("CON") and est_peripherique("aux.int") and est_peripherique("Lpt9")
     assert not est_peripherique("Console") and not est_peripherique("com0")
+
+
+@pytest.mark.parametrize("nom", ["CONIN$", "conout$.txt", "COM¹", "lpt³.dll"])
+def test_peripheriques_que_windows_reserve_aussi(nom):
+    """Audit du 2026-11-16 : la liste de `ntpath.isreserved`, exposants compris."""
+    assert est_peripherique(nom)

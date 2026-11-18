@@ -57,7 +57,7 @@ _SEGMENTS_INTERDITS = frozenset({
 _NOMS_INTERDITS = frozenset({
     "appinit_dlls", "userinit", "shell", "load", "run", "loadappinit_dlls",
 })
-_PROFONDEUR_MIN = 2      # « Software\Editeur\Jeu » au minimum
+_PROFONDEUR_MIN = 3      # « Software\Editeur\Jeu » au minimum (2 laissait passer « Software\Editeur »)
 
 _RUCHES_LONGUES = {"HKCU": "HKEY_CURRENT_USER", "HKLM": "HKEY_LOCAL_MACHINE"}
 

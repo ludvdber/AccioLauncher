@@ -240,7 +240,9 @@ def _lire_zip(source: Path, spec: Sauvegardes) -> Paquet | str:
             compagnons = tuple(Fichier(_nom(i), z.read(i), _date(i)) for i in infos
                                if i is not p and _est_compagnon(_nom(i), spec)
                                and _dossier(i) == _dossier(p))
-            principal = Fichier(_nom(p), z.read(p), _date(p))
+            # Sans le « (2) » d'un doublon de navigateur, comme `lire()` : sinon
+            # `_renumerotes` lisait le numéro « 02 » et jetait le compagnon.
+            principal = Fichier(_DOUBLON.sub("", _nom(p)), z.read(p), _date(p))
     except (OSError, ValueError, zipfile.BadZipFile, UnicodeDecodeError, RuntimeError):
         return ILLISIBLE
     jeu = manifeste.get("jeu")

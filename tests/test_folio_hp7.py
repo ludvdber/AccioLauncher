@@ -54,6 +54,12 @@ class TestPartie:
         assert p.entier("KillCount") == 12 and p.entier("HeadShotCount") == 0
         assert p.entier("DemKillCount") is None, "HP8 n'a pas ce compteur : pas de zéro inventé"
 
+    def test_un_reel_nan_ou_infini_ne_fait_pas_tomber_la_page(self, tmp_path):
+        """Audit du 2026-11-16 : `int(nan)` et `int(inf)` levaient."""
+        p = folio_hp7.Partie(tmp_path / "auto.sav", None,
+                             valeurs={"KillCount": float("nan"), "HeadShotCount": float("inf")})
+        assert p.entier("KillCount") == 0 and p.entier("HeadShotCount") == 0
+
     def test_rien_n_est_ecrit(self, tmp_path):
         chemin = tmp_path / "auto.sav"
         chemin.write_bytes(auto_sav({"KillCount": 1}))

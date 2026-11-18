@@ -396,6 +396,17 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Adoucit le bord des ombres portées, découpé en escalier dans le jeu livré, comme "
             "une vraie ombre au soleil. Leur forme ne change pas.",
             defaut=False, onglet="image", cout=(("GPU", 1),), se_voit=True),
+    # HP5 et HP6, [Accio.Graphics] ShadowBlur du correctif (2026-11-18, décision D6 de Ludo : « on peut
+    # toujours essayer ») : la carte d'ombre du jeu floutée avant d'être lue ; la valeur est l'écart entre
+    # les prélèvements, en texels de la carte. Dans la table, mais dans le `fix_settings` d'AUCUN jeu tant
+    # que la paire avant/après n'est pas jugée et que l'archive ne porte pas la DLL qui lit la clé.
+    Reglage("ombres_floutees", "Accio.Graphics", "ShadowBlur",
+            "Bord des ombres flouté",
+            "Floute le contour des ombres portées avant que le jeu les pose sur le décor : toutes les "
+            "ombres gagnent un bord plus doux, sans changer de forme. S'ajoute aux ombres douces.",
+            choix=(0, 1, 2, 4), zero="D'origine",
+            etiquettes=((1, "Léger"), (2, "Moyen"), (4, "Fort")),
+            onglet="image", cout=(("GPU", 1),), se_voit=True, beta=True),
     # HP4, vu en jeu le 2026-10-22 au camping de la Coupe du monde : plus de
     # braises et d'escarbilles autour du feu, rien de cassé. 20 = livré.
     Reglage("particules_lointaines", "Accio.Graphics", "ParticleCullDistance",
@@ -650,7 +661,7 @@ VALEURS_DU_JEU: dict[str, ValeurChoix | bool] = {
     "lissage": False, "nettete": 0, "anticrenelage": 0, "anticrenelage_transparence": False,
     "surechantillonnage": 1, "textures_lointaines": 0, "feuillage_lointain": False,
     "mipmaps_fins": False, "textures_hd": False, "occlusion": False, "ombres_nettes": 1,
-    "ombres_douces": False, "particules_lointaines": 0, "decor_entier": 1, "halo": False,
+    "ombres_douces": False, "ombres_floutees": 0, "particules_lointaines": 0, "decor_entier": 1, "halo": False,
     "force_halo": 100, "rayons": False, "couleurs": False, "vivacite": 0, "contraste": 0,
     "vignette": 0, "brouillard": True, "vert_relief": 0, "ciel": 0,
 }

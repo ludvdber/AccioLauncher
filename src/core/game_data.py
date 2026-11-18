@@ -6,9 +6,11 @@ import json
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from functools import cmp_to_key
 from typing import Any
 from pathlib import Path
 
+from src.core.version_utils import compare_versions
 from src.core.config import GAMES_JSON_PATH, LAUNCHER_DIR_NAME
 from src.core.chemins import refus_de_chemin
 from src.core.catalogue_blocs import (  # noqa: F401  (réexportés)
@@ -58,6 +60,20 @@ from src.core.catalogue_blocs import (  # noqa: F401  (réexportés)
 )
 
 log = logging.getLogger(__name__)
+
+_cle_de_version = cmp_to_key(compare_versions)
+
+
+def composants_de_chemin(chemin: str) -> tuple[str, ...]:
+    """Les composants d'un chemin du catalogue, « / » ou « \\ » (règle 77 : sous
+    POSIX, `Path("HP1\\System\\HP.exe").parts` n'a qu'un composant)."""
+    return tuple(c for c in chemin.replace("\\", "/").split("/") if c not in ("", "."))
+
+
+def dossier_de(executable: str) -> str:
+    """Le dossier du jeu sous `install_path` : le premier composant de son
+    `executable`. Ce que « Désinstaller » efface, où `%INSTALL_DIR%` mène."""
+    return composants_de_chemin(executable)[0]
 
 # Le jeu se joue-t-il à la manette ? Trois réponses, jamais davantage : un
 # vocabulaire FERMÉ, parce que le libellé affiché en dépend et que le catalogue
@@ -368,20 +384,27 @@ class GameData:
 
     @property
     def current_download(self) -> GameVersion | None:
-        """Retourne la version recommandée (ou la dernière disponible)."""
+        """Retourne la version recommandée (ou, si elle manque, la plus récente).
+
+        « La plus récente » par numéro, pas par position : rien n'oblige le
+        catalogue distant à lister ses versions dans un ordre donné.
+        """
         for v in self.versions:
             if v.version == self.recommended_version:
                 return v
-        return self.versions[-1] if self.versions else None
+        return max(self.versions, key=lambda v: _cle_de_version(v.version), default=None)
 
     @property
     def is_downloadable(self) -> bool:
-        """True si le jeu a au moins une version réellement téléchargeable.
+        """True si la version que le launcher téléchargerait a une archive.
 
         Faux pour un jeu annoncé au catalogue dont aucune archive n'est encore
-        publiée : l'UI affiche « Bientôt disponible » à la place du bouton.
+        publiée : l'UI affiche « Bientôt disponible » à la place du bouton. Lu
+        sur `current_download`, comme le bouton : la vignette et la fiche ne
+        peuvent pas se contredire.
         """
-        return any(v.is_available for v in self.versions)
+        version = self.current_download
+        return version is not None and version.is_available
 
     def get_version(self, version_str: str) -> GameVersion | None:
         """Retourne une version spécifique par son numéro."""
@@ -417,7 +440,7 @@ class GameData:
             raise ValueError(f"executable non sûr ({raison}) : {executable[:60]!r}")
         # Le manager en tire le dossier du jeu (son premier composant) :
         # « . » ou « ./ » passeraient la barrière sans nommer aucun fichier.
-        composants = [c for c in executable.replace("\\", "/").split("/") if c not in ("", ".")]
+        composants = composants_de_chemin(executable)
         if not composants:
             raise ValueError(f"executable sans nom de fichier : {executable!r}")
         # Ce premier composant est ce que « Désinstaller » efface : jamais les
@@ -531,12 +554,25 @@ def _parse_catalog(raw: dict[str, Any] | list[Any]) -> Catalog:
         raise ValueError(f"'games' de type {type(entries).__name__}, attendu liste")
 
     games = []
+    # Un identifiant ou un dossier déjà pris : le second jeu est écarté.
+    # `get_game_path` rend `install_path/<dossier>` et « Désinstaller » l'efface ;
+    # deux jeux sur le même dossier, et désinstaller l'un effaçait l'autre
+    # (audit du 2026-11-16). Sans casse : Windows ne la distingue pas.
+    ids: set[str] = set()
+    dossiers: set[str] = set()
     for entry in entries:
         if not isinstance(entry, dict):
             log.warning("Entrée de catalogue ignorée (type %s)", type(entry).__name__)
             continue
         try:
-            games.append(GameData.from_dict(entry))
+            jeu = GameData.from_dict(entry)
+            dossier = dossier_de(jeu.executable).casefold()
+            if jeu.id.casefold() in ids or dossier in dossiers:
+                log.warning("Jeu ignoré : identifiant ou dossier déjà pris (%s, %s)", jeu.id, dossier)
+                continue
+            ids.add(jeu.id.casefold())
+            dossiers.add(dossier)
+            games.append(jeu)
         # OverflowError : `"year": 1e999` est du JSON valide, lu comme l'infini,
         # et `int()` le refuse par cette exception-là — qui n'est PAS une
         # ValueError. Elle traversait `load_catalog` : un cache abîmé faisait
@@ -550,7 +586,6 @@ def _parse_catalog(raw: dict[str, Any] | list[Any]) -> Catalog:
 
 def load_catalog(path: Path | None = None) -> Catalog:
     """Charge le catalogue le plus récent (embarqué ou cache local)."""
-    from src.core.version_utils import compare_versions
     from src.core.config import LOCAL_CATALOG_PATH as _LOCAL_CATALOG_PATH
 
     src = path or GAMES_JSON_PATH

@@ -121,6 +121,16 @@ class TestNumeroDeVolume:
         assert _numero_volume("https://x.test/archive.zip", 1) == ".002"
 
 
+class TestPartsDansLeDesordre:
+    def test_le_volume_001_est_livre(self, tmp_path, qtbot, monkeypatch):
+        """Audit du 2026-11-16 : la première URL listée était livrée à
+        l'installeur, `.002` ici, et 7z.exe n'ouvre un multi-volumes que par
+        son premier volume."""
+        _installer_httpx(monkeypatch, CORPS_V2)
+        livre = _telecharger(tmp_path, "hp7a_v1.1.7z", list(reversed(V2)))
+        assert livre is not None and Path(livre).name == "hp7a_v1.1.7z.001"
+
+
 class TestVersionPerimee:
     """Le cœur du défaut : demander la v1.1 doit livrer la v1.1."""
 

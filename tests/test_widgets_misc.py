@@ -71,6 +71,56 @@ class TestSingleInstance:
 
         first.release()
 
+    @staticmethod
+    def _envoyer(qtbot, key, *morceaux):
+        """Un client brut qui envoie son message en plusieurs écritures."""
+        from PyQt6.QtNetwork import QLocalSocket
+        sock = QLocalSocket()
+        sock.connectToServer(key)
+        assert sock.waitForConnected(2000)
+        for morceau in morceaux:
+            sock.write(morceau)
+            sock.flush()
+            sock.waitForBytesWritten(1000)
+            qtbot.wait(50)
+        return sock
+
+    def test_un_message_en_deux_morceaux_arrive_entier(self, qtbot):
+        """Audit du 2026-11-16 : le premier morceau (« jou ») était lu seul, et la
+        connexion coupée ; la demande de jeu se perdait."""
+        import uuid
+        key = f"accio-test-{uuid.uuid4().hex}"
+        first = SingleInstance(key)
+        assert first.try_acquire() is True
+        recus = []
+        first.jouer_requested.connect(recus.append)
+        sock = self._envoyer(qtbot, key, b"jou", b"er:hp4\n")
+        qtbot.waitUntil(lambda: recus == ["hp4"], timeout=3000)
+        sock.abort()
+        first.release()
+
+    def test_un_identifiant_douteux_n_est_pas_relaye(self, qtbot):
+        import uuid
+        key = f"accio-test-{uuid.uuid4().hex}"
+        first = SingleInstance(key)
+        assert first.try_acquire() is True
+        recus = []
+        first.jouer_requested.connect(recus.append)
+        sock = self._envoyer(qtbot, key, b"jouer:../../x\n")
+        qtbot.wait(300)
+        assert recus == []
+        sock.abort()
+        first.release()
+
+    def test_la_cle_depend_du_compte(self, monkeypatch):
+        """Audit du 2026-11-16 : un nom fixe est commun à tous les comptes d'un
+        poste ; le launcher d'un second compte croyait l'instance déjà ouverte."""
+        from src.ui import single_instance
+        monkeypatch.setattr(single_instance.getpass, "getuser", lambda: "ludo")
+        a = single_instance._cle_par_utilisateur()
+        monkeypatch.setattr(single_instance.getpass, "getuser", lambda: "invite")
+        assert a != single_instance._cle_par_utilisateur()
+
 
 class TestTicker:
     def test_singleton(self, qtbot):

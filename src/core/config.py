@@ -338,12 +338,19 @@ class Config:
                 return cls()
         return cls()
 
-    def save(self) -> None:
-        """Sauvegarde la configuration dans le fichier JSON (écriture atomique)."""
+    def save(self) -> bool:
+        """Sauvegarde la configuration dans le fichier JSON (écriture atomique).
+
+        Rend False si rien n'est écrit. Un échec d'écriture (disque plein,
+        fichier verrouillé par un antivirus, dossier en lecture seule) est
+        journalisé, jamais levé : une vingtaine d'appelants, dont des slots
+        d'interface, le laissaient remonter jusqu'au dialogue de plantage
+        (audit du 2026-11-16). La config reste en mémoire ; la sauvegarde
+        suivante la réécrit en entier.
+        """
         if ne_pas_ecraser(CONFIG_FILE_PATH):
             log.warning("Config illisible au démarrage : non écrasée par les défauts de la session")
-            return
-        CONFIG_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
+            return False
         data = json.dumps(
             # Les inconnues d'abord : une clé connue l'emporte toujours.
             self.inconnus | {
@@ -383,7 +390,13 @@ class Config:
             indent=4,
             ensure_ascii=False,
         )
-        ecrire_atomique(CONFIG_FILE_PATH, data)
+        try:
+            CONFIG_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
+            ecrire_atomique(CONFIG_FILE_PATH, data)
+        except OSError:
+            log.warning("Configuration non enregistrée", exc_info=True)
+            return False
+        return True
 
 
 # Les clés du JSON que cette version lit : les noms des champs, `inconnus` à part.
@@ -481,10 +494,11 @@ def _corriger_cache_path(fichier: Path, racine: Path) -> None:
         return
     if Path(ancien) != racine / ".cache":
         return
-    install = data.get("install_path", str(racine))
-    if not isinstance(install, str):
-        return
-    data["cache_path"] = str(cache_pour(Path(install)))
+    # Là où la migration vient de RANGER `.cache`, pas sous `install_path` :
+    # des jeux sur un autre disque y envoyaient la valeur, et les `.part` des
+    # téléchargements interrompus restaient orphelins, sans reprise possible
+    # (audit du 2026-11-16).
+    data["cache_path"] = str(cache_pour(racine))
     try:
         ecrire_atomique(fichier, json.dumps(data, indent=4, ensure_ascii=False))
     except OSError as exc:

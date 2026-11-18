@@ -295,11 +295,18 @@ def _textes(system: Path, langue: str) -> dict[str, str]:
 
 
 def decouper(brut: str, classe: str) -> tuple[str, str, str]:
-    """« Nom (dates). Texte » ou « Nom dates Texte » → (nom, dates, texte)."""
-    for motif in (_AVEC_PARENTHESES, _DATES_ANGLAISES):
-        trouve = motif.match(brut)
-        if trouve is not None:
-            return trouve.group(1).strip(" ."), trouve.group(2).strip(), trouve.group(3).strip()
+    """« Nom (dates). Texte » ou « Nom dates Texte » → (nom, dates, texte).
+
+    Les deux formes peuvent répondre : c'est le nom le plus COURT qui dit où
+    sont les dates. La première parenthèse venue ne suffit pas : « Glenda
+    Chittock 1964-present Popular presenter of the W.W.N (Wizarding Wireless
+    Network)… » rendait la parenthèse du TEXTE pour les dates (cartes 23 et
+    45 de la version anglaise, audit du 2026-11-16).
+    """
+    trouves = [t for motif in (_AVEC_PARENTHESES, _DATES_ANGLAISES) if (t := motif.match(brut))]
+    if trouves:
+        date = min(trouves, key=lambda t: len(t.group(1)))
+        return date.group(1).strip(" ."), date.group(2).strip(), date.group(3).strip()
     trouve = _SANS_DATES.match(brut)
     if trouve is not None:
         return trouve.group(1).strip(), "", trouve.group(2).strip()

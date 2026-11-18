@@ -23,7 +23,10 @@ class SpeedTracker:
         now = time.monotonic()
         self._samples.append((now, downloaded))
         cutoff = now - self._window
-        while self._samples and self._samples[0][0] < cutoff:
+        # Jamais moins de deux échantillons : des mises à jour espacées de
+        # plus que la fenêtre (connexion lente, gros paquets) affichaient une
+        # vitesse nulle et aucun temps restant (audit du 2026-11-16).
+        while len(self._samples) > 2 and self._samples[0][0] < cutoff:
             self._samples.popleft()
 
     def should_update_ui(self) -> bool:

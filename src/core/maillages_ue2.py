@@ -422,7 +422,10 @@ def textures(racine: Path, modele: Maillage) -> tuple[Maillage, dict[str, tuple[
                 continue
             image = q.texture_32(texture)
             if image is not None:
-                images[m.texture] = _transparence(image, seuil if drapeaux & PF_MASQUE else 0)
+                # Les drapeaux du MATÉRIAU aussi, comme le chemin à palette :
+                # seuls ceux du shader étaient lus (audit du 2026-11-16).
+                masque = materiaux[k].drapeaux & PF_MASQUE
+                images[m.texture] = _transparence(image, seuil if masque else 0)
         except (ValueError, IndexError, struct.error):
             log.warning("Matériau %s illisible", m.texture, exc_info=True)
     return replace(modele, materiaux=tuple(materiaux)), images

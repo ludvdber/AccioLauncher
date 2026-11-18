@@ -63,7 +63,14 @@ def _hp1(chemin: Path, _n: int) -> Mesure | None:
 def _hp2(chemin: Path, n: int) -> Mesure | None:
     from src.core import folio_hp2
     r = folio_hp2.releve(chemin, n)
-    return (_etape(r.histoire), len(r.cartes)) if r is not None and r.lu else None
+    if r is None:
+        return None
+    if r.lu:
+        return (_etape(r.histoire), len(r.cartes))
+    # Le tout début (le jeu n'a pas encore écrit Harry) est une mesure, zéro,
+    # comme pour HP1 et HP3 : un emplacement recommencé se voyait mal (audit
+    # du 2026-11-16).
+    return (0, 0) if _debut(chemin, None) else None
 
 
 def _hp3(chemin: Path, _n: int) -> Mesure | None:

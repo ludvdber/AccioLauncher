@@ -337,7 +337,8 @@ def _parse_language_registry(data: Any) -> LanguageRegistry | None:
         return None
     langues: list[GameLanguage] = []
     for code, entree in brut.items():
-        if not isinstance(code, str) or not isinstance(entree, dict):
+        # Le code finit dans un nom de dossier (`dossier_remplacees`).
+        if not isinstance(code, str) or not _JETON_SUR.match(code) or not isinstance(entree, dict):
             return None
         valeurs = entree.get("values")
         if not isinstance(valeurs, dict) or not valeurs:
@@ -775,7 +776,8 @@ def _parse_sauvegardes(data: Any) -> Sauvegardes | None:
 
 # Pour tout ce qui finit dans un NOM DE FICHIER (identifiant, version) :
 # « ../../../evil » écrirait hors du dossier.
-_JETON_SUR = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+# `\Z` et non `$` : `$` accepte un saut de ligne final (« 1\n » passait).
+_JETON_SUR = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*\Z")
 
 
 @dataclass(frozen=True, slots=True)
