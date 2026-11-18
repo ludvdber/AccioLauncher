@@ -156,7 +156,6 @@ class TestRayonDesCartes:
     @pytest.mark.parametrize("module, feuille, selecteur", [
         ("src.ui.difficulte_panneau", "_STYLE", "QFrame#preset"),
         ("src.ui.difficulte_panneau", "_STYLE", "QFrame#surMesure"),
-        ("src.ui.difficulte_panneau", "_STYLE", "QFrame#bientot"),
         ("src.ui.folio_page", "_STYLE", "QFrame#tuile, QFrame#coupe, QFrame#objet"),
         ("src.ui.nouveautes_page", "_STYLE", "QFrame#pointFort"),
         ("src.ui.nouveautes_page", "_STYLE", "QFrame#annonce"),

@@ -15,14 +15,17 @@ dossier et y pose la marque `une_vie_finie` ; une partie lancée ensuite est
 une nouvelle vie, gardée dans le même dossier (C4). La DLL ne vide qu'un
 dossier nommé `Save_UneVie` ou rangé dedans : tout autre chemin laisse le mode
 coupé. Elle ne lit pas non plus un chemin que la page de codes de Windows ne
-sait pas écrire (le jeu compose le sien en octets) ni plus long que 150
-caractères : le launcher ne propose alors pas le mode.
+sait pas écrire, ni, pour HP4 à HP6 qui composent le leur en octets, plus long
+que 150 caractères : le launcher ne propose alors pas le mode.
 
 **Où** (un dossier par jeu, jamais à côté de celui du joueur sous le même nom :
 `sauvegardes.json` range les parties par chemin relatif, celles du mode ne s'y
-mêlent pas) :
+mêlent pas). Un chemin FIXE : celui qui est posé dans l'ini est celui où le
+launcher relit la vie ; un dossier qui suivrait celui du joueur changerait de
+place le jour où le jeu crée le sien (HP3, nom selon la langue) :
 
-    HP1, HP3   <Documents>\<dossier du jeu>\Save_UneVie
+    HP1        <Documents>\Harry Potter\Save_UneVie
+    HP3        <Documents>\Harry Potter et le prisonnier d'Azkaban\Save_UneVie
     HP2        <Documents>\Harry Potter II\Save_UneVie\Slot7, lancé avec -SAVESLOT=7
                (ses emplacements vont de 1 à 6 ; la DLL remet à la fermeture
                l'emplacement que `Game.ini` nommait avant, VU le 2026-11-18)
@@ -50,7 +53,7 @@ from pathlib import Path
 from src.core import reglages_correctif as rc
 from src.core import sauvegardes
 from src.core.catalogue_blocs import Sauvegardes
-from src.core.game_data import GameData, dossier_de
+from src.core.game_data import GameData
 
 log = logging.getLogger(__name__)
 
@@ -60,7 +63,7 @@ CLE_COMPTEUR = "DeathCounter"
 CLE_DOSSIER = "OneLifeSaves"
 NOM = "Save_UneVie"
 MARQUE = "une_vie_finie"
-_LONGUEUR_MAX = 150
+_LONGUEUR_MAX = 150     # HP4 à HP6 (`SHGetFolderPathA` détourné, chemin en octets)
 # Ce qu'un chemin ne peut pas porter dans l'ini : le correctif coupe la valeur
 # à un commentaire de fin de ligne (`reglages_correctif._valeur`).
 _INTERDITS = (";", "//", "\r", "\n", "\x00")
@@ -75,8 +78,8 @@ class Mode:
     valeur: int     # OneLife
     apres: str      # clé tr() : ce que le joueur voit après la première mort
     note: str = ""  # clé tr() : ce qui finit la vie quand ce n'est pas « Harry »
-    # Le dossier du jeu sous Documents, quand le catalogue le nomme par un motif
-    # et que le jeu ne l'a pas encore créé (HP3 : nom selon la langue).
+    # Le dossier du jeu sous Documents quand le catalogue le nomme par un motif
+    # (HP3 : un nom par langue) : le mode en prend un, toujours le même.
     parent: str = ""
 
 
@@ -112,53 +115,47 @@ def dossier(game: GameData) -> Path | None:
         return None
     if spec.racine == "localappdata":
         return base / NOM / game.id.upper()
-    parent = _parent(game, spec, base)
+    parent = _parent(game, spec)
     if parent is None:
         return None
-    mode = parent / NOM
+    mode = base / parent / NOM
     return mode / f"Slot{_EMPLACEMENT_HP2}" if game.id == "hp2" else mode
 
 
-def _parent(game: GameData, spec: Sauvegardes, base: Path) -> Path | None:
-    """Le dossier du jeu sous Documents : celui où il sauvegarde déjà, sinon
-    celui que le catalogue nomme sans motif, sinon celui de `Mode.parent`."""
-    trouve = sauvegardes.dossier(spec)
-    if trouve is not None:
-        return trouve.parent
-    nomme = Path(spec.dossiers[0]).parent if spec.dossiers else Path()
-    if nomme.parts and not any(c in str(nomme) for c in "*?["):
-        return base / nomme
-    return base / MODES[game.id].parent if MODES[game.id].parent else None
+def _parent(game: GameData, spec: Sauvegardes) -> str | None:
+    """Le dossier du jeu sous Documents : celui que le catalogue nomme, ou
+    `Mode.parent` quand il le nomme par un motif. Jamais celui qu'on trouve sur
+    le disque : il dépend de la langue jouée (en-tête du module)."""
+    nomme = Path(spec.dossiers[0]).parent.as_posix() if spec.dossiers else ""
+    if nomme not in ("", ".") and not any(c in nomme for c in "*?["):
+        return nomme
+    return MODES[game.id].parent or None
 
 
 def spec_du_mode(game: GameData) -> Sauvegardes | None:
     """Les sauvegardes de la partie à une seule vie, avec des chemins relatifs
     qui ne peuvent pas être ceux du joueur (`Save_UneVie/…`, `Electronic Arts/…`)."""
     spec, ou = game.sauvegardes, dossier(game)
-    if spec is None or ou is None:
-        return None
-    base = sauvegardes.racines().get(spec.racine)
-    if base is None:
+    if spec is None or ou is None:      # `dossier` : jeu sans mode, ou racine inconnue
         return None
     if spec.racine == "localappdata":
         return replace(spec, dossiers=(f"{NOM}/{game.id.upper()}",),
                        fichiers=f"{spec.dossiers[0]}/{spec.fichiers}")
-    racine_jeu = ou.parent.parent if game.id == "hp2" else ou.parent
-    try:
-        relatif = racine_jeu.relative_to(base).as_posix()
-    except ValueError:
+    parent = _parent(game, spec)
+    if parent is None:
         return None
-    return replace(spec, dossiers=(relatif,), fichiers=f"{NOM}/{spec.fichiers}")
+    return replace(spec, dossiers=(parent,), fichiers=f"{NOM}/{spec.fichiers}")
 
 
-def pour_le_jeu(chemin: Path) -> str | None:
-    """Le chemin tel que le JEU le lira, ou None si le correctif le refuserait."""
+def pour_le_jeu(chemin: Path, plafond: bool = False) -> str | None:
+    """Le chemin tel que le JEU le lira, ou None si le correctif le refuserait ;
+    `plafond` : 150 caractères au plus (HP4 à HP6)."""
     if sys.platform == "win32":
         texte, codage = str(chemin), "mbcs"
     else:
         from src.core import compat
         texte, codage = compat.chemin_windows(chemin), compat.encodage_ansi()
-    if len(texte) > _LONGUEUR_MAX or any(c in texte for c in _INTERDITS):
+    if (plafond and len(texte) > _LONGUEUR_MAX) or any(c in texte for c in _INTERDITS):
         return None
     try:
         texte.encode(codage)
@@ -173,7 +170,7 @@ def ini(game: GameData, install_path: Path) -> Path | None:
     """L'ini du correctif de ce jeu, s'il porte les clés du mode."""
     if game.id not in MODES:
         return None
-    chemin = rc.ini_du_correctif(Path(install_path) / dossier_de(game.executable))
+    chemin = rc.ini_du_correctif(Path(install_path) / Path(game.executable).parent)
     return chemin if rc.valeur_posee(chemin, SECTION, CLE_MODE) is not None else None
 
 
@@ -182,7 +179,11 @@ def possible(game: GameData, chemin_ini: Path | None) -> bool:
     if chemin_ini is None or game.id not in MODES:
         return False
     ou = dossier(game)
-    return ou is not None and pour_le_jeu(ou) is not None
+    return ou is not None and _pour(game, ou) is not None
+
+
+def _pour(game: GameData, ou: Path) -> str | None:
+    return pour_le_jeu(ou, plafond=game.sauvegardes is not None and game.sauvegardes.racine == "localappdata")
 
 
 def actif(chemin_ini: Path | None) -> bool:
@@ -218,7 +219,7 @@ def entrer(game: GameData, chemin_ini: Path) -> bool:
     mode coupé. Le dossier est créé ici pour que la page le lise aussitôt
     (la DLL sait aussi le créer)."""
     ou = dossier(game)
-    texte = pour_le_jeu(ou) if ou is not None else None
+    texte = _pour(game, ou) if ou is not None else None
     if ou is None or texte is None:
         return False
     try:

@@ -48,7 +48,6 @@ from src.core import (
 from src.core import difficulte_presets as dp
 from src.core.catalogue_blocs import Sauvegardes
 from src.core.discord_presence import DiscordPresence
-from src.core.game_data import dossier_de
 from src.core.game_manager import GameManager
 from src.core.i18n import get_language, tr
 from src.ui import resume_partie
@@ -257,7 +256,7 @@ class GameSession(QObject):
                 # La DLL a vidé le dossier du mode : le joueur l'apprend en revenant.
                 if self._une_vie and self._debut is not None:
                     fin = compteur_morts.lire(
-                        self._manager.config.install_path / dossier_de(game.executable)).derniere_fin
+                        self._manager.config.install_path / Path(game.executable).parent).derniere_fin
                     vie_finie = fin is not None and fin >= self._debut
                 # La remise n'est proposée que si elle est POSSIBLE : sinon la
                 # question n'aurait pas de bonne réponse, et l'arrêt reçoit la

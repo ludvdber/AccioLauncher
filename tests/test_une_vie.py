@@ -2,7 +2,6 @@
 qui le joue, et ce que le joueur en voit (atelier, `notes/DIFFICULTE_1.4.md` § 6 et § 9 ; C4, C5)."""
 import dataclasses
 import json
-import os
 from datetime import datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
@@ -52,12 +51,12 @@ class TestDossier:
             assert une_vie.dossier(_CATALOGUE[jeu]) == local / "Save_UneVie" / jeu.upper()
         assert une_vie.dossier(_CATALOGUE["hp7a"]) is None, "HP7 et HP8 : de côté"
 
-    def test_hp3_suit_le_dossier_ou_le_jeu_sauvegarde_deja(self):
-        """Son nom suit la langue d'installation ; sans partie, le nom français."""
-        docs = _racine("documents")
-        assert une_vie.dossier(_CATALOGUE["hp3"]) == docs / "Harry Potter et le prisonnier d'Azkaban" / "Save_UneVie"
-        (docs / "Harry Potter and the Prisoner of Azkaban" / "Save").mkdir(parents=True)
-        assert une_vie.dossier(_CATALOGUE["hp3"]) == docs / "Harry Potter and the Prisoner of Azkaban" / "Save_UneVie"
+    def test_hp3_garde_le_meme_dossier_quand_le_jeu_cree_le_sien(self):
+        """Le dossier du joueur suit la langue jouée : celui du mode, posé dans l'ini, ne bouge pas."""
+        attendu = _racine("documents") / "Harry Potter et le prisonnier d'Azkaban" / "Save_UneVie"
+        assert une_vie.dossier(_CATALOGUE["hp3"]) == attendu
+        (_racine("documents") / "Harry Potter and the Prisoner of Azkaban" / "Save").mkdir(parents=True)
+        assert une_vie.dossier(_CATALOGUE["hp3"]) == attendu
 
     @pytest.mark.parametrize("jeu", ["hp1", "hp2", "hp3", "hp4", "hp5", "hp6"])
     def test_les_parties_du_mode_ne_se_melent_pas_a_celles_du_joueur(self, jeu):
@@ -80,13 +79,15 @@ class TestDossier:
         for chemin in (dans_le_mode, chez_le_joueur):
             chemin.parent.mkdir(parents=True, exist_ok=True)
             chemin.write_bytes(b"\0" * 0x600)
-        du_mode = set(sauvegardes.releve(une_vie.spec_du_mode(game)))
-        du_joueur = set(sauvegardes.releve(game.sauvegardes))
+        du_mode = set(sauvegardes.fichiers(une_vie.spec_du_mode(game)))
+        du_joueur = set(sauvegardes.fichiers(game.sauvegardes))
         assert du_mode and du_joueur and not du_mode & du_joueur, (du_mode, du_joueur)
 
     def test_un_chemin_que_le_correctif_refuserait_n_est_pas_propose(self, tmp_path):
         assert une_vie.pour_le_jeu(tmp_path / "Save_UneVie") is not None
-        assert une_vie.pour_le_jeu(tmp_path / ("x" * 160) / "Save_UneVie") is None, "plus de 150 caractères"
+        long = tmp_path / ("x" * 160) / "Save_UneVie"
+        assert une_vie.pour_le_jeu(long, plafond=True) is None, "HP4 à HP6 : plus de 150 caractères"
+        assert une_vie.pour_le_jeu(long) is not None, "HP1 à HP3 : pas de plafond relevé"
         assert une_vie.pour_le_jeu(tmp_path / "a;b" / "Save_UneVie") is None, "coupé au commentaire"
         assert une_vie.pour_le_jeu(tmp_path / "" / "Save_UneVie") is None, "hors de la page de codes"
 
@@ -169,6 +170,29 @@ class TestLancement:
         assert une_vie.arguments(joue) is None
         assert reprise.arguments_pour("hp1", une_vie.dossier(game) / "Save3.usa") == ("?load=3",)
         assert joue.sauvegardes.fichiers.startswith("Save_UneVie/")
+
+    def test_le_vrai_lancement_de_hp2_passe_par_son_emplacement(self, tmp_path, monkeypatch):
+        """`GameManager.launch_game` : en une seule vie, HP2 part sur l'emplacement 7 même sans la reprise."""
+        from unittest.mock import patch
+
+        from src.core.config import Config
+        from src.core.game_data import Catalog
+        from src.core.game_manager import GameManager
+        game = _CATALOGUE["hp2"]
+        catalogue = Catalog(catalog_version="1.0", catalog_url="", games=(game,))
+        monkeypatch.setattr("src.core.config.CONFIG_FILE_PATH", tmp_path / "config.json")
+        with patch("src.core.game_manager.load_catalog", return_value=catalogue):
+            manager = GameManager(Config(install_path=tmp_path, cache_path=tmp_path / ".cache"))
+        exe = tmp_path / game.executable
+        exe.parent.mkdir(parents=True, exist_ok=True)
+        exe.write_bytes(b"")
+        une_vie.entrer(game, _installer(tmp_path, "hp2"))
+        monkeypatch.setattr("src.core.game_manager.prerequis_manquants", lambda _r: [])
+        monkeypatch.setattr(GameManager, "apply_game_language", lambda self, g, confirmer=None: True)
+        lignes: list = []
+        monkeypatch.setattr("src.core.game_manager.subprocess.Popen", lambda args, **k: lignes.append(args))
+        manager.launch_game("hp2")
+        assert lignes and lignes[0][1:] == ["PrivetDr.unr", "-SAVESLOT=7"]
 
     def test_au_lancement_le_preset_tenu(self, tmp_path):
         game = _CATALOGUE["hp1"]
@@ -348,7 +372,7 @@ class TestFenetre:
         panneau = page._panneau
         assert [c.ident for c in panneau.cartes_presets] == ["normal"]
         assert [c.ident for c in panneau.cartes_une_vie] == ["realiste"], "Impardonnable : Hardcore ne change rien"
-        explication = panneau.findChild(type(panneau.etat_une_vie), "explicationUneVie")
+        explication = page.findChild(type(panneau.etat_une_vie), "explicationUneVie")   # posé par la fenêtre
         assert "héros que vous jouez" in explication.text()
         assert panneau.etat_une_vie.isHidden(), "mode coupé : rien à dire"
         realiste = panneau.cartes_une_vie[0]
@@ -364,18 +388,21 @@ class TestFenetre:
 
     def test_le_toast_dit_la_fin_de_vie(self, make_window, monkeypatch):
         win = make_window()
+        win.show()
         win._session.vie_terminee.emit("hp6")
         assert win._toast.isVisible()
-        assert "votre vie s'est terminée" in win._toast._label.text()
+        assert "votre vie s'est terminée" in win._toast.text()
 
     def test_les_defis_montrent_le_compteur(self, qtbot, tmp_path):
+        from PyQt6.QtWidgets import QLabel
+
         from src.ui.defis_page import DefisPage
         (tmp_path / compteur_morts.FICHIER).write_text(
             "2026-11-18T10:00:00\tmort\tSave0\tHarry\n2026-11-18T10:00:01\tune_vie_fin\t\t5400\n"
             "2026-11-18T11:00:00\tchute_balai\tquid\tHarry\n", encoding="utf-8")
         page = DefisPage(dataclasses.replace(_CATALOGUE["hp1"], sauvegardes=None), dossier_exe=tmp_path)
         qtbot.addWidget(page)
-        textes = [[lbl.text() for lbl in t.findChildren(type(page)._TEXTE)] for t in page.tuiles_morts]
+        textes = [[lbl.text() for lbl in t.findChildren(QLabel)] for t in page.tuiles_morts]
         assert [t[:2] for t in textes] == [["1", "Morts"], ["1", "Vies terminées"],
                                            ["1 h 30 min", "La plus longue vie"]]
 
@@ -385,7 +412,3 @@ class TestFenetre:
         qtbot.addWidget(page)
         assert page.tuiles_morts == []
 
-
-def test_l_horloge_du_test_ne_triche_pas():
-    """`os` reste importé pour les dates des fichiers des tests au-dessus."""
-    assert os.sep

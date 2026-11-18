@@ -14,6 +14,8 @@ deux, sur le jeu choisi comme le Folio. Bâtis à la visite, oubliés quand le
 jeu change.
 """
 
+from pathlib import Path
+
 from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
@@ -21,7 +23,6 @@ from PyQt6.QtWidgets import (
 )
 
 from src.core import folio
-from src.core.game_data import dossier_de
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
 from src.ui.composants import colonne_centree, TAILLE_MINIMALE_PAGE, feuille_de_style, filtre, texte
@@ -241,7 +242,7 @@ class CarnetPage(QDialog):
         if self._defis is None:
             from src.ui.defis_page import DefisPage
             self._defis = DefisPage(game, dossier_exe=self.manager.config.install_path
-                                    / dossier_de(game.executable))
+                                    / Path(game.executable).parent)
             self._pile.addWidget(self._defis)
         self._pile.setCurrentWidget(self._defis)
 

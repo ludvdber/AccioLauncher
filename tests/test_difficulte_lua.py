@@ -1,5 +1,7 @@
 """La difficulté de HP6 par ses scripts Lua : le launcher pose le script réglé dans `lua_launcher`
 et laisse la clé jumelle du correctif à l'origine (les deux se multiplieraient)."""
+from types import SimpleNamespace
+
 import pytest
 
 from src.core import difficulte_lua as dl
@@ -159,14 +161,16 @@ class TestParLesReglages:
 
     def test_un_preset_pose_ses_scripts_et_normal_les_retire(self, jeu):
         ini, game = jeu / "d3d9.ini", _game()
+        # Le jeu installé ailleurs : `appliquer` y cherche les clés de la seule vie, absentes.
+        config = SimpleNamespace(install_path=jeu / "ailleurs")
         idents = dp.idents_du_jeu(game, ini)
-        assert dp.appliquer(dp.PAR_IDENT["hardcore"], game, None, ini, idents) == []
+        assert dp.appliquer(dp.PAR_IDENT["hardcore"], game, config, ini, idents) == []
         assert dp.courant(dp.lire(game, None, ini, idents), idents) == "hardcore"
         assert sorted(p.name for p in (jeu / dl.DOSSIER_FOURNI).iterdir()) == [
             "degats_recus.lua", "ennemis_plus_resistants.lua", "ennemis_plus_vifs.lua", "regeneration.lua"]
-        assert dp.appliquer(dp.PAR_IDENT["detendu"], game, None, ini, idents) == []
+        assert dp.appliquer(dp.PAR_IDENT["detendu"], game, config, ini, idents) == []
         assert "multiplier = true" in _script(jeu, "degats_recus")
-        assert dp.appliquer(dp.PAR_IDENT["normal"], game, None, ini, idents) == []
+        assert dp.appliquer(dp.PAR_IDENT["normal"], game, config, ini, idents) == []
         assert list((jeu / dl.DOSSIER_FOURNI).iterdir()) == []
         assert dp.courant(dp.lire(game, None, ini, idents), idents) == "normal"
 
