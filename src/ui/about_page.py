@@ -404,7 +404,7 @@ def _depannage(manager) -> QFrame:
 def _numeros(cible: str, catalogue: str | None) -> str:
     """« VERSION X  ·  CATALOGUE Y », le premier numéro en lien vers `cible`.
     Le numéro du catalogue vient de l'extérieur : échappé."""
-    numeros = html_lien(cible, escape(tr("Version {}").format(APP_VERSION).upper(), quote=False))
+    numeros = html_lien(cible, escape(tr("Version {}").upper().format(APP_VERSION), quote=False))
     if catalogue is not None:
         numeros += "&nbsp;&nbsp;·&nbsp;&nbsp;" + escape(
             tr("Catalogue {}").format(catalogue).upper(), quote=False)

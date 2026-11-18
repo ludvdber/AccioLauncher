@@ -190,9 +190,9 @@ class TestConfig:
             assert Config.exists() is True
 
     def test_app_version_format(self):
-        parts = APP_VERSION.split(".")
-        assert len(parts) == 3
-        assert all(p.isdigit() for p in parts)
+        """Trois nombres, et pour une bêta un suffixe SemVer (« 1.3.6-beta.1 ») : l'exe n'en garde
+        que le noyau dans ses 4 entiers (`accio_launcher.spec`)."""
+        assert re.fullmatch(r"\d+\.\d+\.\d+(-(beta|rc)\.\d+)?", APP_VERSION), APP_VERSION
 
     def test_pyproject_annonce_la_meme_version(self):
         """`pyproject.toml` est la source de vérité des métadonnées ; une version
@@ -209,9 +209,10 @@ class TestConfig:
         une version antérieure à celle qu'il propose au téléchargement."""
         racine = Path(__file__).resolve().parent.parent
         texte = (racine / "README.md").read_text(encoding="utf-8")
-        badge = re.search(r"badge/version-([0-9.]+)-", texte)
+        # shields.io écrit un tiret du texte « -- » (« 1.3.6--beta.1 »).
+        badge = re.search(r"badge/version-((?:[0-9a-z.]|--)+)-", texte)
         assert badge is not None, "badge de version absent du README"
-        assert badge.group(1) == APP_VERSION
+        assert badge.group(1).replace("--", "-") == APP_VERSION
 
 
 class TestChaqueReglageEstReellementPersiste:

@@ -98,7 +98,7 @@ def cache_pour(install_path: Path) -> Path:
 # embarquees : permet a un traducteur de tester son fichier sans release.
 USER_I18N_DIR = LAUNCHER_DATA_PATH / "i18n"
 
-APP_VERSION = "1.3.5"
+APP_VERSION = "1.3.6-beta.1"
 
 
 def _as_str(value: object, default: str) -> str:
@@ -260,6 +260,9 @@ class Config:
     # Taille du texte de HP1/HP2 (id → « petit », « grand », « tres_grand »,
     # « origine »). Absent : automatique, d'après la hauteur de l'image (`texte_ue1`).
     taille_texte: dict[str, str] = field(default_factory=dict)
+    # Qualité du rendu D3D11 de HP1/HP2 (id → « maximale », « equilibree », « legere »).
+    # Absent : rien n'est écrit, l'ini reste celui de l'installation (`qualite_rendu`).
+    qualite_rendu: dict[str, str] = field(default_factory=dict)
     # Panne du correctif déjà signalée au retour d'une partie (id → empreinte des lignes du journal,
     # `journal_correctif.signature`) : la même panne à chaque lancement ne se redit pas.
     correctif_signale: dict[str, str] = field(default_factory=dict)
@@ -321,6 +324,7 @@ class Config:
                     game_language=_as_map(data.get("game_language"), str),
                     resolution_jeu=_as_map(data.get("resolution_jeu"), str),
                     taille_texte=_as_map(data.get("taille_texte"), str),
+                    qualite_rendu=_as_map(data.get("qualite_rendu"), str),
                     correctif_signale=_as_map(data.get("correctif_signale"), str),
                     inconnus={k: v for k, v in data.items() if k not in _CLES_CONNUES},
                 )
@@ -378,6 +382,7 @@ class Config:
                 "game_language": self.game_language,
                 "resolution_jeu": self.resolution_jeu,
                 "taille_texte": self.taille_texte,
+                "qualite_rendu": self.qualite_rendu,
                 "correctif_signale": self.correctif_signale,
             },
             indent=4,

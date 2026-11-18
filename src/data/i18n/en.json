@@ -1532,6 +1532,10 @@
     "Compteurs": "Counters",
     "Chacun règle d'un coup : {}.": "Each one sets at once: {}.",
     "Ce que change « {} »": "What “{}” changes",
-    "Rien : ses réglages sont déjà en place.": "Nothing: its settings are already in place."
+    "Rien : ses réglages sont déjà en place.": "Nothing: its settings are already in place.",
+    "Qualité du rendu": "Rendering quality",
+    "Les effets que la carte graphique calcule à chaque image. Maximale : tout, tel qu'installé. Équilibrée : bords lissés moins fort, sans reflets ni relief des surfaces, à distance de vue normale. Légère : sans lissage ni aucun de ces effets, pour un PC portable ou un jeu qui saccade. Appliquée au prochain lancement ; le menu du jeu ne règle pas ces effets.": "The effects the graphics card computes for every frame. Maximum: everything, as installed. Balanced: softer edge smoothing, no reflections or surface relief, at normal view distance. Light: no smoothing and none of these effects, for a laptop or a game that stutters. Applied at the next launch; the game's menu does not control these effects.",
+    "Lancer sur la carte graphique la plus puissante": "Run on the most powerful graphics card",
+    "Ce PC a deux cartes graphiques, et Windows lance souvent ce jeu sur la plus économe. Allumé, le launcher le note dans les réglages graphiques de Windows (Paramètres > Affichage > Graphiques), pour ce jeu seulement ; éteint, il le retire.": "This PC has two graphics cards, and Windows often runs this game on the more economical one. When on, the launcher records it in Windows graphics settings (Settings > Display > Graphics), for this game only; when off, it removes it."
   }
 }

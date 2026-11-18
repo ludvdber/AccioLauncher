@@ -201,6 +201,19 @@ def apply_ini_patches(game: GameData, config: Config) -> None:
         ecrire_cle_ini(patch, game, config, effective_value)
 
 
+def _meme_nom(a: str, b: str) -> bool:
+    """Sections et clés d'un ini d'UE1 se comparent SANS casse, comme le moteur :
+    « [engine.engine] » est la section du catalogue, et l'écriture en ajoutait
+    une seconde à côté, l'ancienne valeur restant lue (audit du 2026-11-16)."""
+    return a.casefold() == b.casefold()
+
+
+def _entete(ligne: str) -> str | None:
+    """Le nom de la section qu'ouvre cette ligne, None si ce n'en est pas une."""
+    propre = ligne.strip()
+    return propre[1:-1] if propre.startswith("[") and propre.endswith("]") else None
+
+
 def lire_cle_ini(patch: IniPatch, game: GameData, config: Config) -> str | None:
     """La valeur que porte `[section] clé` du fichier du patch, None si absente.
 
@@ -217,35 +230,46 @@ def lire_cle_ini(patch: IniPatch, game: GameData, config: Config) -> str | None:
         return None
     section: str | None = None
     for ligne in lignes:
-        propre = ligne.strip()
-        if propre.startswith("[") and propre.endswith("]"):
-            section = propre[1:-1]
+        if (nom := _entete(ligne)) is not None:
+            section = nom
             continue
-        if section == patch.section:
+        if section is not None and _meme_nom(section, patch.section):
+            propre = ligne.strip()
             egal = propre.find("=")
-            if egal > 0 and propre[:egal].rstrip() == patch.key:
+            if egal > 0 and _meme_nom(propre[:egal].rstrip(), patch.key):
                 return propre[egal + 1:].strip()
     return None
 
 
 def ecrire_cle_ini(patch: IniPatch, game: GameData, config: Config,
                    valeur: str | None = None) -> bool:
-    """Pose `[section] clé=valeur` dans le fichier du patch. True si c'est fait.
+    """Pose `[section] clé=valeur` dans le fichier du patch. True si c'est fait."""
+    return ecrire_cles_ini(patch.file, patch.section,
+                           {patch.key: patch.value if valeur is None else valeur}, game, config)
+
+
+def ecrire_cles_ini(fichier: str, section: str, valeurs: Mapping[str, str],
+                    game: GameData, config: Config) -> bool:
+    """Pose chaque `clé=valeur` dans `[section]` du fichier, en UNE lecture et
+    UNE écriture (règle 140). True si c'est fait.
 
     Patche ligne par ligne (sans configparser.write, pour garder commentaires et
-    ordre). Un fichier ABSENT n'est pas créé : c'est le jeu qui l'écrit.
+    ordre) ; sections et clés sans casse, comme le moteur ; seule la PREMIÈRE
+    ligne d'une clé change, toute autre ligne reste à l'octet. Un fichier
+    ABSENT n'est pas créé : c'est le jeu qui l'écrit.
     """
-    ini_path = resolve_safe_path(patch.file, game, config)
+    ini_path = resolve_safe_path(fichier, game, config)
     if ini_path is None:
         return False
     if not ini_path.exists():
         log.warning("Fichier INI introuvable, skip : %s", ini_path)
         return False
-    value = substituer_pour_le_jeu(patch.value if valeur is None else valeur, game, config)
+    restant = {cle: substituer_pour_le_jeu(v, game, config) for cle, v in valeurs.items()}
     # Un saut de ligne ajouterait ses propres lignes à l'ini.
-    if any(c in s for s in (patch.section, patch.key, value) for c in "\r\n"):
-        log.warning("Patch INI refusé (saut de ligne) : [%s] %s", patch.section, patch.key)
+    if any(c in s for s in (section, *restant, *restant.values()) for c in "\r\n"):
+        log.warning("Patch INI refusé (saut de ligne) : [%s] %s", section, ", ".join(restant))
         return False
+    poses = dict(restant)
     encodage = _encodage_ini()
     try:
         with ini_path.open("r", encoding=encodage,
@@ -254,45 +278,44 @@ def ecrire_cle_ini(patch: IniPatch, game: GameData, config: Config,
             # ligne sont normalisées, ce que suppose le patch ci-dessous.
             lines = f.read().splitlines(keepends=True)
         current_section: str | None = None
-        found = False
         for i, line in enumerate(lines):
-            stripped = line.strip()
-            if stripped.startswith("[") and stripped.endswith("]"):
-                current_section = stripped[1:-1]
+            if (nom := _entete(line)) is not None:
+                current_section = nom
                 continue
-            if current_section == patch.section:
+            if current_section is not None and _meme_nom(current_section, section):
+                stripped = line.strip()
                 eq_pos = stripped.find("=")
-                if eq_pos > 0 and stripped[:eq_pos].rstrip() == patch.key:
-                    lines[i] = f"{patch.key}={value}\n"
-                    found = True
-                    break
-        if not found:
+                if eq_pos > 0:
+                    lue = stripped[:eq_pos].rstrip()
+                    cle = next((k for k in restant if _meme_nom(k, lue)), None)
+                    if cle is not None:
+                        lines[i] = f"{cle}={restant.pop(cle)}\n"
+        if restant:
             # Dans SA section, après sa dernière ligne non vide. En fin de
             # fichier, la clé tombait sous la DERNIÈRE section : le lancement
             # suivant ne la trouvait toujours pas et en ajoutait une autre
             # (grand audit du 2026-11-02).
             if lines and not lines[-1].endswith("\n"):
                 lines[-1] += "\n"
-            nouvelle = f"{patch.key}={value}\n"
+            nouvelles = [f"{cle}={v}\n" for cle, v in restant.items()]
             debut = next((i for i, line in enumerate(lines)
-                          if line.strip() == f"[{patch.section}]"), None)
+                          if (nom := _entete(line)) is not None and _meme_nom(nom, section)), None)
             if debut is None:
-                lines += [f"[{patch.section}]\n", nouvelle]
+                lines += [f"[{section}]\n", *nouvelles]
             else:
                 fin = next((i for i in range(debut + 1, len(lines))
-                            if lines[i].strip().startswith("[") and lines[i].strip().endswith("]")),
-                           len(lines))
+                            if _entete(lines[i]) is not None), len(lines))
                 while fin > debut + 1 and not lines[fin - 1].strip():
                     fin -= 1
-                lines.insert(fin, nouvelle)
+                lines[fin:fin] = nouvelles
         # Encodage du MOTEUR : en UTF-8, UE1 lisait « FrÃ©dÃ©ric ». Encodé
         # AVANT de toucher au fichier, puis posé d'un seul coup : un « w » le
         # vidait d'abord, et une valeur hors de la page ANSI ou un disque plein
         # laissaient le HP.ini du joueur à 0 octet (audit du 2026-10-29).
         octets = "".join(lines).replace("\n", _INI_NEWLINE).encode(encodage, _INI_ERRORS)
         ecrire_octets_atomique(ini_path, octets)
-        log.info("Patch INI appliqué : [%s] %s=%s dans %s",
-                 patch.section, patch.key, value, ini_path)
+        log.info("Patch INI appliqué : [%s] %s dans %s", section,
+                 ", ".join(f"{cle}={v}" for cle, v in poses.items()), ini_path)
         return True
     except (OSError, UnicodeError) as exc:
         # UnicodeError : chemin hors page ANSI, que le jeu ne lirait pas non plus.

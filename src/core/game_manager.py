@@ -16,7 +16,7 @@ from src.core import captures, compat, demarrage, incrustation_wine, manette
 from src.core.chemins import chemin_relatif_sur
 from src.core import game_language as langue
 from src.core import copies_sauvegardes, memoire_4go, reglages_correctif, reprise, resolution_jeu, stats
-from src.core import texte_ue1
+from src.core import qualite_rendu, texte_ue1
 from src.core.catalogue_blocs import GameLanguage, LangueFichiers, Trailer
 from src.core.config import Config, cache_pour
 from src.core.game_registry import Confirmer
@@ -316,6 +316,8 @@ class GameManager:
         # régénérerait depuis Default.ini, assistant de configuration compris.
         restaurer_configs_manquantes(game, self.config)
         apply_ini_patches(game, self.config)
+        # HP1/HP2 : la qualité du rendu D3D11 choisie dans ses réglages, après les patchs.
+        qualite_rendu.appliquer(game, self.config)
         # Taille de fenêtre APRÈS la restauration, qui recopierait le modèle
         # (1024×768 pour HP2) ; écrite à chaque fois, raison dans le module.
         taille = resolution_jeu.appliquer(game, self.config, resolution_jeu.place_pour(game, self.config),
