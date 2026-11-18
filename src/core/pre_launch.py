@@ -14,7 +14,7 @@ from pathlib import Path
 from src.core.config import Config, get_documents_dir
 from src.core.ecriture_atomique import ecrire_octets_atomique
 from src.core.catalogue_blocs import IniPatch
-from src.core.game_data import GameData
+from src.core.game_data import GameData, dossier_de
 from src.core.post_install import apply_config_files, destination_config
 from src.core.system_checks import check_d3d11_feature_level
 from src.core.win_utils import remove_zone_identifier
@@ -81,7 +81,7 @@ def substitute_vars(raw: str, game: GameData, config: Config) -> str:
     if sys.platform != "win32":
         raw = raw.replace("\\", "/")
     docs_dir = get_documents_dir()
-    install_dir = str(config.install_path / Path(game.executable).parts[0])
+    install_dir = str(config.install_path / dossier_de(game.executable))
     return raw.replace("%DOCUMENTS%", str(docs_dir)).replace("%INSTALL_DIR%", install_dir)
 
 
@@ -95,7 +95,7 @@ def substituer_pour_le_jeu(raw: str, game: GameData, config: Config) -> str:
         return substitute_vars(raw, game, config)
     from src.core import compat
     pfx = compat.prefixe()
-    dossier_jeu = config.install_path / Path(game.executable.replace("\\", "/")).parts[0]
+    dossier_jeu = config.install_path / dossier_de(game.executable)
     return (raw.replace("%DOCUMENTS%", compat.chemin_windows(get_documents_dir(), pfx))
             .replace("%INSTALL_DIR%", compat.chemin_windows(dossier_jeu, pfx)))
 
@@ -179,7 +179,7 @@ def restaurer_configs_manquantes(game: GameData, config: Config) -> None:
         return
     log.info("Configuration absente pour %s, restaurée depuis le jeu : %s",
              game.id, ", ".join(dest for _, dest in manquants))
-    game_dir = Path(game.executable).parts[0] if game.executable else None
+    game_dir = dossier_de(game.executable) if game.executable else None
     apply_config_files(config.install_path, game_dir, manquants)
 
 
@@ -199,6 +199,13 @@ def apply_ini_patches(game: GameData, config: Config) -> None:
                         patch.value, patch.fallback)
             effective_value = patch.fallback
         ecrire_cle_ini(patch, game, config, effective_value)
+
+
+def _meme_nom(a: str, b: str) -> bool:
+    """Sections et clés d'un ini d'UE1 se comparent SANS casse, comme le moteur :
+    « [engine.engine] » est la section du catalogue, et l'écriture en ajoutait
+    une seconde à côté, l'ancienne valeur restant lue (audit du 2026-11-16)."""
+    return a.casefold() == b.casefold()
 
 
 def lire_cle_ini(patch: IniPatch, game: GameData, config: Config) -> str | None:
@@ -221,9 +228,9 @@ def lire_cle_ini(patch: IniPatch, game: GameData, config: Config) -> str | None:
         if propre.startswith("[") and propre.endswith("]"):
             section = propre[1:-1]
             continue
-        if section == patch.section:
+        if section is not None and _meme_nom(section, patch.section):
             egal = propre.find("=")
-            if egal > 0 and propre[:egal].rstrip() == patch.key:
+            if egal > 0 and _meme_nom(propre[:egal].rstrip(), patch.key):
                 return propre[egal + 1:].strip()
     return None
 
@@ -260,9 +267,9 @@ def ecrire_cle_ini(patch: IniPatch, game: GameData, config: Config,
             if stripped.startswith("[") and stripped.endswith("]"):
                 current_section = stripped[1:-1]
                 continue
-            if current_section == patch.section:
+            if current_section is not None and _meme_nom(current_section, patch.section):
                 eq_pos = stripped.find("=")
-                if eq_pos > 0 and stripped[:eq_pos].rstrip() == patch.key:
+                if eq_pos > 0 and _meme_nom(stripped[:eq_pos].rstrip(), patch.key):
                     lines[i] = f"{patch.key}={value}\n"
                     found = True
                     break
@@ -275,7 +282,7 @@ def ecrire_cle_ini(patch: IniPatch, game: GameData, config: Config,
                 lines[-1] += "\n"
             nouvelle = f"{patch.key}={value}\n"
             debut = next((i for i, line in enumerate(lines)
-                          if line.strip() == f"[{patch.section}]"), None)
+                          if _meme_nom(line.strip(), f"[{patch.section}]")), None)
             if debut is None:
                 lines += [f"[{patch.section}]\n", nouvelle]
             else:

@@ -480,8 +480,14 @@ def poser(modele: Maillage, retouches: dict[int, Quat] | None = None) -> tuple[P
 
 
 def _peau(modele: Maillage, monde: list[tuple[Quat, Point]]) -> tuple[Point, ...]:
-    """Les points pondérés par les os posés dans le repère du modèle."""
+    """Les points pondérés par les os posés dans le repère du modèle.
+
+    Un point qu'aucun os ne porte garde sa place de repos : sans poids, la
+    somme nulle le jetait en `-origine × échelle`, une pointe hors du modèle
+    (audit du 2026-11-16).
+    """
     somme = [[0.0, 0.0, 0.0] for _ in modele.points]
+    portes = bytearray(len(somme))
     for inf in modele.influences:
         q, v = monde[inf.os]
         r = _qrot(q, inf.local)
@@ -489,8 +495,10 @@ def _peau(modele: Maillage, monde: list[tuple[Quat, Point]]) -> tuple[Point, ...
         s[0] += (r[0] + v[0]) * inf.poids
         s[1] += (r[1] + v[1]) * inf.poids
         s[2] += (r[2] + v[2]) * inf.poids
+        portes[inf.point] = 1
     (ox, oy, oz), (ex, ey, ez) = modele.origine, modele.echelle
-    return tuple(((x - ox) * ex, (y - oy) * ey, (z - oz) * ez) for x, y, z in somme)
+    return tuple(((x - ox) * ex, (y - oy) * ey, (z - oz) * ez) if porte else repos
+                 for (x, y, z), porte, repos in zip(somme, portes, modele.points, strict=True))
 
 
 def tourner_point(q: Quat, v: Point) -> Point:

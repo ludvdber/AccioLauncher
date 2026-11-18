@@ -20,7 +20,7 @@ from src.core import texte_ue1
 from src.core.catalogue_blocs import GameLanguage, LangueFichiers, Trailer
 from src.core.config import Config, cache_pour
 from src.core.game_registry import Confirmer
-from src.core.game_data import Catalog, GameData, GameVersion, load_catalog
+from src.core.game_data import Catalog, GameData, GameVersion, load_catalog, dossier_de
 from src.core.pre_launch import (
     besoin_de_documents,
     documents_inutilisable,
@@ -104,10 +104,7 @@ class GameManager:
             self.config.playtime_seconds[gid] = self.config.playtime_seconds.get(gid, 0) + rattrapee.duree
             self.config.last_played[gid] = max(self.config.last_played.get(gid, ""),
                                                rattrapee.debut.date().isoformat())
-            try:
-                self.config.save()
-            except OSError:
-                log.warning("Partie rattrapée de %s non écrite dans la config", gid, exc_info=True)
+            self.config.save()
         log.info("Catalogue chargé : %d jeux (v%s)", len(self._games), self._catalog.catalog_version)
 
     @property
@@ -210,7 +207,7 @@ class GameManager:
             return None
         if not chemin_relatif_sur(game.executable):
             return None
-        return self.config.install_path / Path(game.executable).parts[0]
+        return self.config.install_path / dossier_de(game.executable)
 
     def get_state(self, game_id: str) -> GameState:
         return self._states.get(game_id, GameState.NOT_INSTALLED)
@@ -479,17 +476,14 @@ class GameManager:
             self.config.playtime_seconds.get(game_id, 0) + int(seconds)
         )
         self.config.last_played[game_id] = date.today().isoformat()
-        # Le journal D'ABORD, puis la config sans lever : `fermer_session` a
-        # déjà effacé le filet de reprise, et un disque plein (juste après une
+        # Le journal D'ABORD, puis la config (qui ne lève plus) : `fermer_session`
+        # a déjà effacé le filet de reprise, et un disque plein (juste après une
         # installation de 7 Go) faisait sortir l'exception avant le journal.
         # La partie était perdue des deux côtés, et `GameSession` n'émettait
         # jamais `terminee` (audit du 2026-10-29). Le cumul reste en mémoire :
         # la sauvegarde suivante le réécrit.
         stats.enregistrer_session(game_id, debut, int(seconds))
-        try:
-            self.config.save()
-        except OSError:
-            log.warning("Temps de jeu de %s non écrit dans la config", game_id, exc_info=True)
+        self.config.save()
         log.info("Temps de jeu de %s : +%d s (total %d s)",
                  game_id, seconds, self.config.playtime_seconds[game_id])
         return True

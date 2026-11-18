@@ -166,6 +166,26 @@ class TestEcritureEnPlace:
         with pytest.raises(ValueError):
             rc.ecrire(p, rc.REGLAGES["arriere_plan"], True)
 
+    def test_la_ligne_active_change_pas_la_commentee_qui_la_precede(self):
+        """Audit du 2026-11-16 : avec « ;FPSLimit=60 » avant « FPSLimit=100 »,
+        la valeur partait sur la ligne commentée : deux lignes actives, et la
+        lecture gardait 100."""
+        lignes = ["[Accio.Window]", ";FPSLimit=60", "FPSLimit=100"]
+        assert rc._poser(lignes, "Accio.Window", "FPSLimit", "30")
+        assert lignes == ["[Accio.Window]", ";FPSLimit=60", "FPSLimit=30"]
+        assert rc._valeur(lignes, "Accio.Window", "FPSLimit") == "30"
+
+    def test_commenter_vise_la_ligne_active(self):
+        lignes = ["[Accio.Window]", ";FPSLimit=60", "FPSLimit=100"]
+        assert rc._poser(lignes, "Accio.Window", "FPSLimit", None)
+        assert rc._valeur(lignes, "Accio.Window", "FPSLimit") is None
+        assert lignes == ["[Accio.Window]", ";FPSLimit=60", ";FPSLimit=100"]
+
+    def test_seule_une_ligne_commentee_est_decommentee(self):
+        lignes = ["[Accio.Keys]", ";MoveUp=W", ""]
+        assert rc._poser(lignes, "Accio.Keys", "MoveUp", "Z")
+        assert lignes == ["[Accio.Keys]", "MoveUp=Z", ""]
+
 
 class TestPerformances:
     def test_eteints_par_defaut_meme_sans_la_cle(self, ini):
@@ -315,9 +335,26 @@ class TestModeDifficile:
         # fluide de HP5 (vue en partie par un script, pas encore jouée par quelqu'un), et le décor entier
         # de HP6 (ZoneCulling, vu à l'image le 2026-11-13, livré à 2), et les textures HD de
         # HP6 (TextureReplace, pack HD bêta de la 1.3.4), et la définition des ombres, « expérimentale »
-        # dans l'ini livré et qui tache HP6 à ×4 (audit UI f101).
+        # dans l'ini livré et qui tache HP6 à ×4 (audit UI f101), et le bord des ombres flouté de HP5 et
+        # HP6 (ShadowBlur, écrit le 2026-11-18, pas encore vu en jeu).
         assert {r.ident for r in rc.REGLAGES.values() if r.beta and r.ident not in hardcore} == {
-            "quidditch", "camera_fluide", "decor_entier", "textures_hd", "ombres_nettes"}
+            "quidditch", "camera_fluide", "decor_entier", "textures_hd", "ombres_nettes", "ombres_floutees"}
+
+    def test_le_bord_des_ombres_floute_attend_son_archive(self, tmp_path):
+        """ShadowBlur : l'écart entre les prélèvements du flou, écrit tel quel ; aucun jeu ne le propose tant
+        que la paire avant/après n'est pas jugée et que l'archive ne porte pas la DLL qui lit la clé."""
+        import json
+        from pathlib import Path
+
+        r = rc.REGLAGES["ombres_floutees"]
+        assert (r.section, r.cle, r.choix) == ("Accio.Graphics", "ShadowBlur", (0, 1, 2, 4))
+        catalogue = json.loads((Path(rc.__file__).parents[1] / "data" / "games.json").read_text(encoding="utf-8"))
+        assert not [g["id"] for g in catalogue["games"] if "ombres_floutees" in g.get("fix_settings", [])]
+        ini = tmp_path / "d3d9.ini"
+        ini.write_text("[Accio.Graphics]\nSoftShadows=1\nShadowBlur=0\n", encoding="utf-8")
+        assert rc.lire(ini, r) == rc.Etat(0)
+        rc.ecrire(ini, r, 2)
+        assert "ShadowBlur=2" in ini.read_text(encoding="utf-8") and rc.lire(ini, r) == rc.Etat(2)
 
     def test_d_origine_quand_la_cle_manque_ou_vaut_un(self, ini_dur):
         for ident in self.IDENTS:

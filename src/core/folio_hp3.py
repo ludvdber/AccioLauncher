@@ -98,7 +98,9 @@ def _niveaux(props: list[textures_ue1.ProprieteLue] | None, etoiles: bool) -> tu
         if not isinstance(ident, str) or not ident:
             continue
         if etoiles:
-            trouves = sum(1 for n, i, v in valeur if n == "Found" and i < total and v)
+            # Sans `NumInLevel` (lu 0), aucune borne : `i < 0` jetait toutes les
+            # étoiles, comptées 0 (audit du 2026-11-16).
+            trouves = sum(1 for n, i, v in valeur if n == "Found" and (not total or i < total) and v)
         else:
             trouves = _entier(champs.get("NumFound"))
         niveaux.append(Niveau(ident, min(trouves, total) if total else trouves, total))

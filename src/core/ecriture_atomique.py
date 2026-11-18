@@ -11,6 +11,8 @@ La même dizaine de lignes vivait recopiée dans `config`, `stats`, `succes`,
 
 import contextlib
 import os
+import stat
+import sys
 import tempfile
 from pathlib import Path
 
@@ -33,11 +35,25 @@ def ecrire_atomique(chemin: Path, texte: str, suffixe: str = ".tmp") -> None:
 
 
 def ecrire_octets_atomique(chemin: Path, octets: bytes, suffixe: str = ".tmp") -> None:
-    """Comme `ecrire_atomique`, pour des octets (un exécutable, `memoire_4go`)."""
+    """Comme `ecrire_atomique`, pour des octets (un exécutable, `memoire_4go`).
+
+    Fichiers du JEU (exe, INI) : on garde leurs droits et leurs liens.
+    `mkstemp` crée en 0600 et `os.replace` mettait ces droits-là à la place de
+    ceux d'origine (exe 0755 → 0600 après le drapeau 4 Go) ; et sur un lien
+    symbolique, il remplaçait le LIEN par un fichier, sans toucher la cible
+    (audit Linux du 2026-11-17, C2). `ecrire_atomique` (config, statistiques)
+    garde son 0600 : c'est voulu.
+    """
+    chemin = Path(os.path.realpath(chemin))
     fd, tmp = tempfile.mkstemp(dir=chemin.parent, suffix=suffixe)
     try:
         with os.fdopen(fd, "wb") as f:
             f.write(octets)
+        # Hors Windows seulement : là, `chmod` ne pose que la lecture seule, et
+        # un temporaire en lecture seule ne s'effacerait plus après un échec.
+        if sys.platform != "win32":
+            with contextlib.suppress(OSError):   # fichier neuf : rien à reprendre
+                os.chmod(tmp, stat.S_IMODE(os.stat(chemin).st_mode))
         os.replace(tmp, chemin)
     except BaseException:
         with contextlib.suppress(OSError):

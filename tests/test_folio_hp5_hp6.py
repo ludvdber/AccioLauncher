@@ -167,6 +167,22 @@ class TestHP6:
             (2026).to_bytes(4, "little"), (0).to_bytes(4, "little"), 1))
         assert partie.ecrite is None and partie.ecussons == 7
 
+    def test_une_partie_sans_date_ecrite_en_dernier_gagne(self, tmp_path):
+        """Audit du 2026-11-16 : sans date lisible, la partie comptait pour
+        `datetime.min` et perdait contre toute partie datée, même plus vieille."""
+        import os
+        datee = tmp_path / "HPHBP0" / "HPHBP0"
+        datee.parent.mkdir()
+        datee.write_bytes(_hphbp0(ecussons=3, quand=datetime(2026, 1, 1, 12, 0)))
+        sans_date = tmp_path / "HPHBP1" / "HPHBP1"
+        sans_date.parent.mkdir()
+        sans_date.write_bytes(_hphbp0(ecussons=7, quand=datetime(2026, 10, 1)).replace(
+            (2026).to_bytes(4, "little"), (0).to_bytes(4, "little"), 1))
+        t = datetime(2026, 11, 1).timestamp()
+        os.utime(sans_date, (t, t))
+        resume = folio_hp6.resume({"a": datee, "b": sans_date})
+        assert resume is not None and resume.trouvees == 7
+
     def test_pas_une_sauvegarde_de_hp6(self):
         assert folio_hp6.lire(b"20CM" + bytes(0x200)) is None
         assert folio_hp6.lire(_hphbp0()[:0x80]) is None

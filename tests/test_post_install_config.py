@@ -59,3 +59,19 @@ class TestConfigEnLectureSeule:
         _lecture_seule(source)
         _installer(install)
         assert not os.access(dest, os.W_OK)
+
+
+class TestDestinationAvecTilde:
+    """Audit du 2026-11-16 : un dossier Documents au nom court 8.3
+    (« LUDOVI~1 ») donnait « C:/Users/LUDOVIC:/Users/LUDOVI~11/… » : le second
+    `replace("~")` réécrivait le « ~ » que le premier venait d'insérer."""
+
+    def test_documents_au_nom_court(self, tmp_path, monkeypatch):
+        docs = tmp_path / "LUDOVI~1" / "Documents"
+        monkeypatch.setattr(post_install, "get_documents_dir", lambda: docs)
+        assert post_install.destination_config("~/Documents/HP2/User.ini") == docs / "HP2" / "User.ini"
+
+    def test_profil_au_nom_court(self, tmp_path, monkeypatch):
+        profil = tmp_path / "LUDOVI~1"
+        monkeypatch.setattr(post_install, "_profil_windows", lambda: profil)
+        assert post_install.destination_config("~/AppData/x.ini") == profil / "AppData" / "x.ini"

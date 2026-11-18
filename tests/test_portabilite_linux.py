@@ -68,6 +68,19 @@ class TestCheminsDuCatalogue:
         assert "Harry Potter/HP.ini" in resolu
         assert "\\" not in resolu.split("Documents", 1)[1]
 
+    def test_install_dir_d_un_executable_en_antislashs(self, tmp_path, monkeypatch):
+        """Audit du 2026-11-16 : « HP1\\System\\HP.exe » n'a qu'un composant pour
+        un `Path` POSIX ; `%INSTALL_DIR%` menait à `jeux/HP1\\System\\HP.exe`.
+        `Path` est simulé en POSIX pour que le test s'arme aussi sous Windows."""
+        from pathlib import PurePosixPath
+        monkeypatch.setattr(pre_launch.sys, "platform", "linux")
+        monkeypatch.setattr(pre_launch, "Path", PurePosixPath)
+        monkeypatch.setattr(pre_launch, "get_documents_dir", lambda: tmp_path / "Documents")
+        jeu = GameData.from_dict({**_JEU, "executable": r"HP1\System\HP.exe"})
+        resolu = pre_launch.substitute_vars("%INSTALL_DIR%/System/HP.ini", jeu,
+                                            Config(install_path=tmp_path / "jeux"))
+        assert Path(resolu) == tmp_path / "jeux" / "HP1" / "System" / "HP.ini"
+
     def test_windows_garde_ses_antislashs(self, tmp_path, monkeypatch):
         """La substitution ne doit rien toucher là où « \\ » est le séparateur."""
         monkeypatch.setattr(pre_launch.sys, "platform", "win32")

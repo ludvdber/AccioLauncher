@@ -88,6 +88,17 @@ class TestLecteursParJeu:
         monkeypatch.setattr(folio_hp2, "releve", lambda c, n: N(lu=False, histoire="", cartes=[]))
         assert progression.mesure("hp2", object(), "Slot.sav#1") is None
 
+    def test_hp2_le_tout_debut_vaut_zero(self, ici, monkeypatch):
+        """Audit du 2026-11-16 : un paquet lisible où le jeu n'a pas encore écrit
+        Harry est une mesure, zéro, comme pour HP1 et HP3 ; HP2 rendait None,
+        et un emplacement recommencé ne se voyait pas."""
+        from types import SimpleNamespace as N
+
+        from src.core import folio_hp2
+        (ici / "Slot.sav").write_bytes(_paquet_harry({}))
+        monkeypatch.setattr(folio_hp2, "releve", lambda c, n: N(lu=False, histoire="", cartes=[]))
+        assert progression.mesure("hp2", object(), "Slot.sav#1") == (0, 0)
+
     def test_hp3_etape_cartes_et_tout_debut(self, ici, monkeypatch):
         from types import SimpleNamespace as N
 

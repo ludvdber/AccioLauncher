@@ -1309,6 +1309,8 @@
     "Forêts et arbres lointains gardent leur feuillage au lieu de fondre dans la pente.": "Distant forests and trees keep their foliage instead of melting into the slope.",
     "Ombres douces": "Soft shadows",
     "Adoucit le bord des ombres portées, découpé en escalier dans le jeu livré, comme une vraie ombre au soleil. Leur forme ne change pas.": "Softens the edge of cast shadows, jagged in the shipped game, like a real shadow in the sun. Their shape does not change.",
+    "Bord des ombres flouté": "Blurred shadow edges",
+    "Floute le contour des ombres portées avant que le jeu les pose sur le décor : toutes les ombres gagnent un bord plus doux, sans changer de forme. S'ajoute aux ombres douces.": "Blurs the outline of cast shadows before the game lays them on the scenery: every shadow gets a softer edge, with no change of shape. Adds to soft shadows.",
     "Braises et étincelles plus loin": "Embers and sparks farther away",
     "Le jeu ne dessine les petites particules (braises, étincelles, poussière) que tout près de la caméra. Ce réglage les montre plus loin : il en vole davantage autour des feux et des sorts.": "The game only draws small particles (embers, sparks, dust) right next to the camera. This setting shows them farther away: more of them fly around fires and spells.",
     "Trois fois plus loin": "Three times farther",

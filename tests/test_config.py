@@ -1,9 +1,12 @@
 """Tests pour src/core/config.py"""
 
+import errno
 import re
 import sys
 from pathlib import Path
 from unittest.mock import patch
+
+import pytest
 
 
 from src.core.config import APP_VERSION, Config, DEFAULT_LANGUAGE, get_documents_dir
@@ -301,3 +304,25 @@ class TestCoutureVersionsFutures:
         with patch("src.core.config.CONFIG_FILE_PATH", tmp_path / "config.json"):
             c.save()
             assert C.load().langue == c.langue
+
+
+class TestEcritureQuiEchoue:
+    """Audit du 2026-11-16 : `save()` laissait remonter l'`OSError` d'un disque
+    plein ou d'un fichier verrouillé ; une vingtaine d'appelants, dont des slots
+    d'interface, ouvraient alors le dialogue de plantage."""
+
+    @pytest.mark.parametrize("err", [errno.ENOSPC, errno.EACCES])
+    def test_save_ne_leve_pas_et_le_dit(self, tmp_path, monkeypatch, err):
+        import src.core.config as cfgmod
+
+        def refuse(*_a, **_k):
+            raise OSError(err, "refusé")
+        monkeypatch.setattr(cfgmod, "CONFIG_FILE_PATH", tmp_path / "config.json")
+        monkeypatch.setattr(cfgmod, "ecrire_atomique", refuse)
+        assert Config(install_path=tmp_path, cache_path=tmp_path).save() is False
+
+    def test_save_reussi_rend_vrai(self, tmp_path, monkeypatch):
+        import src.core.config as cfgmod
+        monkeypatch.setattr(cfgmod, "CONFIG_FILE_PATH", tmp_path / "config.json")
+        assert Config(install_path=tmp_path, cache_path=tmp_path).save() is True
+        assert (tmp_path / "config.json").exists()

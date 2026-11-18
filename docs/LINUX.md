@@ -90,7 +90,7 @@ quelle pull request le traite. L'état réel est aux §§ 7 et 8 (`docs/linux/ET
 
 | Emplacement | Ce qui suppose Windows | Aujourd'hui sous Linux | Traitement | Phase |
 |---|---|---|---|---|
-| `src/core/discord_presence.py` (`_open_ipc`) | Tube nommé Windows ; socket Unix dans `$XDG_RUNTIME_DIR` | Discord **Flatpak** (fréquent sur Bazzite) n'est pas trouvé : son socket est sous `$XDG_RUNTIME_DIR/app/com.discordapp.Discord/` | Ajouter les emplacements Flatpak (et Snap) | 3 |
+| `src/core/discord_presence.py` (`_open_ipc`) | Tube nommé Windows ; socket Unix dans `$XDG_RUNTIME_DIR` | Discord **Flatpak** (fréquent sur Bazzite) n'est pas trouvé : son socket est sous `$XDG_RUNTIME_DIR/app/com.discordapp.Discord/` | Ajouter les emplacements Flatpak (et Snap) ; fait : Discord, Discord Canary, Vesktop en Flatpak, Snap (`dossiers_ipc`) | 3 |
 | `main.py` (`main`, AppUserModelID) | `SetCurrentProcessExplicitAppUserModelID` | Gardé | Équivalent Linux : `setDesktopFileName` — sous Wayland, c'est lui qui relie la fenêtre à son icône et à son `.desktop` | 3 |
 | `src/ui/main_window.py` (`_minimize_to_tray`) | Suppose une zone de notification | Sans zone de notification (GNOME sans extension AppIndicator, certains compositeurs Wayland), la fenêtre **disparaît** sans icône pour la rappeler | Réduire au lieu de cacher quand `isSystemTrayAvailable()` est faux | 3 |
 | `src/core/win_taskbar.py` | `ITaskbarList3` | No-op | Inchangé (piste : `com.canonical.Unity.LauncherEntry`) | — |
@@ -424,8 +424,11 @@ format du registre d'un préfixe, écriture par `regedit /S`, marque des DLL
 internes de Wine, code d'umu.
 
 **Non vérifié par cet audit (2026-09-24)** : vrais jeux sous Proton, umu
-préinstallé, Wayland et manette sont vus depuis sur Bazzite (RETOUR_BAZZITE.md) ;
-restent Gear Lever, Discord Flatpak et le mode Jeu.
+préinstallé et Wayland sont vus depuis sur Bazzite (RETOUR_BAZZITE.md). La
+manette n'y est vue que **par le jeu**, sans bouton pressé
+(`RETOUR_BAZZITE_PASSAGES_1_A_6.md`, « manette non essayée ») : la navigation
+du launcher à la manette (`/dev/input/js*`) reste à essayer sous Linux, comme
+Gear Lever, Discord Flatpak et le mode Jeu (audit du 2026-11-17).
 
 ## À tester sur Bazzite par Ludo (phase 1)
 

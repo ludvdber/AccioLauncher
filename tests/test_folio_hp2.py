@@ -242,6 +242,13 @@ class TestCatalogue:
                                                             "Fell in love.")),
         ("Merlin Medieval, dates unknown Most famous.", ("Merlin", "Medieval, dates unknown",
                                                           "Most famous.")),
+        # Audit du 2026-11-16 (carte 23 de la version anglaise) : la parenthèse
+        # du TEXTE était prise pour les dates.
+        ("Glenda Chittock 1964-present Popular presenter of the W.W.N. (Wizarding Wireless "
+         "Network) programme.", ("Glenda Chittock", "1964-present", "Popular presenter of "
+                                 "the W.W.N. (Wizarding Wireless Network) programme.")),
+        ("Hesper Starkey (1881 - 1973). Née en 1881.", ("Hesper Starkey", "1881 - 1973",
+                                                         "Née en 1881.")),
     ])
     def test_decouper(self, brut, attendu):
         classe = "WCMaeve" if "Maeve" in brut else "WCX"

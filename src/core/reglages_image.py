@@ -49,6 +49,7 @@ _PLACES: dict[str, tuple[str, str]] = {
     "occlusion": ("lumiere", "Ombres de contact"),
     "ombres_nettes": ("lumiere", "Ombres portées"),
     "ombres_douces": ("lumiere", "Ombres portées"),
+    "ombres_floutees": ("lumiere", "Ombres portées"),
     "halo": ("lumiere", "Halo et rayons"),
     "force_halo": ("lumiere", "Halo et rayons"),
     "rayons": ("lumiere", "Halo et rayons"),

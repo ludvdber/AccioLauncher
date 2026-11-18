@@ -16,11 +16,12 @@ def _compact(v: int) -> bytes:
     return bytes(octets)
 
 
-def _paquet(flux: bytes, fmt: str = "mp2", proprietes_vides: bool = True) -> bytes:
+def _paquet(flux: bytes, fmt: str = "mp2", proprietes_vides: bool = True,
+            index_format: bytes | None = None) -> bytes:
     """Un .umx minimal, même disposition que ceux de HP1 (version 75)."""
     noms = ["None", fmt, "Music", "Piste"]
     table = b"".join(_compact(len(n) + 1) + n.encode() + b"\0" + b"\0" * 4 for n in noms)
-    objet = (_compact(0 if proprietes_vides else 3) + _compact(1) + b"\0" * 4
+    objet = (_compact(0 if proprietes_vides else 3) + (index_format or _compact(1)) + b"\0" * 4
              + _compact(len(flux)) + flux)
     debut_noms = 64
     debut_objet = debut_noms + len(table)
@@ -50,6 +51,11 @@ class TestFluxUmx:
 
     def test_un_objet_avec_proprietes_est_saute(self):
         assert flux_umx(_paquet(b"abc", proprietes_vides=False)) is None
+
+    def test_un_index_negatif_ne_relit_pas_la_fin_des_noms(self):
+        """Audit du 2026-11-16 : l'index compact est signé ; -1 (0x81) donnait
+        le DERNIER nom du paquet pour format."""
+        assert flux_umx(_paquet(b"abc", index_format=b"\x81")) is None
 
 
 class TestPistes:

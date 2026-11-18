@@ -28,18 +28,19 @@ def format_size(size_mb: int) -> str:
 
 def format_bytes(b: int) -> str:
     """Formate une taille en Mo/Go (entrée en octets). Unités traduites (GB/MB)."""
+    # Le seuil sur la valeur ARRONDIE, celle qu'on affiche : 999,6 Mo donnait
+    # « 1000 Mo » au lieu de « 1,0 Go » (audit du 2026-11-16). Même chose plus bas.
     mb = b / (1024 * 1024)
-    if mb >= 1000:
+    if round(mb) >= 1000:
         return f"{_nombre(mb / 1000)} {tr('Go')}"
     return f"{mb:.0f} {tr('Mo')}"
 
 
 def format_speed(bytes_per_sec: float) -> str:
     """Formate une vitesse en Ko/s ou Mo/s. Unités traduites (KB/s, MB/s)."""
-    mb = bytes_per_sec / (1024 * 1024)
-    if mb >= 1.0:
-        return f"{_nombre(mb)} {tr('Mo/s')}"
     kb = bytes_per_sec / 1024
+    if round(kb) >= 1024:
+        return f"{_nombre(kb / 1024)} {tr('Mo/s')}"
     return f"{kb:.0f} {tr('Ko/s')}"
 
 

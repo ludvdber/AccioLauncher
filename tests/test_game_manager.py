@@ -226,19 +226,41 @@ class TestGameManager:
         jamais `terminee` (fenêtre jamais rendue, Discord jamais effacé)."""
         import errno
 
+        from src.core import config as cfgmod
         from src.core import stats
         mgr = _make_manager(tmp_path)
 
-        def plein(_self):
+        def plein(*_a, **_k):
             raise OSError(errno.ENOSPC, "disque plein")
-        from src.core.config import Config
-        monkeypatch.setattr(Config, "save", plein)   # dataclass pure, pas un objet Qt
+        monkeypatch.setattr(cfgmod, "CONFIG_FILE_PATH", tmp_path / "config.json")
+        monkeypatch.setattr(cfgmod, "ecrire_atomique", plein)
         journal = tmp_path / "sessions.json"
         monkeypatch.setattr(stats, "chemin_journal", lambda: journal)
 
         assert mgr.add_playtime("hp_test", 600) is True
         assert mgr.get_playtime("hp_test") == 600
         assert [s.jeu for s in stats.charger(journal).sessions] == ["hp_test"]
+
+    def test_un_disque_plein_ne_bloque_pas_la_fin_d_une_desinstallation(self, tmp_path, monkeypatch):
+        """Audit du 2026-11-16 : le dossier du jeu déjà effacé, `config.save()`
+        levait ; les extraits du jeu restaient et la fiche restait grisée."""
+        import errno
+
+        from src.core import config as cfgmod
+
+        def plein(*_a, **_k):
+            raise OSError(errno.ENOSPC, "disque plein")
+        mgr = _make_manager(tmp_path)
+        monkeypatch.setattr(cfgmod, "CONFIG_FILE_PATH", tmp_path / "config.json")
+        monkeypatch.setattr(cfgmod, "ecrire_atomique", plein)
+        oublies = []
+        monkeypatch.setattr(GameManager, "_oublier_les_extraits",
+                            lambda _self, gid: oublies.append(gid))
+        mgr.config.installed_versions["hp_test"] = "1.0"
+
+        assert mgr.finir_desinstallation("hp_test", True) is True
+        assert oublies == ["hp_test"]
+        assert mgr.get_state("hp_test") == GameState.NOT_INSTALLED
 
     def test_un_arret_fatal_ne_compte_que_passe_dix_minutes(self, tmp_path):
         """La boîte « Critical Error » d'UE1 garde le jeu en vie : 2 min devant
@@ -469,6 +491,24 @@ class TestPreLaunch:
         content = ini_file.read_text(encoding="utf-8")
         assert "[NewSection]" in content
         assert "Key=Value" in content
+
+    def test_section_et_cle_comparees_sans_casse(self, tmp_path):
+        """Audit du 2026-11-16 : comme le moteur, « [engine.engine] gamerenderdevice »
+        est la clé du catalogue. La lecture rendait None et l'écriture ajoutait
+        une seconde section, l'ancienne valeur restant celle que le jeu lit."""
+        from src.core.pre_launch import lire_cle_ini
+        ini_file = tmp_path / "Game.ini"
+        ini_file.write_text("[engine.engine]\ngamerenderdevice=Old\n", encoding="utf-8")
+        game = GameData.from_dict({**GAME_DICT, "pre_launch": {"ini_patches": [{
+            "file": str(ini_file), "section": "Engine.Engine",
+            "key": "GameRenderDevice", "value": "New"}]}})
+        mgr = _make_manager(tmp_path, games=[game])
+        patch_ini = game.pre_launch.ini_patches[0]
+        with patch("src.core.pre_launch.get_documents_dir", return_value=tmp_path):
+            assert lire_cle_ini(patch_ini, game, mgr.config) == "Old"
+            apply_ini_patches(game, mgr.config)
+        lignes = ini_file.read_text(encoding="utf-8").splitlines()
+        assert lignes == ["[engine.engine]", "GameRenderDevice=New"]
 
 
 # ── Tests system checks ──

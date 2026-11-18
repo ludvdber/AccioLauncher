@@ -42,3 +42,11 @@ class TestLire:
         r = cm.lire(tmp_path)
         assert r.morts == 1
         assert r.par_carte == (("Recente", 1),)
+
+    def test_une_fenetre_qui_tombe_sur_un_debut_de_ligne_garde_la_ligne(self, tmp_path, monkeypatch):
+        """Audit du 2026-11-16 : la première ligne ENTIÈRE était jetée comme
+        si elle était coupée."""
+        derniere = _ligne("mort", "Recente").encode("utf-8")
+        monkeypatch.setattr(cm, "_OCTETS_MAX", len(derniere))
+        (tmp_path / cm.FICHIER).write_bytes(_ligne("mort", "Ancienne").encode("utf-8") + derniere)
+        assert cm.lire(tmp_path).par_carte == (("Recente", 1),)

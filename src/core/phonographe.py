@@ -213,11 +213,17 @@ def flux_umx(d: bytes) -> tuple[str, bytes] | None:
             if taille <= 0:
                 continue
             debut, i = _compact(d, i)
+            # Un index compact est SIGNÉ : négatif (paquet abîmé), Python le
+            # lisait depuis la fin de la liste ou du fichier (audit du 2026-11-16).
+            if debut < 0:
+                continue
             j = debut
             propriete, j = _compact(d, j)
-            if noms[propriete] != "None":    # un objet avec propriétés n'est pas une musique nue
+            if propriete < 0 or noms[propriete] != "None":    # un objet avec propriétés n'est pas une musique nue
                 continue
             index_format, j = _compact(d, j)
+            if index_format < 0:
+                continue
             j += 4
             nombre, j = _compact(d, j)
             if nombre <= 0 or j + nombre > len(d):

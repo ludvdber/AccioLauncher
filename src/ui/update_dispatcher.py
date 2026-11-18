@@ -49,6 +49,11 @@ log = logging.getLogger(__name__)
 # (les requêtes échouent au premier DNS).
 OFFLINE_RETRY_MS = 45_000
 
+# Taille maximale de l'exe téléchargé (Mo, avant la marge du Downloader). Les
+# builds pèsent 56 Mo (Windows) et 71 Mo (AppImage), plafonds tenus par les tests
+# du build : quatre fois plus laisse grandir le launcher sans remplir un disque.
+PLAFOND_MISE_A_JOUR_MO = 300
+
 # Checkers encore actifs à la fermeture : déparentés de la fenêtre et gardés
 # vivants ici jusqu'à leur fin réelle. Même contrat que GameOperations._zombies.
 _orphaned_checkers: list[UpdateChecker] = []
@@ -278,8 +283,11 @@ class UpdateDispatcher(QObject):
         # Sans elle, `can_install_itself` est faux et on n'arrive pas ici : la
         # page de release existe déjà comme repli, donc refuser ne coûte rien
         # (ACT-008). On remplace un exécutable : on ne le fait pas à l'aveugle.
+        # Plafonné : l'empreinte ne se vérifie qu'à la fin, et un asset démesuré
+        # aurait rempli le disque avant (audit du 2026-11-16).
         self._download = Downloader(
             url=self.asset_url, destination=dest,
+            expected_size_mb=PLAFOND_MISE_A_JOUR_MO,
             expected_sha256=self.asset_sha256,
             parent=self,
         )

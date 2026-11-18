@@ -105,6 +105,14 @@ class TestTexture:
         chemin.write_bytes(paquet(masquee=False))
         assert textures_ue1.texture(chemin, "Tex0").masquee is False
 
+    def test_un_homonyme_d_une_autre_classe_ne_cache_pas_la_texture(self, tmp_path):
+        """Audit du 2026-11-16 : seul le PREMIER export du nom était regardé ;
+        la palette `Pal0`, avant la texture du même nom, la rendait introuvable."""
+        chemin = tmp_path / "Menu.u"
+        chemin.write_bytes(paquet(nom_texture="Pal0"))
+        tex = textures_ue1.texture(chemin, "Pal0")
+        assert tex is not None and tex.indices == bytes([0, 1, 2, 3])
+
     def test_un_autre_format_n_est_pas_devine(self, tmp_path):
         chemin = tmp_path / "Menu.u"
         chemin.write_bytes(paquet(format_=3))   # DXT1 : jamais relevé, jamais deviné
