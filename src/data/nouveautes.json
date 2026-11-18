@@ -1,6 +1,37 @@
 {
   "versions": [
     {
+      "version": "1.3.6-beta.1",
+      "nom": "",
+      "depuis": "1.3.5",
+      "points_forts": [
+        {
+          "icone": "ecran",
+          "jeux": ["hp1", "hp2"],
+          "titre": {
+            "fr": "Qualité du rendu pour les PC portables",
+            "en": "Rendering quality for laptops",
+            "es": "Calidad de renderizado para portátiles"
+          },
+          "texte": {
+            "fr": "Dans les réglages de HP1 et HP2, onglet Image : « Qualité du rendu » Maximale, Équilibrée ou Légère, et, sur un PC à deux cartes graphiques, le lancement sur la plus puissante.",
+            "en": "In the HP1 and HP2 settings, Graphics tab: “Rendering quality” Maximum, Balanced or Light, and, on a PC with two graphics cards, running on the most powerful one.",
+            "es": "En los ajustes de HP1 y HP2, pestaña Gráficos: «Calidad de renderizado» Máxima, Equilibrada o Ligera y, en un PC con dos tarjetas gráficas, el inicio en la más potente."
+          }
+        }
+      ],
+      "changements": [
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "HP1 et HP2 : la qualité du rendu se règle dans le launcher, pour retrouver de la fluidité sur un PC portable.",
+            "en": "HP1 and HP2: rendering quality can be set in the launcher, to get smooth play back on a laptop.",
+            "es": "HP1 y HP2: la calidad de renderizado se ajusta en el launcher, para recuperar fluidez en un portátil."
+          }
+        }
+      ]
+    },
+    {
       "version": "1.3.5",
       "nom": "Reparo",
       "depuis": "1.3.4",

@@ -319,6 +319,28 @@ def puce_intel(cartes: list[str] | None = None) -> bool:
     return any("intel" in ligne.lower() for ligne in lignes)
 
 
+def plusieurs_cartes(cartes: list[str] | None = None) -> bool:
+    """Vrai si la machine a deux cartes graphiques RÉELLES au moins (portable
+    Intel + NVIDIA, par exemple). Un adaptateur virtuel (écran distant, Parsec)
+    ou celui de base de Microsoft ne compte pas : il n'y a rien à choisir."""
+    lignes = _cartes_graphiques() if cartes is None else cartes
+    reelles = [ligne for ligne in lignes
+               if not ligne.endswith(" · virtuel") and not carte_virtuelle(ligne)]
+    return len(reelles) >= 2
+
+
+# Adaptateurs qui ne dessinent rien d'un jeu : écrans distants, pilotes de base et
+# rendu logiciel. Une seule liste pour `plusieurs_cartes` et `ecran_branche`.
+_VIRTUELLES = ("microsoft basic", "parsec", "virtual display", "indirect display",
+               "remote display", "spacedesk", "citrix", "vmware", "virtualbox", "hyper-v")
+
+
+def carte_virtuelle(nom: str) -> bool:
+    """Ce nom d'adaptateur est-il virtuel ou logiciel (Parsec, Microsoft Basic Render Driver…) ?"""
+    bas = nom.lower()
+    return any(mot in bas for mot in _VIRTUELLES)
+
+
 def sans_pilote_graphique(cartes: list[str] | None = None) -> bool:
     """Vrai si AUCUNE carte n'a de pilote : seul l'adaptateur de base de Microsoft
     répond, et tout ce qui s'affiche est dessiné par le processeur (audit UI f116).

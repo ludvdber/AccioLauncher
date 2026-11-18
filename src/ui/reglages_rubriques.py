@@ -21,8 +21,9 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from src.core import (captures, difficulte_jeu, manette, reglages_correctif, reglages_graphiques,
-                      reprise, resolution_jeu, texte_ue1, videos_lancement)
+from src.core import (captures, difficulte_jeu, manette, preference_gpu, qualite_rendu,
+                      reglages_correctif, reglages_graphiques, reprise, resolution_jeu, texte_ue1,
+                      videos_lancement)
 from src.core.i18n import tr
 from src.core.reglages_table import Reglage
 from src.ui.choix_jeux import espacee
@@ -261,6 +262,10 @@ class RubriquesDuJeu:
             self._ligne_resolution(carte)
             if texte_ue1.gere(self.game.id):
                 self._ligne_texte(carte)
+            if qualite_rendu.gere(self.game):
+                self._ligne_qualite_rendu(carte)
+                if preference_gpu.proposee():
+                    self._ligne_carte_puissante(carte)
         # Sous une rubrique active, des choix grisés sans « BIENTÔT » auraient
         # l'air de réglages cassés (règle 119) : on ne les annonce plus ici.
         for nom in (() if reglable else _A_VENIR):
@@ -366,6 +371,45 @@ class RubriquesDuJeu:
         else:
             tailles.pop(self.game.id, None)
         self.manager.config.save()
+
+    def _ligne_qualite_rendu(self, carte: Carte) -> None:
+        """La qualité du rendu D3D11 de HP1/HP2, écrite dans l'ini au lancement (`qualite_rendu`)."""
+        choix = self._liste()
+        for niveau, libelle in ((qualite_rendu.MAXIMALE, tr("Maximale")),
+                                (qualite_rendu.EQUILIBREE, tr("Équilibrée")),
+                                (qualite_rendu.LEGERE, tr("Légère"))):
+            choix.addItem(libelle, niveau)
+        choix.setCurrentIndex(max(0, choix.findData(qualite_rendu.choisi(self.game, self.manager.config))))
+        choix.currentIndexChanged.connect(lambda _i, c=choix: self._on_qualite_rendu(c.currentData()))
+        carte.ajouter(self._ligne(tr("Qualité du rendu"), choix, tr(
+            "Les effets que la carte graphique calcule à chaque image. Maximale : tout, tel "
+            "qu'installé. Équilibrée : bords lissés moins fort, sans reflets ni relief des "
+            "surfaces, à distance de vue normale. Légère : sans lissage ni aucun de ces effets, "
+            "pour un PC portable ou un jeu qui saccade. Appliquée au prochain lancement ; le "
+            "menu du jeu ne règle pas ces effets.")))
+
+    def _on_qualite_rendu(self, niveau: str) -> None:
+        self.manager.config.qualite_rendu[self.game.id] = niveau
+        self.manager.config.save()
+
+    def _ligne_carte_puissante(self, carte: Carte) -> None:
+        """Deux cartes graphiques (Windows) : demander la plus puissante pour l'exe du jeu."""
+        exe = self.manager.config.install_path / self.game.executable
+        bascule = ToggleSwitch(preference_gpu.active(exe))
+        bascule.toggled.connect(lambda oui: self._on_carte_puissante(bascule, exe, oui))
+        carte.ajouter(self._ligne(tr("Lancer sur la carte graphique la plus puissante"), bascule, tr(
+            "Ce PC a deux cartes graphiques, et Windows lance souvent ce jeu sur la plus "
+            "économe. Allumé, le launcher le note dans les réglages graphiques de Windows "
+            "(Paramètres > Affichage > Graphiques), pour ce jeu seulement ; éteint, il le retire.")))
+
+    def _on_carte_puissante(self, bascule: ToggleSwitch, exe: Path, oui: bool) -> None:
+        preference_gpu.poser(exe, oui)
+        # L'interrupteur dit ce que porte VRAIMENT le registre (règle 118).
+        vrai = preference_gpu.active(exe)
+        if vrai != oui:
+            bascule.blockSignals(True)
+            bascule.setChecked(vrai)
+            bascule.blockSignals(False)
 
     def _liste(self) -> QComboBox:
         choix = liste_deroulante()

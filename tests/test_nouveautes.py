@@ -213,8 +213,10 @@ class TestPage:
         from PyQt6.QtWidgets import QLabel
         page = self._page(qtbot)
         # Le nom de la version COURANTE (« Revelio · Folio Magi » en 1.2.0) : écrit
-        # en dur, le test cassait à chaque release.
-        assert page.findChild(QLabel, "nomVersion").text() == nouveautes.charger().nom
+        # en dur, le test cassait à chaque release. Sans nom (une bêta), seul le numéro.
+        nom = nouveautes.charger().nom
+        etiquette = page.findChild(QLabel, "nomVersion")
+        assert (etiquette.text() if etiquette is not None else "") == nom
 
     @pytest.mark.parametrize("largeur", [1000, 1280, 1920])
     def test_les_cartes_montrent_tout_leur_texte(self, qtbot, largeur):

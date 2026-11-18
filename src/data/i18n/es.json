@@ -1535,6 +1535,12 @@
     "Compteurs": "Contadores",
     "Chacun règle d'un coup : {}.": "Cada uno ajusta de una vez: {}.",
     "Ce que change « {} »": "Lo que cambia «{}»",
-    "Rien : ses réglages sont déjà en place.": "Nada: sus ajustes ya están puestos."
+    "Rien : ses réglages sont déjà en place.": "Nada: sus ajustes ya están puestos.",
+    "Qualité du rendu": "Calidad de renderizado",
+    "Les effets que la carte graphique calcule à chaque image. Maximale : tout, tel qu'installé. Équilibrée : bords lissés moins fort, sans reflets ni relief des surfaces, à distance de vue normale. Légère : sans lissage ni aucun de ces effets, pour un PC portable ou un jeu qui saccade. Appliquée au prochain lancement ; le menu du jeu ne règle pas ces effets.": "Los efectos que la tarjeta gráfica calcula en cada imagen. Máxima: todo, tal como se instaló. Equilibrada: bordes suavizados con menos fuerza, sin reflejos ni relieve de las superficies, con distancia de visión normal. Ligera: sin suavizado ni ninguno de estos efectos, para un portátil o un juego que va a tirones. Se aplica en el próximo inicio; el menú del juego no ajusta estos efectos.",
+    "Lancer sur la carte graphique la plus puissante": "Iniciar en la tarjeta gráfica más potente",
+    "Ce PC a deux cartes graphiques, et Windows lance souvent ce jeu sur la plus économe. Allumé, le launcher le note dans les réglages graphiques de Windows (Paramètres > Affichage > Graphiques), pour ce jeu seulement ; éteint, il le retire.": "Este PC tiene dos tarjetas gráficas, y Windows suele iniciar este juego en la más económica. Activado, el launcher lo anota en la configuración de gráficos de Windows (Configuración > Pantalla > Gráficos), solo para este juego; desactivado, lo quita.",
+    "Votre écran est branché sur la puce graphique du processeur, pas sur votre carte graphique {} : les jeux tourneront bien plus lentement. Branchez le câble de l'écran sur la carte graphique.": "Tu pantalla está conectada al chip gráfico del procesador, no a tu tarjeta gráfica {}: los juegos irán mucho más lentos. Conecta el cable de la pantalla a la tarjeta gráfica.",
+    "Ne plus afficher": "No volver a mostrar"
   }
 }

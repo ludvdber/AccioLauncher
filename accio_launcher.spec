@@ -36,7 +36,8 @@ def _write_version_file() -> str:
     """Écrit la ressource VS_VERSION_INFO et retourne son chemin."""
     version = _app_version()
     # Le format Windows exige 4 entiers ; APP_VERSION en compte 3 (0.5.2 → 0.5.2.0).
-    nums = [int(p) for p in version.split(".")][:4]
+    # Une bêta (« 1.3.6-beta.1 ») y garde son noyau, son nom entier reste dans ProductVersion.
+    nums = [int(p) for p in version.partition("-")[0].split(".")][:4]
     nums += [0] * (4 - len(nums))
     quad = tuple(nums)
     dotted = ".".join(str(n) for n in quad)
@@ -67,7 +68,7 @@ VSVersionInfo(
         StringStruct('LegalCopyright', 'Copyright (c) 2026 ASTeam. GNU GPL v3.'),
         StringStruct('OriginalFilename', 'AccioLauncher.exe'),
         StringStruct('ProductName', 'Accio Launcher'),
-        StringStruct('ProductVersion', '{dotted}')])
+        StringStruct('ProductVersion', '{version}')])
       ]),
     VarFileInfo([VarStruct('Translation', [0x40c, 1200])])
   ]
