@@ -325,8 +325,20 @@ def plusieurs_cartes(cartes: list[str] | None = None) -> bool:
     ou celui de base de Microsoft ne compte pas : il n'y a rien à choisir."""
     lignes = _cartes_graphiques() if cartes is None else cartes
     reelles = [ligne for ligne in lignes
-               if not ligne.endswith(" · virtuel") and "microsoft basic" not in ligne.lower()]
+               if not ligne.endswith(" · virtuel") and not carte_virtuelle(ligne)]
     return len(reelles) >= 2
+
+
+# Adaptateurs qui ne dessinent rien d'un jeu : écrans distants, pilotes de base et
+# rendu logiciel. Une seule liste pour `plusieurs_cartes` et `ecran_branche`.
+_VIRTUELLES = ("microsoft basic", "parsec", "virtual display", "indirect display",
+               "remote display", "spacedesk", "citrix", "vmware", "virtualbox", "hyper-v")
+
+
+def carte_virtuelle(nom: str) -> bool:
+    """Ce nom d'adaptateur est-il virtuel ou logiciel (Parsec, Microsoft Basic Render Driver…) ?"""
+    bas = nom.lower()
+    return any(mot in bas for mot in _VIRTUELLES)
 
 
 def sans_pilote_graphique(cartes: list[str] | None = None) -> bool:

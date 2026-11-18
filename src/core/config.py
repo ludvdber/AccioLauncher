@@ -263,6 +263,9 @@ class Config:
     # Qualité du rendu D3D11 de HP1/HP2 (id → « maximale », « equilibree », « legere »).
     # Absent : rien n'est écrit, l'ini reste celui de l'installation (`qualite_rendu`).
     qualite_rendu: dict[str, str] = field(default_factory=dict)
+    # Avertissement « écran sur la puce intégrée » fermé : la carte dédiée qu'il nommait
+    # (`ecran_branche.signature`). Il revient si la situation change.
+    ecran_ignore: str = ""
     # Panne du correctif déjà signalée au retour d'une partie (id → empreinte des lignes du journal,
     # `journal_correctif.signature`) : la même panne à chaque lancement ne se redit pas.
     correctif_signale: dict[str, str] = field(default_factory=dict)
@@ -325,6 +328,7 @@ class Config:
                     resolution_jeu=_as_map(data.get("resolution_jeu"), str),
                     taille_texte=_as_map(data.get("taille_texte"), str),
                     qualite_rendu=_as_map(data.get("qualite_rendu"), str),
+                    ecran_ignore=_as_str(data.get("ecran_ignore"), ""),
                     correctif_signale=_as_map(data.get("correctif_signale"), str),
                     inconnus={k: v for k, v in data.items() if k not in _CLES_CONNUES},
                 )
@@ -383,6 +387,7 @@ class Config:
                 "resolution_jeu": self.resolution_jeu,
                 "taille_texte": self.taille_texte,
                 "qualite_rendu": self.qualite_rendu,
+                "ecran_ignore": self.ecran_ignore,
                 "correctif_signale": self.correctif_signale,
             },
             indent=4,

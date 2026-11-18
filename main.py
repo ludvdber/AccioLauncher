@@ -223,6 +223,9 @@ def main():
         log.info("Écrans : %s", " ; ".join(
             ecran(e.size().width(), e.size().height(), e.devicePixelRatio())
             for e in app.screens()))
+        # Écran branché sur la puce du processeur ? Lu en fond (DXGI, Windows), gardé.
+        from src.core import ecran_branche
+        ecran_branche.lancer()
 
         # La langue doit être active AVANT le premier texte affiché : le splash
         # apparaît bien avant MainWindow, qui appelait jusqu'ici set_language.

@@ -118,6 +118,7 @@ class ActionPanel(QWidget):
         self._alert.setFont(body_font(12))
         self._alert.settings_requested.connect(self.settings_requested)
         self._alert.preparation_requested.connect(self.preparation_requested)
+        self._alert.masque.connect(self.refresh)
         self._layout.addWidget(self._alert)
 
         # Ligne principale des boutons

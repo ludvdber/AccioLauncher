@@ -20,7 +20,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFontMetrics
 from PyQt6.QtWidgets import QLabel, QWidget
 
-from src.core import compat, composants_windows, fichiers_essentiels
+from src.core import compat, composants_windows, ecran_branche, fichiers_essentiels
 from src.core.formatting import format_size
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager, GameState
@@ -76,6 +76,8 @@ class AlertBanner(QLabel):
     # « Installer » les composants manquants par le launcher (Windows :
     # installateur intégré ; Linux : préfixe Wine), pas sur une page web.
     preparation_requested = pyqtSignal()
+    # « Ne plus afficher » : le panneau se recompose sans le message.
+    masque = pyqtSignal()
 
     def __init__(self, manager: GameManager, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -212,6 +214,10 @@ class AlertBanner(QLabel):
                     + " " + LIEN.format("preparer" if paquets else manquants[0], WARN,
                                         tr("Installer"))
                 )
+        # Ni bloquant ni propre au jeu : l'écran branché sur la puce du processeur.
+        ecran = self._ecran_sur_la_puce()
+        if ecran:
+            return ecran
         # Dernier rang : la mise en garde que le CATALOGUE attache à ce jeu.
         # Elle cède le pas à tout ce qui précède, qui est bloquant ici et
         # maintenant, mais elle survit aux deux moments qui comptent : avant le
@@ -228,6 +234,24 @@ class AlertBanner(QLabel):
                 game, Path(self._manager.config.install_path)):
             return self._catalogue(game)
         return ""
+
+    def _ecran_sur_la_puce(self) -> str:
+        """L'écran sur la puce intégrée, une carte dédiée sans écran (`ecran_branche`) ;
+        rien une fois fermé, tant que la situation reste la même."""
+        config = self._manager.config
+        carte = ecran_branche.carte_ignoree()
+        if carte is None:
+            if config.ecran_ignore and ecran_branche.terminee():
+                # Réglé depuis : un prochain mauvais branchement se redira.
+                config.ecran_ignore = ""
+                config.save()
+            return ""
+        if config.ecran_ignore == ecran_branche.signature(carte):
+            return ""
+        return (tr("Votre écran est branché sur la puce graphique du processeur, pas sur votre "
+                   "carte graphique {} : les jeux tourneront bien plus lentement. Branchez le "
+                   "câble de l'écran sur la carte graphique.").format(escape(carte.nom, quote=False))
+                + " " + LIEN.format("ecran_ignore", WARN, tr("Ne plus afficher")))
 
     @staticmethod
     def _sans_lanceur() -> bool:
@@ -362,6 +386,12 @@ class AlertBanner(QLabel):
             self.settings_requested.emit()
         elif href == "preparer":
             self.preparation_requested.emit()
+        elif href == "ecran_ignore":
+            carte = ecran_branche.carte_ignoree()
+            config = self._manager.config
+            config.ecran_ignore = ecran_branche.signature(carte)
+            config.save()
+            self.masque.emit()
         elif href == "guide_linux":
             # Même aller-retour que « Installer » : au retour dans la fenêtre,
             # on cherche à nouveau umu et wine (`invalidate_vcredist_cache`).
