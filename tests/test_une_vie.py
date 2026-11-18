@@ -2,6 +2,7 @@
 qui le joue, et ce que le joueur en voit (atelier, `notes/DIFFICULTE_1.4.md` § 6 et § 9 ; C4, C5)."""
 import dataclasses
 import json
+import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
@@ -98,7 +99,10 @@ class TestCles:
         assert une_vie.ini(_CATALOGUE["hp6"], tmp_path) == ini
         assert une_vie.entrer(_CATALOGUE["hp6"], ini)
         ou = une_vie.dossier(_CATALOGUE["hp6"])
-        assert _valeurs(ini) == {"OneLife": "1", "DeathCounter": "1", "OneLifeSaves": str(ou)}
+        # Le chemin tel que le JEU le lit : sous Linux, celui de Wine (`Z:\…`), pas celui du système.
+        attendu = une_vie.pour_le_jeu(ou, plafond=True)
+        assert attendu is not None and (sys.platform != "win32" or attendu == str(ou))
+        assert _valeurs(ini) == {"OneLife": "1", "DeathCounter": "1", "OneLifeSaves": attendu}
         assert ou.is_dir() and une_vie.actif(ini)
 
     def test_hp5_se_ferme_a_la_fin_de_vie(self, tmp_path):
@@ -192,7 +196,9 @@ class TestLancement:
         lignes: list = []
         monkeypatch.setattr("src.core.game_manager.subprocess.Popen", lambda args, **k: lignes.append(args))
         manager.launch_game("hp2")
-        assert lignes and lignes[0][1:] == ["PrivetDr.unr", "-SAVESLOT=7"]
+        # Les deux derniers : sous Linux la ligne commence par Wine, puis l'exe.
+        assert lignes and lignes[0][-2:] == ["PrivetDr.unr", "-SAVESLOT=7"]
+        assert Path(lignes[0][-3]).name == "Game.exe", "rien entre l'exe et les arguments du mode"
 
     def test_au_lancement_le_preset_tenu(self, tmp_path):
         game = _CATALOGUE["hp1"]
