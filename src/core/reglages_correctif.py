@@ -27,6 +27,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from src.core import difficulte_lua
 from src.core.i18n import decimal_separator, tr
 
 from src.core.reglages_table import (  # noqa: F401  (réexportés)
@@ -408,6 +409,17 @@ def est_nouveau_correctif(ini: Path) -> bool:
     return _bornes(lignes, _MARQUE_V2) is not None
 
 
+_DOSSIER_LUA = ("Accio.Game", "LuaFolder")
+
+
+def _par_lua(ini: Path, reglage: Reglage, lignes: list[str]) -> bool:
+    """Ce réglage de difficulté passe-t-il par un script Lua dans ce jeu
+    (`difficulte_lua`) ? Alors sa clé d'ini reste à l'origine : les deux se
+    multiplieraient."""
+    return (reglage.ident in difficulte_lua.TRADUCTIONS
+            and difficulte_lua.pret(ini.parent, reglage.ident, _valeur(lignes, *_DOSSIER_LUA)))
+
+
 def portes_par(ini: Path | None, reglages: tuple[Reglage, ...]) -> tuple[Reglage, ...]:
     """Les réglages dont l'ini du nouveau correctif porte la section.
 
@@ -421,7 +433,7 @@ def portes_par(ini: Path | None, reglages: tuple[Reglage, ...]) -> tuple[Reglage
         lignes, _ = _lire(ini)
     except OSError:
         return reglages
-    return tuple(r for r in reglages if _bornes(lignes, r.section) is not None)
+    return tuple(r for r in reglages if _bornes(lignes, r.section) is not None or _par_lua(ini, r, lignes))
 
 
 def lire(ini: Path, reglage: Reglage) -> Etat:
@@ -443,7 +455,11 @@ def lire(ini: Path, reglage: Reglage) -> Etat:
             return Etat(reglage.choix[0])
         v = f"{(largeur or '').strip()}x{(hauteur or '').strip()}"
         return Etat(v, personnalise=v not in reglage.choix)
-    brut = _valeur(lignes, reglage.section, reglage.cle)
+    brut: str | None
+    if _par_lua(ini, reglage, lignes):
+        brut = _nombre(difficulte_lua.lire(ini.parent, reglage.ident, float(reglage.choix[0])))
+    else:
+        brut = _valeur(lignes, reglage.section, reglage.cle)
     if reglage.noms_choix:
         # Le correctif compare sans tenir compte de la casse.
         choisi = brut.lower() if brut else reglage.choix[0]
@@ -640,6 +656,9 @@ def remettre_origine(ini: Path, reglages: Iterable[Reglage]) -> None:
     origine, _ = _lire(chemin_origine(ini))
     lignes, fin = _lire(ini)
     for reglage in reglages:
+        if _par_lua(ini, reglage, lignes):
+            neutre = float(reglage.choix[0])
+            difficulte_lua.ecrire(ini.parent, reglage.ident, neutre, neutre)
         for cle in _cles(reglage):
             _poser(lignes, reglage.section, cle, _valeur(origine, reglage.section, cle))
         if reglage.cle == "FPSLimit" and _valeur(lignes, *_PLAFOND) is not None:
@@ -673,8 +692,11 @@ def ecrire(ini: Path, reglage: Reglage, valeur: Any) -> None:
             if not sur_le_curseur(reglage, valeur):
                 raise ValueError(f"{reglage.ident} : {valeur!r} non proposé")
             valeur = arrondir(reglage, valeur)
-        texte = str(valeur) if reglage.noms_choix else _nombre(valeur)
-        if not _poser(lignes, reglage.section, reglage.cle, texte):
+        if _par_lua(ini, reglage, lignes):
+            difficulte_lua.ecrire(ini.parent, reglage.ident, float(valeur), float(reglage.choix[0]))
+            # La clé jumelle du correctif revient à l'origine (une section absente n'a rien à rendre).
+            _poser(lignes, reglage.section, reglage.cle, _nombre(reglage.choix[0]))
+        elif not _poser(lignes, reglage.section, reglage.cle, str(valeur) if reglage.noms_choix else _nombre(valeur)):
             raise ValueError(f"section [{reglage.section}] absente")
         if reglage.cle == "FPSLimit":
             _aligner_plafond(lignes, valeur, chemin_origine(ini))
