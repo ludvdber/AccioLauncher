@@ -170,8 +170,27 @@ def main() -> int:
     sortie.chmod(0o755)
     print(f"AppImage : {sortie.relative_to(RACINE)} "
           f"({sortie.stat().st_size / 1024 ** 2:.0f} Mo)")
+    trop = trop_grosse(sortie.stat().st_size)
+    if trop:
+        print(f"ERREUR : {trop}")
+        return 1
     print(f"SHA-256  : {empreinte(sortie)}")
     return 0
+
+
+# Plafond de taille de l'AppImage. Mesures : 62 Mo (release, Python de
+# setup-python sur 22.04), 67 à 72 Mo (build local, Python de `uv`) ; 77 Mo
+# quand `strip` manquait. Au-delà de 90, une bibliothèque inattendue est
+# embarquée : on s'arrête plutôt que de publier (audit Linux du 2026-11-17, C6).
+PLAFOND_MO = 90
+
+
+def trop_grosse(octets: int, plafond_mo: int = PLAFOND_MO) -> str:
+    """Message d'erreur si l'AppImage dépasse le plafond, sinon chaîne vide. Pure."""
+    if octets > plafond_mo * 1024 ** 2:
+        return (f"AppImage de {octets / 1024 ** 2:.0f} Mo, plafond {plafond_mo} Mo : "
+                "une bibliothèque inattendue est-elle embarquée ?")
+    return ""
 
 
 if __name__ == "__main__":

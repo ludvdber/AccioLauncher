@@ -17,7 +17,7 @@ python -m pytest -n auto --dist loadfile              # toute la suite, ~2 min (
 python -m pytest tests/test_config.py::TestConfig::test_defaults
 python -m ruff check .                                # jeu de règles FIGÉ dans pyproject.toml
 python -m mypy                                        # src/core en strict, réglé dans pyproject.toml
-python -m mypy --platform linux                       # les branches Linux (CI et builds aussi)
+python -m mypy --platform linux                       # les branches Linux de src/core seulement (CI et builds aussi)
 pip install -r requirements-dev.txt && build.bat      # → dist/AccioLauncher.exe
 ./build.sh                                            # Linux → dist/AccioLauncher-x86_64.AppImage
 ```

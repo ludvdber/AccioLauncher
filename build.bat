@@ -46,6 +46,11 @@ if not errorlevel 1 (
 )
 
 :: requirements-dev.txt : les dependances, plus les outils de build et de test.
+:: En release (ACCIO_PY), le workflow a deja installe tests.txt, verifie par
+:: empreinte : reinstaller ici prenait sur PyPI, sans empreinte, tout plancher
+:: plus haut que la version figee (ruff 0.17.5 par-dessus 0.17.3, audit Linux
+:: du 2026-11-17).
+if defined ACCIO_PY goto deps_faites
 echo Installation des dependances de build...
 %PY% -m pip install -r requirements-dev.txt --quiet
 if errorlevel 1 (
@@ -53,6 +58,7 @@ if errorlevel 1 (
     %PAUSE%
     exit /b 1
 )
+:deps_faites
 echo.
 
 :: L'icone n'est plus generee : c'est un asset de marque (7 tailles dessinees,
