@@ -12,5 +12,5 @@ Icon=be.acciolauncher.AccioLauncher
 Terminal=false
 Categories=Game;
 Keywords=Harry Potter;Hogwarts;Wine;Proton;
-StartupWMClass=AccioLauncher
+StartupWMClass=be.acciolauncher.AccioLauncher
 SingleMainWindow=true

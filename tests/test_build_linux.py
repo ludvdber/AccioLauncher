@@ -164,12 +164,22 @@ class TestIdentiteDeBureau:
         assert BUREAU.is_file()
         assert _entrees_bureau()["Icon"] == main.DESKTOP_ID
 
-    def test_la_classe_x11_est_le_nom_de_l_executable(self):
-        """Sous X11, Qt prend le nom de l'exécutable pour `WM_CLASS` (relevé
-        sous Xvfb sur l'AppImage : « AccioLauncher », « AccioLauncher »)."""
+    def test_startupwmclass_est_l_app_id_wayland(self):
+        """`StartupWMClass` = l'`app_id` Wayland, pas la classe X11.
+
+        Gear Lever RENOMME le `.desktop` d'après `Name` (« accio_launcher.desktop »,
+        `AppImageProvider.py` du commit a2917f2) et recopie les autres clés. Sous
+        Wayland, KDE relie alors la fenêtre à son entrée en comparant son `app_id`
+        à `StartupWMClass` (`libtaskmanager/tasktools.cpp`) : avec
+        « AccioLauncher », plus rien ne correspondait. `app_id` MESURÉ sous weston
+        (`WAYLAND_DEBUG=1`, l'AppImage) : `set_app_id("be.acciolauncher.AccioLauncher")`.
+        Coût accepté : sous X11, `WM_CLASS` reste « AccioLauncher » (relevé sous
+        Xvfb), qui ne sert plus de clé ; la fenêtre X11 porte sa propre icône
+        (audit Linux du 2026-11-17, C3)."""
+        import main
         spec = (RACINE / "accio_launcher.spec").read_text(encoding="utf-8")
         assert 'name="AccioLauncher"' in spec
-        assert _entrees_bureau()["StartupWMClass"] == "AccioLauncher"
+        assert _entrees_bureau()["StartupWMClass"] == main.DESKTOP_ID
 
     def test_un_jeu_sans_terminal(self):
         entrees = _entrees_bureau()
@@ -433,3 +443,26 @@ class TestGlibcExigee:
         # Après le trait : la boîte de mise à jour du launcher ne l'affiche pas.
         affiche, _, reste = notes.partition("\n---\n")
         assert "AppImage" not in affiche and "AppImage" in reste
+
+
+class TestPlafondDeTaille:
+    """Une AppImage de plus de 90 Mo arrête le build (audit Linux du 2026-11-17, C6).
+    Mesures : 62 Mo en release, 72 Mo en build local par `uv`."""
+
+    def test_plafond_a_90_mo(self):
+        assert appimage.PLAFOND_MO == 90
+
+    def test_les_tailles_mesurees_passent(self):
+        assert appimage.trop_grosse(62 * 1024 ** 2) == ""
+        assert appimage.trop_grosse(75_831_800) == ""          # build local du 2026-11-17
+        assert appimage.trop_grosse(90 * 1024 ** 2) == ""
+
+    def test_au_dela_le_build_s_arrete(self):
+        message = appimage.trop_grosse(90 * 1024 ** 2 + 1)
+        assert "plafond 90 Mo" in message
+
+    def test_main_rend_une_erreur_au_dela(self):
+        """`main` vérifie le plafond AVANT d'afficher l'empreinte (code 1)."""
+        source = (LINUX / "appimage.py").read_text(encoding="utf-8")
+        corps = source[source.index("def main"):]
+        assert corps.index("trop_grosse(") < corps.index("SHA-256")
