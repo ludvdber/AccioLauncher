@@ -1,0 +1,43 @@
+#!/bin/sh
+# Relais vers l'hôte : `umu-run`, `wine`, `wine64` ou `winetricks` (le nom
+# sous lequel on est appelé) exécuté HORS du bac à sable par `flatpak-spawn
+# --host`, avec le dossier courant et les variables utiles aux jeux.
+#
+# flatpak-spawn --host ne transmet PAS l'environnement : l'hôte lance la
+# commande avec celui de sa session. On passe donc explicitement ce que
+# `compat.environnement` compose (préfixe, Proton, surcharges de DLL, DXVK,
+# marque ACCIO_LAUNCH…), et rien d'autre : surtout pas le PATH ni le
+# LD_LIBRARY_PATH du bac à sable, qui n'ont pas de sens sur l'hôte.
+# Entrées, sorties et code de retour sont relayés par flatpak-spawn, qui vit
+# tant que le programme de l'hôte tourne : le launcher le suit comme un enfant.
+# PAS de `--watch-bus` : il tuait le jeu avec le launcher (vérifié le
+# 2026-11-18), alors que l'AppImage lance le jeu dans sa propre session
+# (`game_manager`, `start_new_session`) et qu'il survit à sa fermeture.
+set -u
+nom=$(basename "$0")
+relais="${ACCIO_RELAIS_HOTE:-}"
+
+set -- "$nom" "$@"
+# Chaque variable devient un `--env=` ; on empile EN TÊTE des arguments.
+for variable in $(env | sed -n 's/^\([A-Za-z_][A-Za-z0-9_]*\)=.*/\1/p' | sort -u); do
+    case "$variable" in
+        WINE|WINEPREFIX|WINEDEBUG|WINEDLLOVERRIDES|WINEARCH|WINEESYNC|WINEFSYNC|\
+        PROTON_*|PROTONPATH|GAMEID|STORE|UMU_*|DXVK_*|VKD3D_*|MANGOHUD*|ACCIO_LAUNCH)
+            valeur=$(printenv "$variable")
+            # `WINE` désigne un relais (chemin du bac à sable) : l'hôte le
+            # retrouve par son nom.
+            if [ -n "$relais" ]; then
+                case "$valeur" in
+                    "$relais"/*) valeur=$(basename "$valeur") ;;
+                esac
+            fi
+            set -- "--env=$variable=$valeur" "$@"
+            ;;
+    esac
+done
+# LD_LIBRARY_PATH du dossier gelé (PyInstaller y met `_internal`) : hérité,
+# flatpak-spawn chargeait la GLib embarquée et mourait (« undefined symbol:
+# g_sort_array », code 127, essai du 2026-11-18). Le launcher le retire déjà
+# pour ses enfants (`compat.environnement_hote`) ; le relais ne compte pas dessus.
+unset LD_LIBRARY_PATH LD_LIBRARY_PATH_ORIG
+exec flatpak-spawn --host --directory="$(pwd)" "$@"
