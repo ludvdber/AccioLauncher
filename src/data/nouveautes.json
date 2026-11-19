@@ -76,9 +76,9 @@
         {
           "genre": "nouveau",
           "texte": {
-            "fr": "HP2 : en Difficile et en Hardcore, chaque coup reçu fait plus mal ; en Détendu, moins.",
-            "en": "HP2: on Hard and Hardcore, every hit you take hurts more; on Relaxed, less.",
-            "es": "HP2: en Difícil y Hardcore, cada golpe recibido duele más; en Relajado, menos."
+            "fr": "HP1 et HP2 : en Difficile et en Hardcore, chaque coup reçu fait plus mal et les boss encaissent plus de coups ; en Détendu, c'est l'inverse.",
+            "en": "HP1 and HP2: on Hard and Hardcore, every hit you take hurts more and bosses take more hits; on Relaxed, the reverse.",
+            "es": "HP1 y HP2: en Difícil y Hardcore, cada golpe recibido duele más y los jefes aguantan más golpes; en Relajado, al revés."
           }
         },
         {
