@@ -142,7 +142,17 @@ class TestParJeu:
         idents = dp.idents_du_jeu(hp2)
         assert dp.NATIVE in idents
         assert dp.disponible(dp.PAR_IDENT["hardcore"], "hp2", idents)
-        assert ("Difficulté du jeu", "Difficile") in dp.changements(dp.PAR_IDENT["hardcore"], idents)
+        # Sans facteur de dégâts reçus (ini d'avant la 1.4), la difficulté du jeu fait le travail.
+        sans_facteur = idents - {"degats_recus"}
+        assert ("Difficulté du jeu", "Difficile") in dp.changements(dp.PAR_IDENT["hardcore"], sans_facteur)
+
+    def test_avec_le_facteur_la_difficulte_du_jeu_reste_facile(self):
+        """Ludo 2026-11-19 : le facteur et la difficulté du jeu se multipliaient (×7,5 en Hardcore)."""
+        hp2 = next(g for g in load_catalog().games if g.id == "hp2")
+        idents = dp.idents_du_jeu(hp2) | {"degats_recus"}
+        for ident in ("difficile", "hardcore", "impardonnable"):
+            assert dp.valeurs_pour(dp.PAR_IDENT[ident], idents)[dp.NATIVE] == 0, ident
+            assert "Difficulté du jeu" not in dict(dp.changements(dp.PAR_IDENT[ident], idents)), ident
 
     def test_normal_reconnu_avant_un_preset_qui_ne_change_rien(self):
         """HP2 : Détendu (premier de la liste) y vaut Normal ; la page disait « Détendu » choisi."""

@@ -59,8 +59,9 @@ TABLE: dict[str, dict[str, dict[str, float]]] = {
 }
 # Le Quidditch de HP1 et HP2 (`QuidditchDifficulty`, [Accio.Game]) et la difficulté propre de HP2 (User.ini).
 QUIDDITCH = {"recit": 0, "detendu": 0, "normal": 0, "difficile": 1, "hardcore": 2}
-NATIVE_HP2 = {"detendu": "DifficultyEasy", "normal": "DifficultyEasy", "difficile": "DifficultyHard",
-              "hardcore": "DifficultyHard"}
+# Ludo 2026-11-19 : là où DamageTaken s'applique, la difficulté propre de HP2 reste Facile (les deux se multipliaient).
+NATIVE_HP2 = {"detendu": "DifficultyEasy", "normal": "DifficultyEasy", "difficile": "DifficultyEasy",
+              "hardcore": "DifficultyEasy"}
 # Une seule vie : Réaliste = Normal, Impardonnable = Hardcore, plus les trois clés du mode.
 UNE_VIE = {"realiste": "normal", "impardonnable": "hardcore"}
 ONE_LIFE = {"hp1": "1", "hp2": "1", "hp3": "1", "hp4": "1", "hp5": "2", "hp6": "1"}

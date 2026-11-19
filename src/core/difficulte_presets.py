@@ -129,8 +129,14 @@ def idents_du_jeu(game: GameData, ini: Path | None = None) -> frozenset[str]:
 
 
 def valeurs_pour(preset: Preset, idents: Iterable[str]) -> dict[str, object]:
+    """Les valeurs du preset que ce jeu sait régler. Là où le facteur de dégâts
+    reçus s'applique, la difficulté propre du jeu reste Facile (rang 0) : les deux
+    se multiplient (HP2 : 7,5 fois le jeu livré en Hardcore), Ludo 2026-11-19."""
     voulus = set(idents)
-    return {k: v for k, v in preset.valeurs.items() if k in voulus}
+    valeurs = {k: v for k, v in preset.valeurs.items() if k in voulus}
+    if NATIVE in valeurs and "degats_recus" in voulus:
+        valeurs[NATIVE] = 0
+    return valeurs
 
 
 def disponible(preset: Preset, game_id: str, idents: Iterable[str]) -> bool:
