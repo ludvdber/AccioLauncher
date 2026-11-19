@@ -1,5 +1,5 @@
 {
-  "catalog_version": "0.59",
+  "catalog_version": "0.60",
   "contributors": [
     {
       "name": "ASTeam",
@@ -117,9 +117,33 @@
         "winmm"
       ],
       "cover_image": "hp1_cover.jpg",
-      "latest_version": "1.7",
-      "recommended_version": "1.7",
+      "latest_version": "1.8",
+      "recommended_version": "1.8",
       "versions": [
+        {
+          "version": "1.8",
+          "date": "2026-11-19",
+          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp1-v1.8/hp1.7z",
+          "size_mb": 466,
+          "changes": [
+            "Difficulté réglable (launcher 1.4) : dégâts reçus et infligés",
+            "Mode « une seule vie » (launcher 1.4)"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "Adjustable difficulty (launcher 1.4): damage taken and dealt",
+                "“One life” mode (launcher 1.4)"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Dificultad ajustable (launcher 1.4): daño recibido e infligido",
+                "Modo «una sola vida» (launcher 1.4)"
+              ]
+            }
+          }
+        },
         {
           "version": "1.7",
           "date": "2026-11-05",
@@ -605,9 +629,33 @@
         "winmm"
       ],
       "cover_image": "hp2_cover.jpg",
-      "latest_version": "1.6",
-      "recommended_version": "1.6",
+      "latest_version": "1.7",
+      "recommended_version": "1.7",
       "versions": [
+        {
+          "version": "1.7",
+          "date": "2026-11-19",
+          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp2-v1.7/hp2.7z",
+          "size_mb": 664,
+          "changes": [
+            "Difficulté réglable (launcher 1.4) : dégâts reçus et infligés",
+            "Mode « une seule vie » (launcher 1.4)"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "Adjustable difficulty (launcher 1.4): damage taken and dealt",
+                "“One life” mode (launcher 1.4)"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Dificultad ajustable (launcher 1.4): daño recibido e infligido",
+                "Modo «una sola vida» (launcher 1.4)"
+              ]
+            }
+          }
+        },
         {
           "version": "1.6",
           "date": "2026-11-05",
@@ -1143,9 +1191,33 @@
         "msvcr70"
       ],
       "cover_image": "hp3_cover.jpg",
-      "latest_version": "1.7",
-      "recommended_version": "1.7",
+      "latest_version": "1.8",
+      "recommended_version": "1.8",
       "versions": [
+        {
+          "version": "1.8",
+          "date": "2026-11-19",
+          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp3-v1.8/hp3.7z",
+          "size_mb": 1792,
+          "changes": [
+            "Difficulté réglable (launcher 1.4) : dégâts reçus et infligés",
+            "Mode « une seule vie » (launcher 1.4)"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "Adjustable difficulty (launcher 1.4): damage taken and dealt",
+                "“One life” mode (launcher 1.4)"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Dificultad ajustable (launcher 1.4): daño recibido e infligido",
+                "Modo «una sola vida» (launcher 1.4)"
+              ]
+            }
+          }
+        },
         {
           "version": "1.7",
           "date": "2026-11-05",
@@ -1893,9 +1965,33 @@
         "slots": "hp4"
       },
       "cover_image": "hp4_cover.jpg",
-      "latest_version": "1.6",
-      "recommended_version": "1.6",
+      "latest_version": "1.7",
+      "recommended_version": "1.7",
       "versions": [
+        {
+          "version": "1.7",
+          "date": "2026-11-19",
+          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp4-v1.7/hp4.7z",
+          "size_mb": 2598,
+          "changes": [
+            "Difficulté réglable (launcher 1.4) : dégâts, résistance des créatures",
+            "Mode « une seule vie » (launcher 1.4)"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "Adjustable difficulty (launcher 1.4): damage, creature toughness",
+                "“One life” mode (launcher 1.4)"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Dificultad ajustable (launcher 1.4): daño, resistencia de las criaturas",
+                "Modo «una sola vida» (launcher 1.4)"
+              ]
+            }
+          }
+        },
         {
           "version": "1.6",
           "date": "2026-11-15",
@@ -2183,9 +2279,37 @@
         "xinput1_3"
       ],
       "cover_image": "hp5_cover.jpg",
-      "latest_version": "1.7",
-      "recommended_version": "1.7",
+      "latest_version": "1.8",
+      "recommended_version": "1.8",
       "versions": [
+        {
+          "version": "1.8",
+          "date": "2026-11-19",
+          "download_url": null,
+          "download_parts": [
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp5-v1.8/hp5.7z.001",
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp5-v1.8/hp5.7z.002"
+          ],
+          "size_mb": 5909,
+          "changes": [
+            "Difficulté réglable (launcher 1.4) : dégâts, vie de Harry, Harry invincible",
+            "Caméra fluide : les gestes des sorts gardent leur rythme d'origine"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "Adjustable difficulty (launcher 1.4): damage, Harry's health, invincible Harry",
+                "Smooth camera: spell gestures keep their original pace"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Dificultad ajustable (launcher 1.4): daño, vida de Harry, Harry invencible",
+                "Cámara fluida: los gestos de los hechizos conservan su ritmo original"
+              ]
+            }
+          }
+        },
         {
           "version": "1.7",
           "date": "2026-11-15",
@@ -2562,9 +2686,37 @@
         "xinput1_3"
       ],
       "cover_image": "hp6_cover.jpg",
-      "latest_version": "1.4",
-      "recommended_version": "1.4",
+      "latest_version": "1.5",
+      "recommended_version": "1.5",
       "versions": [
+        {
+          "version": "1.5",
+          "date": "2026-11-19",
+          "download_url": null,
+          "download_parts": [
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp6-v1.5/hp6.7z.001",
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp6-v1.5/hp6.7z.002"
+          ],
+          "size_mb": 4417,
+          "changes": [
+            "Difficulté réglable (launcher 1.4) : dégâts, réaction des ennemis",
+            "Mode « une seule vie » (launcher 1.4)"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "Adjustable difficulty (launcher 1.4): damage, enemy reactions",
+                "“One life” mode (launcher 1.4)"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Dificultad ajustable (launcher 1.4): daño, reacción de los enemigos",
+                "Modo «una sola vida» (launcher 1.4)"
+              ]
+            }
+          }
+        },
         {
           "version": "1.4",
           "date": "2026-11-15",
