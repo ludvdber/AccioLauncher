@@ -37,7 +37,6 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QDialog,
     QGraphicsOpacityEffect,
-    QHBoxLayout,
     QLabel,
     QPushButton,
     QRadioButton,
@@ -56,7 +55,6 @@ from src.ui.composants import (
     transparent,
     colonne_centree,
     MARGES_PAGE,
-    ENCRE_DOUCE,
     Carte,
     bouton_retour,
     feuille_de_style,
@@ -66,19 +64,16 @@ from src.ui.composants import (
 from src.ui.bandeau_jeu import badge_dans_la_pastille, bandeau_du_jeu, pastille_rubrique
 from src.ui.editeur_touches import EditeurTouches
 from src.ui.entree_focus import entree_suit_le_focus
-from src.ui.icon_button import pixmap_icone
 from src.core.reglages_image import Magasin, MagasinCorrectif
 from src.core.reglages_table import Reglage
 from src.ui.page_image import LARGEUR_LISTE, LigneLibre, PageAvecFiche, PageImage, _LigneImage
-from src.ui.theme import accent_qcolor, themed
+from src.ui.theme import themed
 from src.ui.theme import current as theme_courant
 from src.ui.toggle_switch import ToggleSwitch
 from src.ui.utils import zone_defilable
 from src.ui.reglages_widgets import (  # réexportés
     _STYLE,
-    _CarteEffets,
     _Disposition,
-    _Points,
     _texte_beta,
 )
 from src.ui.reglages_rubriques import (  # noqa: F401  (réexportés)
@@ -402,42 +397,6 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         entete = surtitre(titre)
         entete.setMinimumHeight(_HAUTEUR_ENTETE)
         return entete
-
-    def _entete_effets(self, titre: str) -> QWidget:
-        """Le surtitre, et la légende des repères au bout de la ligne."""
-        entete = QWidget()
-        transparent(entete)
-        h = QHBoxLayout(entete)
-        h.setContentsMargins(0, 0, 0, 0)
-        h.setSpacing(6)
-        h.addWidget(surtitre(titre))
-        h.addStretch()
-        oeil = QLabel()
-        oeil.setPixmap(pixmap_icone("oeil", 18, accent_qcolor()))   # la maison, pas l'or (f4)
-        transparent(oeil)
-        h.addWidget(oeil)
-        h.addWidget(self._petit(tr("le plus visible")))
-        h.addSpacing(12)
-        for niveau in (1, 2, 3):
-            h.addWidget(_Points(niveau))
-        h.addWidget(self._petit(tr("exigence")))
-        # Le détail des couleurs, au survol de la légende.
-        entete.setToolTip(
-            tr("Exigence pour la carte graphique (GPU), le processeur (CPU) ou la mémoire (RAM) :")
-            + " " + " · ".join((tr("vert faible"), tr("orange moyen"), tr("rouge extrême"))) + ". "
-            + tr("Chaque « ? » explique son réglage."))
-        return entete
-
-    @staticmethod
-    def _petit(contenu: str) -> QLabel:
-        lbl = QLabel(contenu)
-        lbl.setTextFormat(Qt.TextFormat.PlainText)
-        lbl.setFont(police(12))
-        lbl.setStyleSheet(f"color: {ENCRE_DOUCE}; background: transparent;")
-        return lbl
-
-    def _carte_effets(self) -> _CarteEffets:
-        return _CarteEffets()
 
     def _fiche(self, aide_txt: str, reglage=None) -> str:
         """Ce qu'ouvre le « ? » : la description, puis tout ce qu'on sait du réglage."""

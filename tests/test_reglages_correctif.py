@@ -892,7 +892,7 @@ class TestFenetre:
 
     def test_les_reperes_disent_le_cout_et_ce_qui_se_voit(self, qtbot, tmp_path):
         """Trois points pour le coût, l'œil pour ce qui se voit, le détail au survol."""
-        from src.ui.game_settings_dialog import _Points
+        from src.ui.reglages_widgets import _Points
         (tmp_path / "HP4").mkdir()
         (tmp_path / "HP4" / "d3d9.ini").write_bytes(INI_V2.encode("ascii"))
         dlg = _dialogue(qtbot, _jeu(tmp_path, ["surechantillonnage", "arriere_plan"]), _manager(tmp_path))
@@ -907,7 +907,7 @@ class TestFenetre:
     def test_la_couleur_suit_le_niveau(self, qtbot, tmp_path):
         """Orange moyen, rouge extrême (Ludo, 2026-09-30) ; le faible ne se dit plus sur la
         ligne (refonte B, 2026-11-13)."""
-        from src.ui.game_settings_dialog import _COULEURS_COUT, _Points
+        from src.ui.reglages_widgets import _COULEURS_COUT, _Points
         (tmp_path / "HP4").mkdir()
         (tmp_path / "HP4" / "d3d9.ini").write_bytes(INI_V2.encode("ascii"))
         dlg = _dialogue(qtbot, _jeu(tmp_path, ["surechantillonnage", "filtrage", "anticrenelage"]),
@@ -1685,7 +1685,7 @@ class TestPageImage:
         assert not dlg._erreur.isHidden()
 
     def test_la_couleur_des_points_suit_le_cout(self, qtbot, tmp_path):
-        from src.ui.game_settings_dialog import _COULEURS_COUT, _Points
+        from src.ui.reglages_widgets import _COULEURS_COUT, _Points
         _dlg, page, _ini = self._fenetre(qtbot, tmp_path, self.IDENTS + ["anticrenelage"])
         for ident, niveau in (("anticrenelage", 2), ("surechantillonnage", 3)):
             points = page.ligne(ident).points

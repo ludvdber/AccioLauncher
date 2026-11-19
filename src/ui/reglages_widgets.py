@@ -10,7 +10,6 @@ from PyQt6.QtCore import QRectF, QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QPainter, QPixmap
 from PyQt6.QtWidgets import (
     QButtonGroup,
-    QFrame,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -21,7 +20,7 @@ from PyQt6.QtWidgets import (
 
 from src.core.config import ASSETS_DIR
 from src.core.i18n import tr
-from src.ui.composants import ENCRE_DOUCE, pastille, petit_titre, police, transparent
+from src.ui.composants import ENCRE_DOUCE, pastille, police, transparent
 from src.ui.fonts import cinzel
 from src.ui.reglages_rubriques import _COULEURS_COUT
 from src.ui.theme import RAYON_CARTE
@@ -38,11 +37,6 @@ QFrame#rail {{
 QFrame#pied {{
     background: #08081a; border: none;
     border-top: 1px solid rgba(255, 255, 255, 0.06);
-}}
-QFrame#effets {{
-    background: #0d0d1a;
-    border: 1px solid rgba(214, 167, 44, 0.14);
-    border-radius: {RAYON_CARTE}px;
 }}
 QPushButton#prereglage, QPushButton#choix {{
     background: #0d0d1a; border: 1px solid rgba(255, 255, 255, 0.09);
@@ -124,26 +118,6 @@ class _Points(QWidget):
                 y = (self.height() - self._d) / 2
                 p.drawEllipse(QRectF(i * (self._d + 3), y, self._d, self._d))
         p.end()
-
-
-class _CarteEffets(QFrame):
-    """La carte « Chaque effet » : des familles nommées, des lignes serrées, sans filet."""
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.setObjectName("effets")
-        self._lay = QVBoxLayout(self)
-        self._lay.setContentsMargins(0, 2, 0, 10)
-        self._lay.setSpacing(0)
-
-    def famille(self, nom: str) -> None:
-        titre = petit_titre(nom)
-        titre.setContentsMargins(16, 12, 16, 4)
-        self._lay.addWidget(titre)
-
-    def ajouter(self, widget: QWidget) -> QWidget:
-        self._lay.addWidget(widget)
-        return widget
 
 
 class _CarteCliquable(QPushButton):
