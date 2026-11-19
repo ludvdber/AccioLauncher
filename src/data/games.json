@@ -1816,7 +1816,8 @@
       "fix_settings": [
         "son_arriere_plan_hp3",
         "degats_recus",
-        "degats_infliges"
+        "degats_infliges",
+        "compteur_fps_hp3"
       ]
     },
     {
