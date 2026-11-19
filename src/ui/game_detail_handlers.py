@@ -889,7 +889,7 @@ def on_game_settings(view: GameDetailView, onglet: str = "") -> None:
         return
     dlg = filtres_globaux.batie(lambda: GameSettingsDialog(
         game, view.manager,
-        appliquer_langue=lambda code: _appliquer_langue(view, code),
+        appliquer_langue=lambda code: _appliquer_langue(view, code), partie_en_cours=view.partie_en_cours,
         actions=_actions_fichiers(view, game),
         parent=view,
         appliquer_manette=lambda oui: _appliquer_manette(view, game, oui), onglet=onglet))

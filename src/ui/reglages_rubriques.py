@@ -27,6 +27,7 @@ from src.core import (captures, difficulte_jeu, manette, preference_gpu, qualite
 from src.core import difficulte_presets as dp
 from src.core.i18n import tr
 from src.core.reglages_table import Reglage
+from src.ui import choix_sauvegarde
 from src.ui.choix_jeux import espacee
 from src.ui.difficulte_panneau import PanneauDifficulte
 from src.ui.composants import (
@@ -656,7 +657,7 @@ class RubriquesDuJeu:
         Choisir un preset remet chaque contrôle sur le fichier ; changer un
         réglage déplace l'aiguille (`_maj_dependances`)."""
         panneau = PanneauDifficulte(self.game, self.manager.config, self._ini)
-        # HP3 n'a encore aucun réglage : Réaliste y est le seul preset qui change quelque chose.
+        # Ni réglage de difficulté ni une seule vie (HP7, hors 1.4) : pas d'onglet.
         if not panneau.idents and not dp.une_vie_proposee(self.game, self.manager.config):
             panneau.deleteLater()
             return False
@@ -677,6 +678,10 @@ class RubriquesDuJeu:
         if (une_vie := panneau.bloc_une_seule_vie()) is not None:
             corps.addSpacing(34)
             corps.addWidget(une_vie)
+        # HP5 et HP4 : écrire dans la sauvegarde du joueur, à son choix seulement (C8).
+        if (dans_la_sauvegarde := choix_sauvegarde.bloc(self.game, self._partie_en_cours)) is not None:
+            corps.addSpacing(34)
+            corps.addWidget(dans_la_sauvegarde)
         panneau.choisi.connect(lambda _ident, rates: self._sur_preset(reglages, choix_jeu, rates))
         return True
 
@@ -712,12 +717,16 @@ class RubriquesDuJeu:
 
     def _noter_pied(self, onglet: str) -> None:
         """Le pied dit QUAND c'est pris en compte pour l'onglet affiché : HP5 et
-        HP6 relisent leur difficulté dans la seconde, le ciel de HP6 aussi, le reste
-        au prochain lancement."""
+        HP6 relisent leur difficulté dans la seconde, HP4 ses dégâts (ses créatures
+        au niveau suivant), le ciel de HP6 aussi, le reste au prochain lancement."""
         self._onglet_pied = onglet
         self._minuteur_pied.stop()
         if onglet == "difficulte" and self.game.id in ("hp5", "hp6"):
             contenu = tr("Change à tout moment, partie en cours comprise.")
+        elif onglet == "difficulte" and self.game.id == "hp4":
+            # Le correctif relit les dégâts dans la seconde, la jauge des créatures au chargement d'un niveau.
+            contenu = tr("Les dégâts changent à tout moment, partie en cours comprise ; la résistance des "
+                         "créatures, au prochain niveau.")
         elif not (self._correctif_actif() or self._conf_graph is not None
                   or self.game.resolution is not None):
             contenu = ""

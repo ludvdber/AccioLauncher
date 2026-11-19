@@ -1,5 +1,5 @@
 {
-  "catalog_version": "0.58",
+  "catalog_version": "0.59",
   "contributors": [
     {
       "name": "ASTeam",
@@ -563,7 +563,9 @@
       "controller": "yes",
       "fix_settings": [
         "son_arriere_plan",
-        "quidditch"
+        "quidditch",
+        "degats_recus",
+        "degats_infliges"
       ]
     },
     {
@@ -1085,7 +1087,9 @@
       "controller_note": "Le jeu se joue à la manette, mais sa fenêtre de démarrage (avant la partie) se passe à la souris.",
       "fix_settings": [
         "son_arriere_plan",
-        "quidditch"
+        "quidditch",
+        "degats_recus",
+        "degats_infliges"
       ]
     },
     {
@@ -1806,7 +1810,9 @@
       "display_locked": true,
       "controller": "yes",
       "fix_settings": [
-        "son_arriere_plan_hp3"
+        "son_arriere_plan_hp3",
+        "degats_recus",
+        "degats_infliges"
       ]
     },
     {
@@ -1862,7 +1868,11 @@
         "nettete",
         "feuillage_lointain",
         "particules_lointaines",
-        "son_arriere_plan"
+        "son_arriere_plan",
+        "degats_recus",
+        "degats_infliges",
+        "sorts_par_creature",
+        "jauge_creature"
       ],
       "dll_overrides": [
         "d3d9",
@@ -2159,7 +2169,9 @@
         "degats_infliges",
         "ombres_douces",
         "son_arriere_plan",
-        "camera_fluide"
+        "camera_fluide",
+        "vie_joueur",
+        "invincible"
       ],
       "dll_overrides": [
         "d3d9",

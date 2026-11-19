@@ -382,11 +382,13 @@ class TestModeDifficile:
         assert rc.libelle_choix(rc.REGLAGES["regeneration"], 0) == tr("Jamais")
         assert rc.libelle_choix(rc.REGLAGES["vie_joueur"], 0.5) in ("×0,5", "×0.5")
 
-    def test_vie_regeneration_invincible_pas_encore_au_catalogue(self):
-        """Pas vus en jeu : aucun jeu ne les déclare encore, donc ils ne s'affichent pas."""
+    def test_vie_et_invincible_seulement_pour_hp5_regeneration_nulle_part(self):
+        """Catalogue 0.59 (Ludo, 2026-11-19) : la vie de Harry (Détendu) et Récit pour HP5 ; la régénération
+        de HP5 vaut 0 partout, ses crans n'y changeraient rien (C7) ; HP6 garde les siens hors catalogue."""
         from src.core.game_data import load_catalog
         for jeu in load_catalog().games:
-            assert not {"vie_joueur", "regeneration", "invincible"} & set(jeu.fix_settings), jeu.id
+            attendus = {"vie_joueur", "invincible"} if jeu.id == "hp5" else set()
+            assert {"vie_joueur", "regeneration", "invincible"} & set(jeu.fix_settings) == attendus, jeu.id
 
     def test_invincible_est_une_cle_a_part_eteinte_par_defaut(self, ini_dur):
         """Pas DamageTaken=0 : une valeur illisible vaut 0 aussi, et ne doit rendre personne immortel."""

@@ -217,12 +217,18 @@ def etat(game: GameData) -> Etat:
 def entrer(game: GameData, chemin_ini: Path) -> bool:
     """Pose les trois clés ; `OneLife` en DERNIER : un échec en route laisse le
     mode coupé. Le dossier est créé ici pour que la page le lise aussitôt
-    (la DLL sait aussi le créer)."""
+    (la DLL sait aussi le créer).
+
+    La copie d'origine de l'ini est prise AVANT : prise après (par le premier
+    réglage écrit ensuite), elle gardait `OneLife=1`, et `sortir` « rendait »
+    ce 1 : on ne quittait plus le mode (trouvé le 2026-11-19 par
+    `test_prereglages_par_jeu`, Impardonnable puis Normal sur un ini neuf)."""
     ou = dossier(game)
     texte = _pour(game, ou) if ou is not None else None
     if ou is None or texte is None:
         return False
     try:
+        rc._garder_origine(chemin_ini)
         ou.mkdir(parents=True, exist_ok=True)
         rc.poser_valeur(chemin_ini, SECTION, CLE_DOSSIER, texte)
         rc.poser_valeur(chemin_ini, SECTION, CLE_COMPTEUR, "1")

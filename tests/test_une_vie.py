@@ -208,6 +208,9 @@ class TestLancement:
         une_vie.entrer(game, ini)
         assert dp.au_lancement(game, config) == "realiste"
         rc.poser_valeur(ini, "Accio.Game", "QuidditchDifficulty", "2")
+        assert dp.au_lancement(game, config) == "", "le Quidditch seul ne fait plus Hardcore : sur mesure"
+        rc.poser_valeur(ini, "Accio.Hardcore", "DamageTaken", "3")
+        rc.poser_valeur(ini, "Accio.Hardcore", "DamageDealt", "0.5")
         assert dp.au_lancement(game, config) == "impardonnable"
 
 
