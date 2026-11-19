@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>be.acciolauncher.AccioLauncher</id>
+  <name>Accio Launcher</name>
+  <summary>Download, install and launch the eight Harry Potter PC games</summary>
+  <summary xml:lang="fr">Télécharger, installer et lancer les huit jeux Harry Potter PC</summary>
+  <summary xml:lang="es">Descargar, instalar y lanzar los ocho juegos de Harry Potter para PC</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+  <developer id="be.acciolauncher">
+    <name>ASTeam</name>
+  </developer>
+  <description>
+    <p>Accio Launcher downloads, installs and launches the eight Harry Potter PC games (2001-2011).
+      On Linux, the games run through umu-launcher (Proton) or Wine installed on the system.</p>
+    <p xml:lang="fr">Accio Launcher télécharge, installe et lance les huit jeux Harry Potter PC (2001-2011).
+      Sous Linux, les jeux tournent par umu-launcher (Proton) ou par le Wine du système.</p>
+  </description>
+  <launchable type="desktop-id">be.acciolauncher.AccioLauncher.desktop</launchable>
+  <url type="homepage">https://acciolauncher.be/</url>
+  <url type="vcs-browser">https://github.com/ludvdber/AccioLauncher</url>
+  <url type="bugtracker">https://github.com/ludvdber/AccioLauncher/issues</url>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/ludvdber/AccioLauncher/main/docs/screenshot.jpg</image>
+      <caption>The library: the eight games, one click to play</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/ludvdber/AccioLauncher/main/docs/screen_reglages.jpg</image>
+      <caption>A game's settings</caption>
+    </screenshot>
+  </screenshots>
+  <releases>
+    <release version="@VERSION@" date="@DATE@"/>
+  </releases>
+  <content_rating type="oars-1.1"/>
+  <categories>
+    <category>Game</category>
+  </categories>
+</component>

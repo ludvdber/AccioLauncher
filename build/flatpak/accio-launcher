@@ -1,0 +1,35 @@
+#!/bin/sh
+# Point d'entrée du Flatpak d'Accio Launcher (/app/bin/accio-launcher).
+#
+# Le launcher lance les jeux par umu-run ou wine, qui sont installés sur
+# l'HÔTE (Bazzite les livre dans son image), pas dans le bac à sable. Plutôt
+# que de toucher au code (`compat._trouver` cherche par `shutil.which`), on
+# lui présente, en tête du PATH, un relais par programme que l'hôte possède
+# VRAIMENT : `compat.detecter` les trouve comme s'ils étaient installés, et
+# n'en trouve aucun si l'hôte n'a rien (bandeau « Wine introuvable » intact).
+# Chaque relais exécute le vrai programme sur l'hôte par `flatpak-spawn
+# --host` (relais `accio-hote`). Détail et preuves : docs/linux/FLATPAK.md.
+set -u
+
+relais="${XDG_RUNTIME_DIR:-/tmp}/accio-hote"
+rm -rf "$relais"
+mkdir -p "$relais"
+# Un seul aller-retour vers l'hôte pour les quatre noms ; `command -v` est
+# évalué par le shell de l'HÔTE, avec le PATH de sa session.
+presents=$(flatpak-spawn --host sh -c \
+    'for p in umu-run wine wine64 winetricks; do command -v "$p" >/dev/null 2>&1 && echo "$p"; done' \
+    2>/dev/null || true)
+for programme in $presents; do
+    ln -s /app/bin/accio-hote "$relais/$programme"
+done
+export PATH="$relais:$PATH"
+export ACCIO_RELAIS_HOTE="$relais"
+
+# Flatpak redirige XDG_DATA_HOME vers ~/.var/app/<id>/data. Le launcher y
+# cherche GE-Proton (`Steam/compatibilitytools.d`) et le runtime d'umu
+# (`umu/`), qui vivent dans le XDG_DATA_HOME de l'HÔTE : on lui rend celui-là
+# (permissions en lecture seule dans le manifeste). Le launcher n'écrit rien
+# d'autre dans XDG_DATA_HOME (sa config est dans ~/Games/AccioLauncher/_Launcher).
+export XDG_DATA_HOME="${HOST_XDG_DATA_HOME:-$HOME/.local/share}"
+
+exec /app/lib/AccioLauncher/AccioLauncher "$@"
