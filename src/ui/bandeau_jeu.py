@@ -10,10 +10,12 @@ l'ESO (`ciel_parametres.jpg`, CC BY 4.0, repeinte dans les bleus du thème), cad
 fondue en bleu nuit sur ses bords (`Bandeau(couvrir=True, bords=…)`).
 """
 
+from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
 
 from PyQt6.QtCore import QRectF, QSize, Qt
-from PyQt6.QtGui import QColor, QFontMetrics, QIcon, QLinearGradient, QPainter, QPixmap, QRadialGradient
+from PyQt6.QtGui import (QColor, QFontMetrics, QIcon, QImage, QLinearGradient, QPainter, QPixmap,
+                         QRadialGradient)
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSizePolicy, QVBoxLayout, QWidget
 
 from src.core.config import ASSETS_DIR
@@ -45,6 +47,12 @@ def fond_du_jeu(ident: str) -> Path:
     return ASSETS_DIR / "backgrounds" / f"{ident}_bg.jpg"
 
 
+# Le JPEG du fond (3 840 × 1 240) prenait 100 à 170 ms sur le fil de l'interface, à chaque ouverture des
+# réglages d'un jeu (banc du 2026-11-19) : il se décode ici pendant que la page se bâtit, et la
+# première peinture le prend. Une QImage sur ce fil, jamais une QPixmap (fil de l'interface seul).
+_FIL = ThreadPoolExecutor(max_workers=1, thread_name_prefix="bandeau")
+
+
 class Bandeau(QWidget):
     """Le bandeau peint : l'image, puis les fondus. Les widgets se posent dessus.
 
@@ -59,7 +67,8 @@ class Bandeau(QWidget):
         self.setFixedHeight(hauteur)
         self._couvrir = couvrir
         self._bords = bords
-        self._image = QPixmap(str(image)) if image.is_file() else QPixmap()
+        self._attente: Future[QImage] | None = _FIL.submit(QImage, str(image)) if image.is_file() else None
+        self._pixmap: QPixmap | None = None
         self._cache: QPixmap | None = None
         self._cache_pour: QSize | None = None
         self._marges_de_base: tuple[int, int, int, int] | None = None
@@ -78,24 +87,32 @@ class Bandeau(QWidget):
         retrait = retrait_de_colonne(self.width())
         lay.setContentsMargins(gauche + retrait, haut, droite + retrait, bas)
 
+    def _image(self) -> QPixmap:
+        """L'image source, attendue au besoin (le plus souvent déjà décodée à la première peinture)."""
+        if self._pixmap is None:
+            self._pixmap = QPixmap.fromImage(self._attente.result()) if self._attente is not None else QPixmap()
+            self._attente = None
+        return self._pixmap
+
     def _fond(self) -> QPixmap | None:
         """L'image mise à la largeur du bandeau (à sa densité de pixels), recalculée seulement au redimensionnement."""
-        if self._image.isNull():
+        image = self._image()
+        if image.isNull():
             return None
         dpr = self.devicePixelRatioF()
         taille = QSize(round(self.width() * dpr), round(self.height() * dpr))
         if self._cache is None or self._cache_pour != taille:
             if self._couvrir:
-                echelle = max(taille.width() / self._image.width(), taille.height() / self._image.height())
-                mise = self._image.scaled(round(self._image.width() * echelle), round(self._image.height() * echelle),
-                                          transformMode=Qt.TransformationMode.SmoothTransformation)
+                echelle = max(taille.width() / image.width(), taille.height() / image.height())
+                mise = image.scaled(round(image.width() * echelle), round(image.height() * echelle),
+                                    transformMode=Qt.TransformationMode.SmoothTransformation)
                 haut = (mise.height() - taille.height()) // 2
             else:
                 hauteur = round(taille.height() * _ECHELLE)
                 largeur_mini = taille.width() * _LARGEUR_MINI_IMAGE
-                if self._image.width() * hauteur / self._image.height() < largeur_mini:
-                    hauteur = round(largeur_mini * self._image.height() / self._image.width())
-                mise = self._image.scaledToHeight(hauteur, Qt.TransformationMode.SmoothTransformation)
+                if image.width() * hauteur / image.height() < largeur_mini:
+                    hauteur = round(largeur_mini * image.height() / image.width())
+                mise = image.scaledToHeight(hauteur, Qt.TransformationMode.SmoothTransformation)
                 haut = min(round(mise.height() * _HAUT_DU_CADRAGE), max(0, mise.height() - taille.height()))
             # Ancré à droite : le personnage est à droite des huit fonds ; à gauche, la page.
             self._cache = QPixmap(taille)

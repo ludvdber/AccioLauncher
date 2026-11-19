@@ -5,6 +5,7 @@ clés alignées sur une colonne, CRLF, `ForceVerticalSync` dans `[Glide]` ET
 `[DirectX]`, `RTTexturesForceScaleAndMSAA` dans `[DirectXExt]`.
 """
 import json
+import os
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -38,6 +39,26 @@ CONF = (
     "SmoothedDepthSampling               = true\r\n"
 )
 R = rg.REGLAGES
+
+
+def _lectures(monkeypatch, chemin):
+    """Les lectures de `chemin` (toute lecture d'un fichier de réglages passe par `Path.read_bytes`)."""
+    lues = []
+    vraie = Path.read_bytes
+
+    def lire(self):
+        if self == chemin:
+            lues.append(1)
+        return vraie(self)
+    monkeypatch.setattr(Path, "read_bytes", lire)
+    return lues
+
+
+def _ecritures(monkeypatch):
+    ecrites = []
+    vraie = rg._ecrire
+    monkeypatch.setattr(rg, "_ecrire", lambda *a: (ecrites.append(1), vraie(*a)))
+    return ecrites
 
 
 @pytest.fixture
@@ -113,6 +134,44 @@ class TestEcriture:
         assert "FPSLimit                             = 60" in conf.read_bytes().decode()
 
 
+class TestUneOuverture:
+    """Banc du 2026-11-19 : un préréglage lisait le fichier, tout juste écrit, neuf fois et l'écrivait
+    quatre fois ; la page à son ouverture, sept fois. Le fichier du test vient d'être écrit : `lecture_ini`
+    ne le garde pas, chaque lecture compte (le pire cas)."""
+
+    def test_plusieurs_reglages_une_lecture_une_ecriture(self, conf, monkeypatch):
+        lues, ecrites = _lectures(monkeypatch, conf), _ecritures(monkeypatch)
+        valeurs = rg.ecrire_tout(conf, [(R["graph_antialiasing"], "4x"), (R["graph_vsync"], False)])
+        assert valeurs == {"graph_antialiasing": "4x", "graph_vsync": False}
+        assert len(lues) == 1 and len(ecrites) == 1
+        texte = conf.read_bytes().decode()
+        assert "Antialiasing                        = 4x" in texte
+        assert "ForceVerticalSync                   = false" in texte
+
+    def test_une_valeur_refusee_n_ecrit_rien(self, conf):
+        with pytest.raises(ValueError):
+            rg.ecrire_tout(conf, [(R["graph_antialiasing"], "4x"), (R["graph_limite"], "144")])
+        assert conf.read_bytes() == CONF.encode()
+
+    def test_tous_les_reglages_d_une_lecture(self, conf, monkeypatch):
+        lues = _lectures(monkeypatch, conf)
+        valeurs = rg.MagasinGraphique(conf).lire_tout(R.values())
+        assert len(lues) == 1
+        assert valeurs == {ident: rg.lire(conf, r).valeur for ident, r in R.items()}
+
+    def test_apres_un_choix_y_a_t_il_a_remettre_sans_relire(self, conf, monkeypatch):
+        magasin = rg.MagasinGraphique(conf)
+        magasin.ecrire_tout([(R["graph_antialiasing"], "4x")])
+        lues = _lectures(monkeypatch, conf)
+        assert magasin.a_change() is True
+        assert lues == []
+        # Changé depuis (date reculée) : la réponse gardée ne vaut plus, le fichier est relu.
+        conf.write_bytes(CONF.encode("ascii"))
+        os.utime(conf, ns=(1_000_000_000, 1_000_000_000))
+        assert magasin.a_change() is False
+        assert len(lues) == 1      # relu pour le comparer à sa copie d'origine
+
+
 class TestRepliApresEchec:
     """Après « SetRenderTarget failed » : un cran plus bas à la fois (P3-001)."""
 
@@ -176,6 +235,10 @@ class TestFenetre:
 
     @pytest.fixture
     def dlg(self, qtbot, conf, tmp_path, monkeypatch):
+        return self._dialogue(qtbot, tmp_path, monkeypatch)
+
+    @staticmethod
+    def _dialogue(qtbot, tmp_path, monkeypatch):
         from src.ui.game_settings_dialog import GameSettingsDialog
         monkeypatch.setattr(rg.sys, "platform", "win32")
         jeu = GameData.from_dict({
@@ -221,6 +284,19 @@ class TestFenetre:
         assert "RTTexturesForceScaleAndMSAA         = false" in texte
         page.choisir_prereglage("maximale")
         assert conf.read_bytes() == CONF.encode(), "Maximale = l'installation"
+
+    def test_un_fichier_une_ouverture_par_geste(self, qtbot, conf, tmp_path, monkeypatch):
+        """Ouvrir la page : une lecture ; un préréglage : une lecture, une écriture (règle « UN fichier =
+        UNE ouverture »). Le fichier vient d'être écrit : aucune lecture n'est gardée. Sa copie d'origine,
+        comme l'installation la pose, dit les valeurs Accio."""
+        rg.chemin_origine(conf).write_bytes(conf.read_bytes())
+        lues, ecrites = _lectures(monkeypatch, conf), _ecritures(monkeypatch)
+        page = self._dialogue(qtbot, tmp_path, monkeypatch)._page_img
+        assert len(lues) == 1
+        lues.clear()
+        page.choisir_prereglage("legere")
+        assert len(lues) == 1 and len(ecrites) == 1
+        assert page.valeur("graph_antialiasing") == "off"
 
     def test_retablir_l_origine(self, dlg, conf):
         page = dlg._page_img

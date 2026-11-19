@@ -263,6 +263,22 @@ class TestNiveauDeLaBeta:
 
 
 class TestMagasin:
+    def test_un_lot_n_enregistre_la_config_qu_une_fois(self, hp2):
+        """Un préréglage enregistrait la config sept fois, une par réglage (banc du 2026-11-19)."""
+        game, config, _ini = hp2
+        magasin, sauvegardes = _magasin(game, config)
+        valeurs = magasin.ecrire_tout([(R["rendu_anticrenelage"], 0), (R["rendu_vsync"], False)])
+        assert valeurs == {"rendu_anticrenelage": 0, "rendu_vsync": False}
+        assert sauvegardes == [1]
+        assert config.rendu_d3d11["hp2"]["Antialiasing"] == "0"
+
+    def test_un_lot_refuse_ne_change_rien(self, hp2):
+        game, config, _ini = hp2
+        magasin, sauvegardes = _magasin(game, config)
+        with pytest.raises(ValueError):
+            magasin.ecrire_tout([(R["rendu_anticrenelage"], 0), (R["rendu_limite"], 144)])
+        assert sauvegardes == [] and config.rendu_d3d11 == {}
+
     def test_sans_reglage_la_page_montre_l_ini(self, hp2):
         """Une valeur posée à la main dans l'ini se montre telle quelle ; rien n'est écrit pour autant."""
         game, config, ini = hp2

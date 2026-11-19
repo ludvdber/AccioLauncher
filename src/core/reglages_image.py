@@ -11,7 +11,7 @@ Ce qui est tranché (la maquette, « Déjà tranché ») :
   seulement pour ce qui a trop de choix ou de trop longs noms (la résolution, le mode d'affichage).
 """
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, Protocol
@@ -139,7 +139,16 @@ class Magasin(Protocol):
 
     def lire(self, reglage: Reglage) -> object: ...
 
+    def lire_tout(self, reglages: Iterable[Reglage]) -> dict[str, object]:
+        """Plusieurs réglages, par identifiant : leur fichier lu une fois. Lève OSError."""
+        ...
+
     def ecrire(self, reglage: Reglage, valeur: object) -> None: ...
+
+    def ecrire_tout(self, valeurs: Sequence[tuple[Reglage, object]]) -> dict[str, object]:
+        """Plusieurs réglages d'un coup (un préréglage), et ce que porte ensuite le magasin, par identifiant :
+        la page n'a rien à relire."""
+        ...
 
     def accio(self, reglage: Reglage) -> object: ...
 
@@ -155,8 +164,19 @@ class MagasinCorrectif:
     def lire(self, reglage: Reglage) -> object:
         return rc.lire(self.ini, reglage).valeur
 
+    def lire_tout(self, reglages: Iterable[Reglage]) -> dict[str, object]:
+        # `rc.lire` passe par `lecture_ini` : l'ini n'est relu que s'il vient d'être écrit.
+        return {r.ident: self.lire(r) for r in reglages}
+
     def ecrire(self, reglage: Reglage, valeur: object) -> None:
         rc.ecrire(self.ini, reglage, valeur)
+
+    def ecrire_tout(self, valeurs: Sequence[tuple[Reglage, object]]) -> dict[str, object]:
+        """Un réglage après l'autre (`rc.ecrire` connaît les réglages à plusieurs clés) : ce qui précède
+        un refus reste écrit, et la page relit alors tout le lot."""
+        for reglage, valeur in valeurs:
+            rc.ecrire(self.ini, reglage, valeur)
+        return {r.ident: self.lire(r) for r, _v in valeurs}
 
     def accio(self, reglage: Reglage) -> object:
         return rc.valeur_accio(self.ini, reglage)

@@ -36,9 +36,10 @@ import logging
 import re
 import shutil
 import sys
+from collections.abc import Iterable, Sequence
 from pathlib import Path
 
-from src.core.lecture_ini import differe
+from src.core.lecture_ini import differe, lire_lignes
 from src.core.reglages_correctif import Etat, Prereglage, _bornes, _ecrire, _lire
 from src.core.reglages_table import Reglage, ValeurChoix
 
@@ -132,31 +133,75 @@ class MagasinGraphique:
 
     def __init__(self, conf: Path) -> None:
         self.conf = conf
+        # Les lignes que la page vient de lire ou d'écrire, avec (date en ns, taille) du fichier : la
+        # question « y a-t-il à remettre ? » qui suit aussitôt ne le relit pas tant qu'il n'a pas bougé.
+        # `lecture_ini` ne garde pas un fichier de moins de 2 s, et ce bouton le relisait à l'ouverture
+        # de la page et après chaque choix (banc du 2026-11-19).
+        self._vu: tuple[tuple[int, int], list[str], str] | None = None
+        self._accio: dict[str, object] | None = None
+
+    def _signature(self) -> tuple[int, int]:
+        etat = self.conf.stat()
+        return etat.st_mtime_ns, etat.st_size
 
     def lire(self, reglage: Reglage) -> object:
         return lire(self.conf, reglage).valeur
 
+    def lire_tout(self, reglages: Iterable[Reglage]) -> dict[str, object]:
+        """Le fichier lu UNE fois : tout juste écrit, il l'était autant de fois que de réglages (sept)."""
+        signature = self._signature()       # avant la lecture : un changement entre les deux se verra
+        lignes, fin = _lire(self.conf)
+        self._vu = (signature, lignes, fin)
+        return {r.ident: _etat(lignes, r).valeur for r in reglages}
+
     def ecrire(self, reglage: Reglage, valeur: object) -> None:
-        if not isinstance(valeur, (str, bool)):
-            raise ValueError(f"{reglage.ident} : {valeur!r} non proposé")
-        ecrire(self.conf, reglage, valeur)
+        self.ecrire_tout([(reglage, valeur)])
+
+    def ecrire_tout(self, valeurs: Sequence[tuple[Reglage, object]]) -> dict[str, object]:
+        propres: list[tuple[Reglage, str | bool]] = []
+        for reglage, valeur in valeurs:
+            if not isinstance(valeur, (str, bool)):
+                raise ValueError(f"{reglage.ident} : {valeur!r} non proposé")
+            propres.append((reglage, valeur))
+        self._vu = None
+        lignes, fin = _ecrire_lot(self.conf, propres)
+        try:
+            self._vu = (self._signature(), lignes, fin)
+        except OSError:
+            pass
+        return {r.ident: _etat(lignes, r).valeur for r, _v in propres}
 
     def accio(self, reglage: Reglage) -> object:
-        """Ce que porte le fichier tel qu'installé (sa copie d'origine), sinon le fichier."""
-        for fichier in (chemin_origine(self.conf), self.conf):
-            try:
-                return lire(fichier, reglage).valeur
-            except OSError:
-                continue
-        return None
+        """Ce que porte le fichier tel qu'installé (sa copie d'origine), sinon le fichier : lu une fois pour
+        tous les réglages (sans copie d'origine, l'ouverture de la page relisait le fichier six fois). La
+        copie d'origine, posée avant la première retouche, porte ce que portait alors le fichier."""
+        if self._accio is None:
+            self._accio = {}
+            for fichier in (chemin_origine(self.conf), self.conf):
+                try:
+                    lignes, _ = _lire(fichier)
+                except OSError:
+                    continue
+                self._accio = {r.ident: _etat(lignes, r).valeur for r in REGLAGES.values()}
+                break
+        return self._accio.get(reglage.ident)
 
     def jeu(self, reglage: Reglage) -> object:
         return DU_JEU.get(reglage.ident)
 
     def a_change(self) -> bool:
+        if (vu := self._vu) is not None:
+            try:
+                if self._signature() == vu[0]:
+                    origine = chemin_origine(self.conf)
+                    return origine.is_file() and lire_lignes(origine) != (vu[1], vu[2])
+            except OSError:
+                pass
+            self._vu = None
         return a_une_origine(self.conf)
 
     def remettre(self) -> None:
+        self._vu = None
         remettre_origine(self.conf)
 
 
@@ -208,6 +253,10 @@ def _poser(lignes: list[str], section: str, cle: str, valeur: str) -> None:
 def lire(conf: Path, reglage: Reglage) -> Etat:
     """Ce que porte le fichier. Lève OSError s'il est illisible."""
     lignes, _ = _lire(conf)
+    return _etat(lignes, reglage)
+
+
+def _etat(lignes: list[str], reglage: Reglage) -> Etat:
     brut = _valeur(lignes, reglage.section, reglage.cle)
     if not reglage.choix:
         if brut is None:
@@ -237,11 +286,26 @@ def a_une_origine(conf: Path) -> bool:
 def ecrire(conf: Path, reglage: Reglage, valeur: str | bool) -> None:
     """Écrit un réglage. OSError si le fichier ne peut pas l'être, ValueError
     si la valeur n'est pas proposée (jamais plus de 60 images/s, par exemple)."""
-    if reglage.choix and valeur not in reglage.choix:
-        raise ValueError(f"{reglage.ident} : {valeur!r} non proposé")
+    ecrire_tout(conf, [(reglage, valeur)])
+
+
+def ecrire_tout(conf: Path, valeurs: Sequence[tuple[Reglage, str | bool]]) -> dict[str, object]:
+    """Plusieurs réglages en UNE lecture et UNE écriture du fichier, et ce qu'il porte ensuite, par
+    identifiant. Un préréglage en écrit quatre : le fichier, tout juste écrit, était relu neuf fois
+    (`lecture_ini` ne garde pas un fichier de moins de 2 s ; banc du 2026-11-19). OSError ou
+    ValueError (valeur non proposée, section absente) : rien n'est écrit."""
+    lignes, _fin = _ecrire_lot(conf, valeurs)
+    return {r.ident: _etat(lignes, r).valeur for r, _v in valeurs}
+
+
+def _ecrire_lot(conf: Path, valeurs: Sequence[tuple[Reglage, str | bool]]) -> tuple[list[str], str]:
+    """`ecrire_tout`, qui rend les lignes écrites et leur fin de ligne."""
     lignes, fin = _lire(conf)
-    texte = str(valeur) if reglage.choix else ("true" if valeur else "false")
-    _poser(lignes, reglage.section, reglage.cle, texte)
+    for reglage, valeur in valeurs:
+        if reglage.choix and valeur not in reglage.choix:
+            raise ValueError(f"{reglage.ident} : {valeur!r} non proposé")
+        _poser(lignes, reglage.section, reglage.cle,
+               str(valeur) if reglage.choix else ("true" if valeur else "false"))
     copie = chemin_origine(conf)
     if not copie.exists():
         try:
@@ -249,7 +313,9 @@ def ecrire(conf: Path, reglage: Reglage, valeur: str | bool) -> None:
         except OSError:
             log.warning("Réglages graphiques : copie d'origine de %s impossible", conf, exc_info=True)
     _ecrire(conf, lignes, fin)
-    log.info("Réglages graphiques : %s = %s dans %s", reglage.cle, texte, conf)
+    log.info("Réglages graphiques : %s dans %s",
+             ", ".join(f"{r.cle} = {v}" for r, v in valeurs), conf)
+    return lignes, fin
 
 
 # Après un arrêt PENDANT le dessin d'une image (`config_cassee.DESSIN`), un cran

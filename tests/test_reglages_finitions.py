@@ -170,6 +170,16 @@ class TestBandeau:
             assert b.height() == HAUTEUR_FILTRE_GRAND
         assert sum(b.isChecked() for b in dlg._onglets.values()) == 1
 
+    def test_le_fond_decode_sur_un_fil_est_le_meme(self, qtbot):
+        """Le JPEG du fond se décode pendant que la page se bâtit (100 à 170 ms de moins sur le fil de
+        l'interface, banc du 2026-11-19) : les mêmes pixels que lus sur place."""
+        from PyQt6.QtGui import QPixmap
+        from src.ui.bandeau_jeu import Bandeau, fond_du_jeu
+        chemin = fond_du_jeu("hp1")
+        bandeau = Bandeau(chemin)
+        qtbot.addWidget(bandeau)
+        assert bandeau._image().toImage() == QPixmap(str(chemin)).toImage()
+
     def test_plus_de_rail_a_gauche(self, qtbot, tmp_path):
         from PyQt6.QtWidgets import QFrame
         dlg, _ini = _fenetre(qtbot, tmp_path)
@@ -341,7 +351,8 @@ def test_revenir_a_l_installation_remet_aussi_la_resolution(qtbot):
     liste.addItem("Remplir l'écran", "")
     liste.addItem("1600 × 1024", "1600x1024")
     liste.setCurrentIndex(1)
-    page = SimpleNamespace(reglages={}, _resolution=True, liste_resolution=liste, _maj=lambda: None)
+    page = SimpleNamespace(reglages={}, _resolution=True, liste_resolution=liste, _maj=lambda: None,
+                           _relire_tout=lambda _r: None)
     PageImage.rafraichir(page)
     assert liste.currentIndex() == 0
 

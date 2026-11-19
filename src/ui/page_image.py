@@ -770,8 +770,8 @@ class PageImage(QWidget):
         self._valeurs: dict[str, object] = {}
         self._accio: dict[str, object] = {}
         self._jeu: dict[str, object] = {}
+        self._relire_tout(reglages)
         for r in reglages:
-            self._relire(r)
             self._accio[r.ident] = self._magasins[r.ident].accio(r)
             self._jeu[r.ident] = self._magasins[r.ident].jeu(r)
         # La résolution : réglée par le launcher, écrite au lancement (`resolution_jeu`).
@@ -807,6 +807,20 @@ class PageImage(QWidget):
         except OSError:
             log.warning("Image : %s illisible", r.ident, exc_info=True)
 
+    def _relire_tout(self, reglages: Iterable[Reglage]) -> None:
+        """Chaque magasin lu une fois pour tous ses réglages ; illisible, un réglage après l'autre (ce qui
+        se lit encore se montre)."""
+        lots: dict[int, tuple[reglages_image.Magasin, list[Reglage]]] = {}
+        for r in reglages:
+            magasin = self._magasins[r.ident]
+            lots.setdefault(id(magasin), (magasin, []))[1].append(r)
+        for magasin, lot in lots.values():
+            try:
+                self._valeurs.update(magasin.lire_tout(lot))
+            except OSError:
+                for r in lot:
+                    self._relire(r)
+
     def valeur(self, ident: str) -> object:
         return self._valeurs.get(ident)
 
@@ -826,8 +840,7 @@ class PageImage(QWidget):
         """Après une remise à l'origine : tout reprend ce que porte le fichier, et la résolution
         revient sur « Remplir l'écran ». Elle restait sur 1600 × 1024 alors que la confirmation
         annonçait l'Image remise (audit UI v49, 2026-11-13)."""
-        for r in self.reglages.values():
-            self._relire(r)
+        self._relire_tout(self.reglages.values())
         if self._resolution:
             self.liste_resolution.setCurrentIndex(0)
         self._maj()
@@ -1263,14 +1276,13 @@ class PageImage(QWidget):
         if r.choix and valeur not in r.choix and not rc.sur_le_curseur(r, valeur):
             return   # l'entrée « réglé à la main » : c'est déjà ce que porte le fichier
         try:
-            self._magasins[ident].ecrire(r, valeur)
+            self._valeurs.update(self._magasins[ident].ecrire_tout([(r, valeur)]))
         except (OSError, ValueError):
             log.warning("Image : %s non écrit", ident, exc_info=True)
             self._relire(r)
             self._montrer_erreur(r)
             self._maj()
             return
-        self._relire(r)
         self._apres_ecriture()
         self._exclure(r)
         self._maj()
@@ -1282,11 +1294,11 @@ class PageImage(QWidget):
                 or not rc.allume(autre, self._valeurs.get(autre.ident)):
             return
         try:
-            self._magasins[autre.ident].ecrire(autre, rc.eteint(autre))
+            self._valeurs.update(self._magasins[autre.ident].ecrire_tout([(autre, rc.eteint(autre))]))
         except (OSError, ValueError):
             log.warning("Image : %s non éteint", autre.ident, exc_info=True)
             self._montrer_erreur(autre)
-        self._relire(autre)
+            self._relire(autre)
 
     def _vers(self, cible: dict[str, object]) -> None:
         """Le bouton de la fiche : le réglage affiché à sa valeur Accio, ou à celle du jeu."""
@@ -1302,14 +1314,19 @@ class PageImage(QWidget):
 
     def choisir_prereglage(self, ident: str) -> None:
         voulues = next(v for i, _n, _t, v in self._prereglages if i == ident)
-        rate: Reglage | None = None
+        # Un lot par magasin : chaque fichier (ou la config) lu et écrit UNE fois pour tout le préréglage.
+        lots: dict[int, tuple[reglages_image.Magasin, list[tuple[Reglage, object]]]] = {}
         for cle, valeur in voulues.items():
+            magasin = self._magasins[cle]
+            lots.setdefault(id(magasin), (magasin, []))[1].append((self.reglages[cle], valeur))
+        rate: Reglage | None = None
+        for magasin, lot in lots.values():
             try:
-                self._magasins[cle].ecrire(self.reglages[cle], valeur)
+                self._valeurs.update(magasin.ecrire_tout(lot))
             except (OSError, ValueError):
                 log.warning("Image : préréglage %s non écrit", ident, exc_info=True)
-                rate = self.reglages[cle]
-            self._relire(self.reglages[cle])
+                rate = rate or lot[0][0]
+                self._relire_tout(r for r, _v in lot)
         if rate is not None:
             self._montrer_erreur(rate)
         else:

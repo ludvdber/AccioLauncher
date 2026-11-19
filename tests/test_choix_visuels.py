@@ -97,7 +97,7 @@ class TestCielDesParametres:
         dlg = SettingsDialog(cfg, GameManager(cfg))
         qtbot.addWidget(dlg)
         ciel = dlg.findChild(Bandeau)
-        assert ciel is not None and ciel._couvrir and not ciel._image.isNull()
+        assert ciel is not None and ciel._couvrir and not ciel._image().isNull()
         assert dlg._nav.parentWidget() is ciel
         dlg.resize(1280, 800)
         assert not ciel.grab().isNull()

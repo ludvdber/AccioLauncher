@@ -28,7 +28,7 @@ récente, rien à gagner à les couper), `SupportMETextEnabled`, `OneXBlending`,
 `ShinySurfaces`, `Coronas`) tant qu'un essai en jeu ne les a pas vus.
 """
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable, Sequence
 
 from src.core.catalogue_blocs import IniPatch
 from src.core.config import Config
@@ -205,6 +205,15 @@ def appliquer(game: GameData, config: Config) -> bool:
     return ecrire_cles_ini(patch.file, SECTION, cles, game, config)
 
 
+def _proposee(reglage: Reglage, v: object) -> object:
+    """La valeur telle qu'elle s'écrit (un cran du curseur arrondi) ; ValueError si la page ne la propose pas."""
+    if reglage.choix and v not in reglage.choix:
+        if not sur_le_curseur(reglage, v):
+            raise ValueError(f"{reglage.ident} : {v!r} non proposé")
+        return arrondir(reglage, float(str(v)))
+    return v
+
+
 class MagasinRendu:
     """Où la page Image lit et écrit ces réglages (`reglages_image.Magasin`) : la config du launcher,
     sinon ce que porte l'ini du jeu (lu UNE fois, à l'ouverture), sinon l'installation."""
@@ -221,15 +230,23 @@ class MagasinRendu:
         lue = valeur(reglage, brut) if brut is not None else None
         return ACCIO.get(reglage.ident) if lue is None else lue
 
+    def lire_tout(self, reglages: Iterable[Reglage]) -> dict[str, object]:
+        return {r.ident: self.lire(r) for r in reglages}
+
     def ecrire(self, reglage: Reglage, v: object) -> None:
         """ValueError pour une valeur que la page ne propose pas ; OSError si la config ne s'écrit pas."""
-        if reglage.choix and v not in reglage.choix:
-            if not sur_le_curseur(reglage, v):
-                raise ValueError(f"{reglage.ident} : {v!r} non proposé")
-            v = arrondir(reglage, float(str(v)))
+        self.ecrire_tout([(reglage, v)])
+
+    def ecrire_tout(self, valeurs: Sequence[tuple[Reglage, object]]) -> dict[str, object]:
+        """Tout d'un coup, la config enregistrée UNE fois : un préréglage l'enregistrait sept fois
+        (banc du 2026-11-19). Une valeur non proposée : rien ne change."""
+        textes = [(r, texte(r, _proposee(r, v))) for r, v in valeurs]
         _surcharges(self.game, self.config)
-        self.config.rendu_d3d11.setdefault(self.game.id, {})[reglage.cle] = texte(reglage, v)
+        posees = self.config.rendu_d3d11.setdefault(self.game.id, {})
+        for r, t in textes:
+            posees[r.cle] = t
         self._enregistrer()
+        return {r.ident: self.lire(r) for r, _t in textes}
 
     def accio(self, reglage: Reglage) -> object:
         return ACCIO.get(reglage.ident)
