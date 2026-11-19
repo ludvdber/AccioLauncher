@@ -85,7 +85,7 @@
           "genre": "nouveau",
           "texte": {
             "fr": "Une seule vie : dans HP3, seule la mort du héros que vous jouez compte, même dans les épreuves de Ron et d'Hermione ; dans HP4, seule celle du personnage choisi ; dans HP6, « Continuer » ne répond plus après la fin, une nouvelle partie ouvre une nouvelle vie.",
-            "en": "One life: in HP3, only the death of the hero you play counts, even in Ron's and Hermione's challenges; in HP4, only the character you chose; in HP6, “Continue” no longer responds after the end, a new game starts a new life.",
+            "en": "One life: in HP3, only the death of the hero you play counts, even in Ron's and Hermione's challenges; in HP4, only the character you chose; in HP6, the Continue button no longer responds after the end, a new game starts a new life.",
             "es": "Una sola vida: en HP3 solo cuenta la muerte del héroe que juegas, incluso en las pruebas de Ron y Hermione; en HP4, solo la del personaje elegido; en HP6, «Continuar» ya no responde tras el final, una partida nueva abre una vida nueva."
           }
         },
@@ -124,9 +124,9 @@
         {
           "genre": "corrige",
           "texte": {
-            "fr": "HP5 : avec « Caméra fluide », les gestes des sorts retrouvent leur rythme d'origine.",
-            "en": "HP5: with “Smooth camera”, spell gestures are back to their original pace.",
-            "es": "HP5: con «Cámara fluida», los gestos de los hechizos recuperan su ritmo original."
+            "fr": "HP5 : avec la caméra « Fluide », les gestes des sorts retrouvent leur rythme d'origine.",
+            "en": "HP5: with the “Smooth” camera, spell gestures are back to their original pace.",
+            "es": "HP5: con la cámara «Fluida», los gestos de los hechizos recuperan su ritmo original."
           }
         }
       ]
