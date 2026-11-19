@@ -184,25 +184,13 @@ def _preparation_bloque(view: GameDetailView) -> bool:
 
 
 def _occupe(view: GameDetailView) -> bool:
-    """Refuse, d'un toast, tant qu'un téléchargement ou une installation tourne. True si c'est refusé.
-
-    Une seule opération à la fois. Toute porte d'opération passe par ici AVANT sa
-    question : « Mettre à jour » pendant le téléchargement d'un autre jeu posait sa
-    question puis ne faisait rien (le refus partait dans la barre d'état), et
-    « Réparer », « Installer depuis un fichier », « Importer » se taisaient (Ludo,
-    2026-11-20). Filet : `test_toute_porte_d_operation_passe_par_la_garde`.
-    """
+    """Refuse d'un toast tant qu'une opération tourne, avant toute question (ARCHITECTURE_UI.md)."""
     if not view._ops.is_busy:
         return False
     active = view._ops.active_game
-    if active and view.game is not None and active.id != view.game.id:
-        # Toast et non dialogue : il n'y a aucune décision à prendre, et la
-        # barre de téléchargement en bas montre déjà ce qui occupe le poste.
-        view.notify.emit(
-            tr("Téléchargement déjà en cours pour {} : un seul à la fois.")
-            .format(active.name))
-    else:
-        view.notify.emit(tr("Téléchargement déjà en cours pour ce jeu."))
+    autre = active is not None and view.game is not None and active.id != view.game.id
+    view.notify.emit(tr("Téléchargement déjà en cours pour {} : un seul à la fois.").format(active.name)
+                     if autre else tr("Téléchargement déjà en cours pour ce jeu."))
     return True
 
 
