@@ -15,6 +15,7 @@ from src.ui.audio_bar import AudioBar
 from src.ui import fiche_gpu
 from src.ui import filtres_globaux
 from src.ui import fond_gpu
+from src.ui import bandeau_jeu
 from src.ui.background_widget import BackgroundWidget
 from src.ui.game_operations import GameOperations
 from src.ui.info_panel import InfoPanel
@@ -396,6 +397,7 @@ class GameDetailView(QWidget):
 
         # La jaquette d'abord, la bande-annonce après le délai de lecture.
         self._bg.set_image(ASSETS_DIR / "backgrounds" / f"{game.id}_bg.jpg")
+        bandeau_jeu.precharger(game.id)   # le bandeau de ses réglages, prêt avant le clic sur l'engrenage
         if not self._fonds_precharges:
             self._fonds_precharges = True
             QTimer.singleShot(_PRECHARGE_FONDS_MS, self._precharger_fonds)

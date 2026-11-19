@@ -76,6 +76,7 @@ from src.ui.reglages_widgets import (  # réexportés
     _Disposition,
     _texte_beta,
 )
+from src.ui import filtres_globaux
 from src.ui.difficulte_panneau import pastille_beta
 from src.ui.reglages_rubriques import (  # noqa: F401  (réexportés)
     log,
@@ -250,10 +251,10 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
     def _batir_page(self, ident: str, poser: Callable[[QWidget], object]) -> None:
         """La page d'une rubrique, que `poser` met à sa place dans la pile.
 
-        Du haut vers le bas (règle 143) : la page de lignes est posée VIDE, puis remplie. Remplie d'abord,
-        sa feuille de style repassait sur chaque ligne à chaque étage (zone qui défile, fiche, pile) :
-        la Difficulté de HP5 prenait 350 ms à sa première ouverture (banc du 2026-11-19). La page Image
-        se bâtit entière, hors de la fenêtre, puis se rattache d'un geste."""
+        Du haut vers le bas (règle 143) : la page est posée VIDE, puis remplie. Remplie d'abord, sa feuille
+        de style repassait sur chaque ligne à chaque étage (zone qui défile, fiche, pile) : la Difficulté de
+        HP5 prenait 350 ms à sa première ouverture, la page Image de HP6 en perdait 35 à son rattachement
+        (banc du 2026-11-19)."""
         contenu = QWidget()
         transparent(contenu)
         page = QVBoxLayout(contenu)
@@ -266,11 +267,11 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         page.addLayout(corps)
         self._lignes_de_page = []
         if ident == "image" and self._forme_image() == "page":
-            self._remplir_annoncee(ident, corps)
             # La page Image défile en dedans : ses onglets, sa recherche et sa fiche restent en place.
-            corps.setStretch(0, 1)
             page.setStretch(page.count() - 1, 1)
             poser(contenu)
+            self._remplir_annoncee(ident, corps)
+            corps.setStretch(0, 1)
             return
         page.addStretch()
         if ident != "difficulte":
@@ -294,8 +295,12 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         if ident in self._a_batir:
             self._a_batir.discard(ident)
             attente = self._defile.widget(rang)
-            self._batir_page(ident, lambda page: self._defile.insertWidget(rang, page))
-            self._defile.removeWidget(attente)
+            # Comme la fenêtre entière à son ouverture (`filtres_globaux.batie`) : sans les filtres globaux,
+            # qui voyaient chaque événement de la construction pour rien (17 ms de la Difficulté de HP5).
+            # La page ne se montre qu'après, filtres reposés.
+            with filtres_globaux.suspendus():
+                self._batir_page(ident, lambda page: self._defile.insertWidget(rang, page))
+                self._defile.removeWidget(attente)
             attente.deleteLater()
         self._defile.setCurrentIndex(rang)
 
@@ -443,7 +448,8 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
                    "l'empêcher de redémarrer.")
                 if self.game.display_locked and self.game.resolution is not None else "")
         self._page_img = PageImage(self.game, config, magasins, self._erreur_image, self._apres_ecriture,
-                                   prereglages=prereglages, libres=libres, note_ecran=note)
+                                   prereglages=prereglages, libres=libres, note_ecran=note,
+                                   parent=corps.parentWidget())
         corps.addWidget(self._page_img, stretch=1)
         return True
 

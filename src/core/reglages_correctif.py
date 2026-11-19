@@ -329,6 +329,10 @@ def _bornes(lignes: list[str], section: str) -> tuple[int, int] | None:
     """(première ligne après l'en-tête, ligne de la section suivante), ou None."""
     debut = None
     for i, ligne in enumerate(lignes):
+        # Une ligne sans « [ » n'est pas un en-tête : l'expression ne passe que sur les autres. L'ouverture
+        # des réglages de HP6 en essayait 45 000, 20 ms sur ses 300 (banc du 2026-11-19).
+        if "[" not in ligne:
+            continue
         m = _SECTION.match(ligne)
         if not m:
             continue
@@ -350,6 +354,8 @@ def _valeur(lignes: list[str], section: str, cle: str) -> str | None:
         return None
     motif = _motif_cle(cle, commentee=False)
     for ligne in lignes[bornes[0]:bornes[1]]:
+        if "=" not in ligne:
+            continue
         m = motif.match(ligne)
         if m:
             # Le correctif lit ses valeurs avec les commentaires de fin de ligne

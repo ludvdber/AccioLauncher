@@ -103,3 +103,86 @@ def test_l_annonce_d_une_rubrique_est_sa_page(qtbot, tmp_path, jeu, installe):
         assert annoncee == (ident in dlg._onglets), (jeu.id, ident)
         # Bâtie à part, sur un corps jetable : la page dit-elle la même chose que l'annonce ?
         assert dlg._remplir(ident, QVBoxLayout()) == annoncee, (jeu.id, ident)
+
+
+class TestCeQueLOuvertureNeFaitPlus:
+    """Sentinelles du banc du 2026-11-19 (ouverture des réglages de HP6 : 290 → 113 ms sous profileur), chacune
+    contre-éprouvée sur l'ancien code."""
+
+    def test_chaque_ligne_ne_repasse_pas_sous_la_feuille_a_chaque_etage(self, qtbot, tmp_path):
+        """Bâties du haut vers le bas (règle 143) : 13 changements de style pour 6 lignes, 58 quand chaque
+        ligne, sa carte, sa page et sa zone se rattachaient l'une après l'autre."""
+        from PyQt6.QtCore import QEvent, QObject
+        from PyQt6.QtWidgets import QApplication
+        from src.ui.page_image import _LigneImage
+        from tests.test_reglages_correctif import INI_V2, _dialogue as dialogue_hp4, _jeu, _manager
+
+        class Compte(QObject):
+            n = 0
+
+            def eventFilter(self, obj, e):  # noqa: N802 (Qt)
+                if e.type() == QEvent.Type.StyleChange and isinstance(obj, _LigneImage):
+                    Compte.n += 1
+                return False
+
+        (tmp_path / "HP4").mkdir()
+        (tmp_path / "HP4" / "d3d9.ini").write_bytes(INI_V2.encode("ascii"))
+        compte = Compte()
+        QApplication.instance().installEventFilter(compte)
+        try:
+            dlg = dialogue_hp4(qtbot, _jeu(tmp_path, ["surechantillonnage", "lissage", "anticrenelage", "filtrage",
+                                                      "arriere_plan", "compteur_fps", "panneau_perfs"]),
+                               _manager(tmp_path))
+            dlg.show()
+            qtbot.waitExposed(dlg)
+            dlg._onglets["jeu"].click()
+        finally:
+            QApplication.instance().removeEventFilter(compte)
+        lignes = len(dlg.findChildren(_LigneImage))
+        assert lignes >= 3
+        assert Compte.n <= 3 * lignes, (Compte.n, lignes)
+
+    def test_le_fond_precharge_par_la_fiche_n_est_pas_redecode(self, qtbot):
+        """La fiche du jeu décode le fond du bandeau dès qu'elle montre le jeu : ses réglages le trouvent
+        prêt (la première peinture l'attendait 60 à 75 ms)."""
+        from src.ui import bandeau_jeu
+        bandeau_jeu.precharger("hp6")
+        decodage = bandeau_jeu._DERNIER[str(bandeau_jeu.fond_du_jeu("hp6"))]
+        assert not decodage.result().isNull()
+        bandeau = bandeau_jeu.Bandeau(bandeau_jeu.fond_du_jeu("hp6"))
+        qtbot.addWidget(bandeau)
+        assert bandeau._attente is decodage
+
+    def test_un_fond_annule_se_decode_sur_place(self, qtbot, monkeypatch):
+        """Un autre fond demandé avant que celui d'un bandeau commence : le bandeau le lit lui-même."""
+        from concurrent.futures import Future
+        from src.ui import bandeau_jeu
+        annule: Future = Future()
+        annule.cancel()
+        monkeypatch.setattr(bandeau_jeu, "_decodage", lambda _c: annule)
+        bandeau = bandeau_jeu.Bandeau(bandeau_jeu.fond_du_jeu("hp6"))
+        qtbot.addWidget(bandeau)
+        assert not bandeau._image().isNull()
+
+    def test_une_rubrique_se_batit_sans_les_filtres_globaux(self, qtbot, tmp_path):
+        """Comme la fenêtre à son ouverture : les filtres posés sur toute l'application ne voient pas la
+        construction de la Difficulté (17 ms de son premier clic)."""
+        from PyQt6.QtCore import QEvent, QObject
+        from src.ui import filtres_globaux
+
+        class Compte(QObject):
+            ajouts = 0
+
+            def eventFilter(self, obj, e):  # noqa: N802 (Qt)
+                if e.type() == QEvent.Type.ChildAdded and isinstance(obj, PanneauDifficulte):
+                    Compte.ajouts += 1
+                return False
+
+        dlg, _ini = _fenetre(qtbot, tmp_path)
+        compte = Compte()
+        filtres_globaux.poser(compte)
+        try:
+            dlg._onglets["difficulte"].click()
+        finally:
+            filtres_globaux.retirer(compte)
+        assert dlg._panneau is not None and Compte.ajouts == 0

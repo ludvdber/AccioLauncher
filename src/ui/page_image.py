@@ -625,8 +625,10 @@ class _LigneImage(QFrame):
         v = QVBoxLayout(self)
         v.setContentsMargins(14 + (22 if retrait else 0), 6, 12, 6)
         v.setSpacing(2)
+        # Du haut vers le bas (règle 143) : chaque conteneur posé avant d'être rempli.
         self.haut = QWidget()
         transparent(self.haut)
+        v.addWidget(self.haut)
         h = QHBoxLayout(self.haut)
         h.setContentsMargins(0, 0, 0, 0)
         h.setSpacing(8)
@@ -654,6 +656,7 @@ class _LigneImage(QFrame):
         case.setObjectName("caseControle")
         transparent(case)
         case.setFixedWidth(_LARGEUR_CONTROLE)
+        h.addWidget(case)
         hc = QHBoxLayout(case)
         hc.setContentsMargins(0, 0, 0, 0)
         hc.setSpacing(6)
@@ -662,8 +665,6 @@ class _LigneImage(QFrame):
         hc.addWidget(controle, stretch=1 if isinstance(controle, CurseurGradue) else 0)
         if fin is not None:
             hc.addWidget(fin)
-        h.addWidget(case)
-        v.addWidget(self.haut)
         self.note = QLabel("")
         self.note.setTextFormat(Qt.TextFormat.PlainText)
         self.note.setWordWrap(True)
@@ -764,8 +765,10 @@ class PageImage(QWidget):
                  montrer_erreur: Callable[[Reglage], None], apres_ecriture: Callable[[], None],
                  enregistrer_config: Callable[[], None] | None = None,
                  prereglages: tuple[rc.Prereglage, ...] | None = None,
-                 libres: tuple[LigneLibre, ...] = (), note_ecran: str = "") -> None:
-        super().__init__()
+                 libres: tuple[LigneLibre, ...] = (), note_ecran: str = "",
+                 parent: QWidget | None = None) -> None:
+        # `parent` : bâtie DANS sa page (règle 143), elle ne repasse pas sous la feuille de style au rattachement.
+        super().__init__(parent)
         self.setStyleSheet(themed(_STYLE) + "PageImage { background: transparent; }")
         self.game, self.config = game, config
         self._montrer_erreur, self._apres_ecriture = montrer_erreur, apres_ecriture
@@ -962,12 +965,16 @@ class PageImage(QWidget):
             self._maj()
             return
         if rang not in self._construites:
+            # Du haut vers le bas (règle 143) : la page posée VIDE dans sa zone et dans la pile, puis
+            # remplie ; remplie d'abord, chaque ligne repassait sous la feuille de style à chaque étage.
             ancienne = self.pile.widget(rang)
-            page = zone_defilable(self._page(self.categories[rang]))
+            contenu = QWidget()
+            page = zone_defilable(contenu)
             self.pile.insertWidget(rang, page)
             if ancienne is not None:
                 self.pile.removeWidget(ancienne)
                 ancienne.deleteLater()
+            self._page(self.categories[rang], contenu)
             self._construites.add(rang)
             self._ordre_de_tab(page)
         self.pile.setCurrentIndex(rang)
@@ -993,19 +1000,26 @@ class PageImage(QWidget):
                 QWidget.setTabOrder(precedent, w)
                 precedent = w
 
-    def _page(self, cat: reglages_image.Categorie) -> QWidget:
-        contenu = QWidget()
+    def _page(self, cat: reglages_image.Categorie, contenu: QWidget) -> None:
+        """Remplit `contenu`, déjà posé dans sa zone : chaque carte est posée avant ses lignes."""
         transparent(contenu)
         v = QVBoxLayout(contenu)
         v.setContentsMargins(0, 0, 8, 0)
         v.setSpacing(0)
         for groupe in cat.groupes:
+            ecran = cat.ident == "ecran" and groupe.nom == "Affichage"
+            if not groupe.reglages and not (ecran and (self._resolution or self._libres)):
+                continue
+            v.addWidget(petit_titre(tr(groupe.nom)))
+            v.addSpacing(6)
             carte = QFrame()
             carte.setObjectName("carteImage")
+            v.addWidget(carte)
+            v.addSpacing(16)
             lay = QVBoxLayout(carte)
             lay.setContentsMargins(0, 6, 0, 6)
             lay.setSpacing(0)
-            if cat.ident == "ecran" and groupe.nom == "Affichage":
+            if ecran:
                 if self._resolution:
                     lay.addWidget(self._ligne_resolution())
                 for libre in self._libres.values():
@@ -1013,13 +1027,6 @@ class PageImage(QWidget):
             presents = {r.ident for r in groupe.reglages}
             for r in groupe.reglages:
                 lay.addWidget(self._ligne(r, retrait=r.depend_de in presents))
-            if not lay.count():
-                carte.deleteLater()
-                continue
-            v.addWidget(petit_titre(tr(groupe.nom)))
-            v.addSpacing(6)
-            v.addWidget(carte)
-            v.addSpacing(16)
         if cat.ident == "ecran" and self._note_ecran:
             note = QLabel(self._note_ecran)
             note.setObjectName("noteEcran")
@@ -1029,7 +1036,6 @@ class PageImage(QWidget):
             note.setStyleSheet(f"color: {_COULEUR_AVERTIR}; background: transparent;")
             v.addWidget(note)
         v.addStretch()
-        return contenu
 
     def _page_prereglages(self) -> QWidget:
         """Leur propre page, en tête de la liste : un préréglage règle d'un coup plusieurs catégories.

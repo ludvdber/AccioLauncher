@@ -51,6 +51,30 @@ def fond_du_jeu(ident: str) -> Path:
 # réglages d'un jeu (banc du 2026-11-19) : il se décode ici pendant que la page se bâtit, et la
 # première peinture le prend. Une QImage sur ce fil, jamais une QPixmap (fil de l'interface seul).
 _FIL = ThreadPoolExecutor(max_workers=1, thread_name_prefix="bandeau")
+# Le dernier fond demandé (chemin → décodage, prêt ou en cours) : la fiche du jeu le demande dès
+# qu'elle montre le jeu (`precharger`), et ses réglages le trouvent prêt. Avec les rubriques bâties à la
+# demande, la page se bâtissait plus vite que le JPEG ne se décodait : la première peinture l'attendait
+# 60 à 75 ms (banc du 2026-11-19). Un seul gardé : 19 Mo pour un fond de 3 840 × 1 240.
+_DERNIER: dict[str, Future[QImage]] = {}
+
+
+def _decodage(chemin: Path) -> Future[QImage] | None:
+    """Le décodage de `chemin` : celui déjà lancé, sinon un nouveau (le précédent, pas commencé, s'annule)."""
+    cle = str(chemin)
+    if (deja := _DERNIER.get(cle)) is not None and not deja.cancelled():
+        return deja
+    if not chemin.is_file():
+        return None
+    for ancien in _DERNIER.values():
+        ancien.cancel()
+    _DERNIER.clear()
+    _DERNIER[cle] = _FIL.submit(QImage, cle)
+    return _DERNIER[cle]
+
+
+def precharger(ident_jeu: str) -> None:
+    """Décode d'avance le fond du bandeau de ce jeu, sur le fil : ses réglages s'ouvriront sans l'attendre."""
+    _decodage(fond_du_jeu(ident_jeu))
 
 
 class Bandeau(QWidget):
@@ -67,7 +91,8 @@ class Bandeau(QWidget):
         self.setFixedHeight(hauteur)
         self._couvrir = couvrir
         self._bords = bords
-        self._attente: Future[QImage] | None = _FIL.submit(QImage, str(image)) if image.is_file() else None
+        self._chemin = image
+        self._attente = _decodage(image)
         self._pixmap: QPixmap | None = None
         self._cache: QPixmap | None = None
         self._cache_pour: QSize | None = None
@@ -90,8 +115,14 @@ class Bandeau(QWidget):
     def _image(self) -> QPixmap:
         """L'image source, attendue au besoin (le plus souvent déjà décodée à la première peinture)."""
         if self._pixmap is None:
-            self._pixmap = QPixmap.fromImage(self._attente.result()) if self._attente is not None else QPixmap()
-            self._attente = None
+            attente, self._attente = self._attente, None
+            if attente is None:
+                self._pixmap = QPixmap()
+            elif attente.cancelled():
+                # Un autre fond demandé avant que celui-ci commence (les Paramètres, un autre jeu) : sur place.
+                self._pixmap = QPixmap(str(self._chemin))
+            else:
+                self._pixmap = QPixmap.fromImage(attente.result())
         return self._pixmap
 
     def _fond(self) -> QPixmap | None:

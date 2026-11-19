@@ -509,21 +509,23 @@ class RubriquesDuJeu:
         réglage déplace l'aiguille (`_maj_dependances`)."""
         if not self._difficulte_proposee():
             return False
-        panneau = PanneauDifficulte(self.game, self.manager.config, self._ini)
+        # Bâtis DANS la page, déjà posée (règle 143) : rattachés après, panneau et carte repassaient
+        # entiers sous la feuille de style (26 ms du premier clic sur la Difficulté de HP5).
+        panneau = PanneauDifficulte(self.game, self.manager.config, self._ini, parent=corps.parentWidget())
         self._panneau = panneau
         corps.addWidget(panneau)
         choix_jeu, reglages = None, []
         # HP1 : le Quidditch seul, que les presets règlent déjà cran par cran.
         if panneau.sur_mesure:
+            corps.addSpacing(14)
             carte = Carte()
+            corps.addWidget(carte)
             choix_jeu = self._ligne_difficulte_jeu(carte)
             if self._correctif_actif():
                 reglages = [r for r in self._reglages if r.onglet == "difficulte"]
             for reglage in reglages:
                 self._controle(carte, self._ini, reglage)
             self._egaliser(carte)
-            corps.addSpacing(14)
-            corps.addWidget(carte)
         if (une_vie := panneau.bloc_une_seule_vie()) is not None:
             corps.addSpacing(34)
             corps.addWidget(une_vie)
