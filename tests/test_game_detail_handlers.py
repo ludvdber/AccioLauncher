@@ -265,7 +265,7 @@ class TestTelechargerRefuse:
     def test_ce_jeu_deja_en_cours(self, tmp_path):
         vue, lances = self._vue_dl(tmp_path, is_busy=True, active_game=SimpleNamespace(id="hpx", name="HPX"))
         h.on_download(vue)
-        assert not lances and vue.status_message.recus and not vue.notify.recus
+        assert not lances and vue.notify.recus == ["Téléchargement déjà en cours pour ce jeu."]
 
     def test_sans_version(self, tmp_path):
         vue, lances = self._vue_dl(tmp_path)
@@ -314,6 +314,23 @@ class TestMiseAJourDuJeu:
         titre, texte = boites[0]
         assert "v1.1" in texte and "v1.2" in texte and "• Textures HD" in texte
         assert not changes, "« Plus tard » ne change rien"
+
+    def test_un_autre_jeu_en_cours_un_toast_et_aucune_question(self, tmp_path, boites):
+        """Ludo, 2026-11-20 : « Mettre à jour » pendant le téléchargement d'un autre jeu
+        posait sa question puis ne faisait rien (le refus partait dans la barre d'état)."""
+        vue, changes = self._vue_maj(tmp_path)
+        vue._ops.is_busy, vue._ops.active_game = True, SimpleNamespace(id="hp2", name="HP2")
+        h.on_update_clicked(vue)
+        assert not boites and not changes
+        assert vue.notify.recus == ["Téléchargement déjà en cours pour HP2 : un seul à la fois."]
+
+    @pytest.mark.parametrize("porte", ["on_repair", "on_install_local", "on_import_existing"])
+    def test_les_autres_portes_le_disent_aussi(self, tmp_path, boites, porte):
+        """Elles se taisaient (`return` sans un mot) : le clic semblait ne rien faire."""
+        vue, _changes = self._vue_maj(tmp_path)
+        vue._ops.is_busy, vue._ops.active_game = True, SimpleNamespace(id="hp2", name="HP2")
+        getattr(h, porte)(vue)
+        assert not boites and vue.notify.recus == ["Téléchargement déjà en cours pour HP2 : un seul à la fois."]
 
     def test_accepter_met_a_jour_vers_la_recommandee(self, tmp_path, boites):
         vue, changes = self._vue_maj(tmp_path)

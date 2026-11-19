@@ -183,19 +183,31 @@ def _preparation_bloque(view: GameDetailView) -> bool:
     return True
 
 
+def _occupe(view: GameDetailView) -> bool:
+    """Refuse, d'un toast, tant qu'un téléchargement ou une installation tourne. True si c'est refusé.
+
+    Une seule opération à la fois. Toute porte d'opération passe par ici AVANT sa
+    question : « Mettre à jour » pendant le téléchargement d'un autre jeu posait sa
+    question puis ne faisait rien (le refus partait dans la barre d'état), et
+    « Réparer », « Installer depuis un fichier », « Importer » se taisaient (Ludo,
+    2026-11-20). Filet : `test_toute_porte_d_operation_passe_par_la_garde`.
+    """
+    if not view._ops.is_busy:
+        return False
+    active = view._ops.active_game
+    if active and view.game is not None and active.id != view.game.id:
+        # Toast et non dialogue : il n'y a aucune décision à prendre, et la
+        # barre de téléchargement en bas montre déjà ce qui occupe le poste.
+        view.notify.emit(
+            tr("Téléchargement déjà en cours pour {} : un seul à la fois.")
+            .format(active.name))
+    else:
+        view.notify.emit(tr("Téléchargement déjà en cours pour ce jeu."))
+    return True
+
+
 def on_download(view: GameDetailView, version: GameVersion | None = None) -> None:
-    if view.game is None or _preparation_bloque(view):
-        return
-    if view._ops.is_busy:
-        active = view._ops.active_game
-        if active and active.id != view.game.id:
-            # Toast et non dialogue : il n'y a aucune décision à prendre, et la
-            # barre de téléchargement en bas montre déjà ce qui occupe le poste.
-            view.notify.emit(
-                tr("Téléchargement déjà en cours pour {} : un seul à la fois.")
-                .format(active.name))
-        else:
-            view.status_message.emit(tr("Téléchargement déjà en cours pour ce jeu."))
+    if view.game is None or _preparation_bloque(view) or _occupe(view):
         return
     ver = version or view.game.current_download
     if ver is None:
@@ -540,7 +552,7 @@ def _ce_qui_reste(game: GameData) -> str:
 
 
 def on_update_clicked(view: GameDetailView) -> None:
-    if view.game is None or _preparation_bloque(view):
+    if view.game is None or _preparation_bloque(view) or _occupe(view):
         return
     ver = view.game.current_download
     if ver is None or ver.version != view.game.recommended_version:
@@ -585,7 +597,7 @@ def on_repair(view: GameDetailView) -> None:
     proposer de la remettre : c'est elle qui casse quand on touche aux options
     graphiques du jeu, et le re-téléchargement ne la touche pas.
     """
-    if view.game is None or view._ops.is_busy or _preparation_bloque(view):
+    if view.game is None or _preparation_bloque(view) or _occupe(view):
         return
     # Ce qui manque d'abord : la configuration n'aide pas un jeu privé de son
     # pilote d'affichage (rapport du 2026-10-09).
@@ -625,7 +637,7 @@ def _proposer_la_configuration(view: GameDetailView, constat: str = "") -> None:
         _remettre_la_configuration(view, game)
     elif choix == 1:
         # Re-gardé : une préparation de Wine a pu démarrer pendant la question.
-        if _preparation_bloque(view):
+        if _preparation_bloque(view) or _occupe(view):
             return
         view._ops.repair(game)
         view._refresh()
@@ -824,7 +836,7 @@ def find_import_error(game: GameData, source: Path, install_path: Path) -> str |
 
 def on_import_existing(view: GameDetailView) -> None:
     """« J'ai déjà ce jeu » — déplace une installation existante dans le launcher."""
-    if view.game is None or view._ops.is_busy:
+    if view.game is None or _occupe(view):
         return
     game = view.game
     chosen = QFileDialog.getExistingDirectory(
@@ -863,7 +875,7 @@ def on_import_existing(view: GameDetailView) -> None:
 
 
 def on_install_local(view: GameDetailView) -> None:
-    if view.game is None or view._ops.is_busy or _preparation_bloque(view):
+    if view.game is None or _preparation_bloque(view) or _occupe(view):
         return
     path, _ = QFileDialog.getOpenFileName(
         view, tr("Sélectionner une archive de jeu"), "", "Archives (*.7z *.zip)",

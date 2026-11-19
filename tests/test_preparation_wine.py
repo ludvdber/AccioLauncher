@@ -451,8 +451,11 @@ class TestAucuneOperationPendantUnePreparation:
                        for f in appels):
                 continue
             portes.append(fonction.name)
-            if not any(isinstance(f, ast.Name) and f.id == "_preparation_bloque" for f in appels):
-                sans_garde.append(fonction.name)
+            # Les deux gardes : la préparation de Wine, et une opération déjà en cours
+            # (`_occupe` : un refus muet faisait croire que le clic ne faisait rien, 2026-11-20).
+            for garde in ("_preparation_bloque", "_occupe"):
+                if not any(isinstance(f, ast.Name) and f.id == garde for f in appels):
+                    sans_garde.append((fonction.name, garde))
         assert len(portes) >= 5, f"le balayage ne voit plus les portes : {portes}"
         assert not sans_garde
 
