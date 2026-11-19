@@ -221,7 +221,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # Déclaré au catalogue avec l'archive HP5 qui porte cette DLL (la 2.2.0 l'ignore).
     Reglage("camera_fluide", "Accio.Game", "SimulationStep",
             "Caméra",
-            "Le jeu ne lit la souris et la manette que 20 fois par seconde, quel que soit le nombre d'images : la caméra avance par petits à-coups. « Fluide » les lit 62 fois par seconde ; Harry garde sa vitesse. Connu : le geste de la baguette pendant un sort va encore trop vite.",
+            "Le jeu ne lit la souris et la manette que 20 fois par seconde, quel que soit le nombre d'images : la caméra avance par petits à-coups. « Fluide » les lit 62 fois par seconde ; Harry garde sa vitesse. Les gestes des sorts gardent leur rythme d'origine. Connu : quelques objets soulevés par Wingardium bougent un peu plus vite.",
             choix=(0, 16), zero="D'origine", etiquettes=((16, "Fluide"),), onglet="perfs", beta=True),
     # HP4, HP5, HP6, [Accio.Game] RealFrameTime du correctif (issues #28 et #29) : la boucle de ces jeux rend
     # chaque image à un temps virtuel qui avance de 1000/FrameRateCap ; sous une limite plus basse que le plafond,
