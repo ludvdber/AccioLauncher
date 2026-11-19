@@ -565,7 +565,9 @@
         "son_arriere_plan",
         "quidditch",
         "degats_recus",
-        "degats_infliges"
+        "degats_infliges",
+        "compteur_fps",
+        "panneau_perfs"
       ]
     },
     {
@@ -1089,7 +1091,9 @@
         "son_arriere_plan",
         "quidditch",
         "degats_recus",
-        "degats_infliges"
+        "degats_infliges",
+        "compteur_fps",
+        "panneau_perfs"
       ]
     },
     {
