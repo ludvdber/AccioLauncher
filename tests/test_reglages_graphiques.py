@@ -171,6 +171,9 @@ def test_chaque_texte_est_traduit():
 
 
 class TestFenetre:
+    """Depuis le 2026-11-19, les réglages graphiques de HP3 vivent dans la page Image (`page_image`),
+    comme ceux du correctif des autres jeux : catégories, fiche, préréglages."""
+
     @pytest.fixture
     def dlg(self, qtbot, conf, tmp_path, monkeypatch):
         from src.ui.game_settings_dialog import GameSettingsDialog
@@ -187,59 +190,97 @@ class TestFenetre:
     def test_la_fluidite_vit_dans_la_page_image(self, dlg):
         """Audit UI reg21 : plus de page Performances ; ses réglages sont sous l'image, en « Fluidité »."""
         assert "image" in dlg._onglets and "perfs" not in dlg._onglets
-        assert set(dlg._controles_graph) == set(R)
+        page = dlg._page_img
+        assert set(page.reglages) == set(R)
+        assert page.categorie_de("graph_limite") == page.categorie_de("graph_vsync") == "fluidite"
+        assert page.categorie_de("graph_antialiasing") == "qualite"
 
     def test_un_interrupteur_ne_repete_pas_son_nom_en_infobulle(self, dlg):
         """f60 : la bulle redisait mot pour mot le nom écrit à gauche ; le nom accessible reste."""
         from src.ui.toggle_switch import ToggleSwitch
-        interrupteurs = [c for c in dlg._controles_graph.values() if isinstance(c, ToggleSwitch)]
+        interrupteurs = [dlg._page_img.ligne(i).controle for i in R]
+        interrupteurs = [c for c in interrupteurs if isinstance(c, ToggleSwitch)]
         assert interrupteurs
         assert all(c.accessibleName() and c.toolTip() != c.accessibleName() for c in interrupteurs)
 
     def test_choisir_ecrit_aussitot(self, dlg, conf):
-        liste = dlg._controles_graph["graph_antialiasing"]
-        assert liste.currentData() == "8x"
-        liste.setCurrentIndex(liste.findData("4x"))
+        page = dlg._page_img
+        assert page.valeur("graph_antialiasing") == "8x"
+        assert not dlg._bouton_reset.isEnabled()
+        page.regler("graph_antialiasing", "4x")
         assert "Antialiasing                        = 4x" in conf.read_bytes().decode()
         assert dlg._bouton_reset.isEnabled()
 
-    def test_retablir_l_origine(self, qtbot, dlg, conf):
-        qtbot.mouseClick(dlg._controles_graph["graph_vsync"], Qt.MouseButton.LeftButton)
+    def test_un_prereglage_ecrit_ses_quatre_reglages(self, dlg, conf):
+        page = dlg._page_img
+        assert page.onglet_prereglages is not None
+        page.choisir_prereglage("legere")
+        texte = conf.read_bytes().decode()
+        assert "Resolution                          = max_fhd" in texte
+        assert "Antialiasing                        = off" in texte
+        assert "RTTexturesForceScaleAndMSAA         = false" in texte
+        page.choisir_prereglage("maximale")
+        assert conf.read_bytes() == CONF.encode(), "Maximale = l'installation"
+
+    def test_retablir_l_origine(self, dlg, conf):
+        page = dlg._page_img
+        page.regler("graph_vsync", False)
         assert "ForceVerticalSync                   = false" in conf.read_bytes().decode()
         dlg._confirmer_origine = lambda _pages: True   # la vraie question : test_reglages_finitions
         dlg._bouton_reset.click()
         assert conf.read_bytes() == CONF.encode()
-        assert dlg._controles_graph["graph_vsync"].isChecked()
+        assert page.valeur("graph_vsync") is True
+        assert page.ligne("graph_vsync").controle.isChecked()
 
     def test_avec_un_reglage_du_correctif_l_image_reste(self, qtbot, conf, tmp_path, monkeypatch):
-        """HP3 déclare `son_arriere_plan_hp3` (dinput8.ini) : la page Image garde ses
-        réglages graphiques, et la coupure du son a sa ligne dans « Jeu »."""
+        """HP3 déclare `son_arriere_plan_hp3` et `compteur_fps_hp3` (dinput8.ini) : la page Image
+        garde ses réglages graphiques et gagne le compteur, la coupure du son a sa ligne dans « Jeu »."""
         from src.ui.game_settings_dialog import GameSettingsDialog
         monkeypatch.setattr(rg.sys, "platform", "win32")
-        (conf.parent / "dinput8.ini").write_bytes(b"[Accio.Window]\r\nMuteInBackground=0\r\n")
+        (conf.parent / "dinput8.ini").write_bytes(
+            b"[Accio.Overlay]\r\nShowFPS=0\r\n[Accio.Window]\r\nMuteInBackground=0\r\n")
         jeu = GameData.from_dict({
             "id": "hp3", "name": "HP3", "year": 2004, "description": "d", "developer": "d",
             "executable": "HP3/system/hppoa.exe", "cover_image": "c.jpg",
-            "fix_settings": ["son_arriere_plan_hp3"]})
+            "fix_settings": ["son_arriere_plan_hp3", "compteur_fps_hp3"]})
         manager = SimpleNamespace(game_language=lambda g: None, langues_disponibles=lambda g: (),
                                   config=SimpleNamespace(install_path=tmp_path, resolution_jeu={}, reprise={}))
         d = GameSettingsDialog(jeu, manager, lambda code: True)
         qtbot.addWidget(d)
-        assert set(d._controles_graph) == set(R)
+        assert set(d._page_img.reglages) == set(R) | {"compteur_fps_hp3"}
+        d._page_img.regler("compteur_fps_hp3", True)
+        assert b"ShowFPS=1\r\n" in (conf.parent / "dinput8.ini").read_bytes()
         assert "son_arriere_plan_hp3" in d._controles
         qtbot.mouseClick(d._controles["son_arriere_plan_hp3"], Qt.MouseButton.LeftButton)
         assert b"MuteInBackground=1\r\n" in (conf.parent / "dinput8.ini").read_bytes()
 
-    def test_fichier_en_lecture_seule(self, dlg, conf, monkeypatch):
+    def test_fichier_en_lecture_seule(self, dlg, monkeypatch):
         def refus(*_a):
             raise OSError("verrouillé")
         monkeypatch.setattr(rg, "_ecrire", refus)
-        liste = dlg._controles_graph["graph_limite"]
-        liste.setCurrentIndex(liste.findData("30"))
-        assert liste.currentData() == "60"                    # remis sur le fichier
+        page = dlg._page_img
+        page.regler("graph_limite", "30")
+        assert page.valeur("graph_limite") == "60"                    # remis sur le fichier
         assert "réglages graphiques" in dlg._erreur.text()
         assert "voodoo" not in dlg._erreur.text().lower()
 
+
+class TestPrereglages:
+    def test_maximale_est_l_installation_livree(self):
+        """Les valeurs livrées de HP3 v1.2 (`notes/HP3.md`, « Réglages livrés »)."""
+        _i, _n, _t, maximale = next(p for p in rg.PREREGLAGES if p[0] == "maximale")
+        assert maximale == {"graph_resolution": "max", "graph_antialiasing": "8x",
+                            "graph_textures_rendu": True, "graph_filtrage": "16"}
+
+    def test_chaque_valeur_est_proposee(self):
+        for _i, _n, _t, valeurs in rg.PREREGLAGES:
+            for ident, v in valeurs.items():
+                r = R[ident]
+                assert (v in r.choix) if r.choix else isinstance(v, bool), (ident, v)
+
+    def test_jamais_la_limite_d_images(self):
+        """HP3 ne doit jamais dépasser 60 images/s (CLAUDE.md) : aucun préréglage n'y touche."""
+        assert all("graph_limite" not in v for _i, _n, _t, v in rg.PREREGLAGES)
 
 def test_l_oeil_ne_marque_que_ce_qui_se_voit_le_plus():
     """f118 : « œil = le plus visible » sur les quatre réglages d'image ne distinguait rien."""

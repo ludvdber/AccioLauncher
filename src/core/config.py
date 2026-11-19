@@ -146,6 +146,12 @@ def _as_map(value: object, type_valeur: type) -> dict[str, Any]:
             and not isinstance(v, bool)}
 
 
+def _as_rendu(value: object) -> dict[str, dict[str, str]]:
+    """id → {clé → valeur}, textes seulement : un jeu ou une clé mal typés sont écartés."""
+    return {jeu: cles for jeu, brut in _as_dict(value).items()
+            if isinstance(jeu, str) and (cles := _as_map(brut, str))}
+
+
 # Les jeux qui savent reprendre (`reprise.JEUX`), pour reprendre un ancien choix.
 _JEUX_REPRISE = ("hp1", "hp2", "hp3")
 
@@ -260,8 +266,11 @@ class Config:
     # Taille du texte de HP1/HP2 (id → « petit », « grand », « tres_grand »,
     # « origine »). Absent : automatique, d'après la hauteur de l'image (`texte_ue1`).
     taille_texte: dict[str, str] = field(default_factory=dict)
-    # Qualité du rendu D3D11 de HP1/HP2 (id → « maximale », « equilibree », « legere »).
-    # Absent : rien n'est écrit, l'ini reste celui de l'installation (`qualite_rendu`).
+    # Le rendu D3D11 de HP1/HP2 réglé dans le launcher (id → {clé de `[D3D11Drv.D3D11RenderDevice]` →
+    # valeur écrite}), posé à chaque lancement (`qualite_rendu`). Une clé absente : l'ini garde la sienne.
+    rendu_d3d11: dict[str, dict[str, str]] = field(default_factory=dict)
+    # 1.3.6-beta.1 : un niveau par jeu (« maximale », « equilibree », « legere »), changé en clés par
+    # `qualite_rendu` à sa première lecture, puis retiré.
     qualite_rendu: dict[str, str] = field(default_factory=dict)
     # Avertissement « écran sur la puce intégrée » fermé : la carte dédiée qu'il nommait
     # (`ecran_branche.signature`). Il revient si la situation change.
@@ -327,6 +336,7 @@ class Config:
                     game_language=_as_map(data.get("game_language"), str),
                     resolution_jeu=_as_map(data.get("resolution_jeu"), str),
                     taille_texte=_as_map(data.get("taille_texte"), str),
+                    rendu_d3d11=_as_rendu(data.get("rendu_d3d11")),
                     qualite_rendu=_as_map(data.get("qualite_rendu"), str),
                     ecran_ignore=_as_str(data.get("ecran_ignore"), ""),
                     correctif_signale=_as_map(data.get("correctif_signale"), str),
@@ -393,6 +403,7 @@ class Config:
                 "game_language": self.game_language,
                 "resolution_jeu": self.resolution_jeu,
                 "taille_texte": self.taille_texte,
+                "rendu_d3d11": self.rendu_d3d11,
                 "qualite_rendu": self.qualite_rendu,
                 "ecran_ignore": self.ecran_ignore,
                 "correctif_signale": self.correctif_signale,

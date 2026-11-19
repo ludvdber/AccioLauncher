@@ -265,6 +265,8 @@ class TestChaqueReglageEstReellementPersiste:
                 temoin = {"hp1": 4242}
             elif champ.name == "reprise":       # id → choix (bool), par jeu
                 temoin = {"hp1": True}
+            elif champ.name == "rendu_d3d11":   # id → {clé → valeur}, par jeu
+                temoin = {"hp1": {"Antialiasing": "4"}}
             else:
                 temoin = self._valeur_temoin(champ, actuel)
             attendus[champ.name] = temoin

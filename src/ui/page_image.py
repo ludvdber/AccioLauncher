@@ -1,4 +1,4 @@
-"""L'onglet Image des réglages d'un jeu (HP4 à HP7b), refait d'après la maquette « Curseurs gradués »
+"""L'onglet Image des réglages d'un jeu (les huit), refait d'après la maquette « Curseurs gradués »
 (2026-11-12, choisie par Ludo) : six catégories en onglets, une recherche, une ligne par réglage
 (nom, coût, contrôle) et, à droite, la fiche du réglage survolé.
 
@@ -11,14 +11,15 @@ Ce que la maquette corrige de la page d'avant :
   paliers nommés, le repère Accio (or) et celui du jeu (argent), et une valeur exacte ;
 - deux à cinq choix courts : des boutons côte à côte, lisibles sans ouvrir de liste.
 
-Tout s'écrit AUSSITÔT dans l'ini du correctif (`reglages_correctif.ecrire`), comme le reste de la
-fenêtre ; un échec remet le contrôle sur ce que porte le fichier et la fenêtre le dit.
+Tout s'écrit AUSSITÔT là où vit le réglage (`reglages_image.Magasin` : l'ini du correctif, le rendu
+D3D11 de HP1/HP2 gardé dans la config jusqu'au lancement, les réglages graphiques de HP3), comme le
+reste de la fenêtre ; un échec remet le contrôle sur ce que porte le fichier et la fenêtre le dit.
 """
 
 import html
 import logging
-from collections.abc import Callable
-from pathlib import Path
+from collections.abc import Callable, Iterable, Mapping
+from dataclasses import dataclass
 
 from PyQt6.QtCore import QEvent, QObject, QPointF, QRectF, QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QFocusEvent, QFontMetrics, QKeyEvent, QMouseEvent, QPainter, QPainterPath, QPen, QWheelEvent
@@ -62,6 +63,8 @@ log = logging.getLogger(__name__)
 # argent, pour ne pas lui faire concurrence (maquette, « Designer ») ; l'or fixe restait sous un
 # thème rouge, vert ou bleu (audit UI f54).
 ARGENT = "#b9bccb"
+# Une mise en garde (la note d'« Écran » de HP1/HP2) : l'orange des erreurs de la fenêtre.
+_COULEUR_AVERTIR = "#e8955a"
 # La fiche de droite, et la largeur sous laquelle elle laisse sa place à la liste (la description
 # passe alors dans l'infobulle de la ligne).
 _LARGEUR_FICHE = 300
@@ -552,7 +555,7 @@ class PageAvecFiche(QWidget):
                 self._active.marquer(large)
 
 
-def _html_fiche(reglage: Reglage, aide: str, declares: set[str], note_affichee: bool = False) -> str:
+def _html_fiche(reglage: Reglage, aide: str, declares: Mapping[str, Reglage], note_affichee: bool = False) -> str:
     """La description, puis ce que la ligne ne dit pas : se voit, bêta, dépendances. Quand la ligne
     est grisée, sa note dit déjà de quoi elle dépend : la fiche la répétait mot pour mot à
     400 px (audit UI f95)."""
@@ -566,11 +569,11 @@ def _html_fiche(reglage: Reglage, aide: str, declares: set[str], note_affichee: 
     def deja_dit(autre: Reglage) -> bool:
         return rc.textes(autre)[0].lower() in aide.lower()
 
-    parent = rc.REGLAGES.get(reglage.depend_de)
-    if parent is not None and parent.ident in declares and not deja_dit(parent) and not note_affichee:
+    parent = declares.get(reglage.depend_de)
+    if parent is not None and not deja_dit(parent) and not note_affichee:
         paragraphes.append(e(tr("Sans effet tant que « {} » est éteint.").format(rc.textes(parent)[0])))
-    exclu = rc.REGLAGES.get(reglage.exclut)
-    if exclu is not None and exclu.ident in declares and not deja_dit(exclu):
+    exclu = declares.get(reglage.exclut)
+    if exclu is not None and not deja_dit(exclu):
         paragraphes.append(e(tr("L'allumer éteint « {} », qui ne peut pas agir en même temps.").format(
             rc.textes(exclu)[0])))
     return "".join(f"<p>{p}</p>" for p in paragraphes)
@@ -727,38 +730,64 @@ def _textes_cherches(r: Reglage) -> tuple[str, str]:
     return libelle, f"{aide} {tr(r.technique)}" if r.technique else aide
 
 
-class PageImage(QWidget):
-    """L'onglet Image d'un jeu à correctif. Voir le module.
+@dataclass(frozen=True)
+class LigneLibre:
+    """Une ligne d'« Écran » que le launcher règle lui-même (taille du texte, carte graphique de HP1/HP2) :
+    son contrôle, déjà branché par la fenêtre, et ce que dit sa fiche."""
+    ident: str
+    nom: str
+    aide: str
+    controle: QWidget
 
-    `montrer_erreur()` et `apres_ecriture()` sont ceux de la fenêtre : le message d'échec et le
+
+class PageImage(QWidget):
+    """L'onglet Image d'un jeu. Voir le module.
+
+    `magasins` : chaque magasin et les réglages qu'il porte. `prereglages` : ceux du jeu (rendu D3D11,
+    HP3) ; None, ceux du correctif réduits à ses réglages. `libres` et `note_ecran` complètent « Écran ».
+    `montrer_erreur(réglage)` et `apres_ecriture()` sont ceux de la fenêtre : le message d'échec et le
     pied (« Rétablir » s'allume à la première retouche) vivent chez elle.
     """
 
-    def __init__(self, game: GameData, config: Config, ini: Path, reglages: tuple[Reglage, ...],
-                 montrer_erreur: Callable[[], None], apres_ecriture: Callable[[], None],
-                 enregistrer_config: Callable[[], None] | None = None) -> None:
+    def __init__(self, game: GameData, config: Config,
+                 magasins: Iterable[tuple[reglages_image.Magasin, tuple[Reglage, ...]]],
+                 montrer_erreur: Callable[[Reglage], None], apres_ecriture: Callable[[], None],
+                 enregistrer_config: Callable[[], None] | None = None,
+                 prereglages: tuple[rc.Prereglage, ...] | None = None,
+                 libres: tuple[LigneLibre, ...] = (), note_ecran: str = "") -> None:
         super().__init__()
         self.setStyleSheet(themed(_STYLE) + "PageImage { background: transparent; }")
-        self.game, self.config, self.ini = game, config, ini
+        self.game, self.config = game, config
         self._montrer_erreur, self._apres_ecriture = montrer_erreur, apres_ecriture
         self._enregistrer_config = enregistrer_config
-        self.reglages = {r.ident: r for r in reglages}
-        self._declares = set(self.reglages)
+        self._magasins: dict[str, reglages_image.Magasin] = {}
+        self.reglages: dict[str, Reglage] = {}
+        for magasin, portes in magasins:
+            for r in portes:
+                self._magasins[r.ident] = magasin
+                self.reglages[r.ident] = r
+        reglages = tuple(self.reglages.values())
         self._valeurs: dict[str, object] = {}
         self._accio: dict[str, object] = {}
         self._jeu: dict[str, object] = {}
         for r in reglages:
             self._relire(r)
-            self._accio[r.ident] = rc.valeur_accio(ini, r)
-            self._jeu[r.ident] = rc.valeur_du_jeu(r)
-        # La résolution des jeux du correctif : réglée par le launcher, écrite au lancement.
-        self._resolution = game.resolution is not None and resolution_jeu.du_correctif(game.resolution)
+            self._accio[r.ident] = self._magasins[r.ident].accio(r)
+            self._jeu[r.ident] = self._magasins[r.ident].jeu(r)
+        # La résolution : réglée par le launcher, écrite au lancement (`resolution_jeu`).
+        self._resolution = game.resolution is not None
+        self._libres = {li.ident: li for li in libres}
+        self._note_ecran = note_ecran
         self.categories = reglages_image.ranger(reglages)
-        if self._resolution and not any(c.ident == "ecran" for c in self.categories):
+        if (self._resolution or libres) and not any(c.ident == "ecran" for c in self.categories):
             self.categories = (reglages_image.Categorie("ecran", tr("Écran"), (
                 reglages_image.Groupe("Affichage", ()),)), *self.categories)
-        self._prereglages = rc.prereglages_du_jeu(
-            [r for r in reglages if reglages_image.place(r)[0] not in ("couleurs", "fluidite")])
+        if prereglages is None:
+            self._prereglages = rc.prereglages_du_jeu(
+                [r for r in reglages if reglages_image.place(r)[0] not in ("couleurs", "fluidite")])
+        else:
+            self._prereglages = tuple((i, n, t, {k: v for k, v in valeurs.items() if k in self.reglages})
+                                      for i, n, t, valeurs in prereglages)
         # Les lignes de chaque réglage (une dans sa catégorie, une autre dans la recherche).
         self._lignes: dict[str, list[_LigneImage]] = {}
         self._cartes_prereglage: dict[str, _CartePrereglage] = {}
@@ -774,9 +803,9 @@ class PageImage(QWidget):
 
     def _relire(self, r: Reglage) -> None:
         try:
-            self._valeurs[r.ident] = rc.lire(self.ini, r).valeur
+            self._valeurs[r.ident] = self._magasins[r.ident].lire(r)
         except OSError:
-            log.warning("Correctif : %s illisible", self.ini, exc_info=True)
+            log.warning("Image : %s illisible", r.ident, exc_info=True)
 
     def valeur(self, ident: str) -> object:
         return self._valeurs.get(ident)
@@ -786,7 +815,7 @@ class PageImage(QWidget):
         if ident not in self._lignes or not self._lignes[ident]:
             rang = next(i for i, c in enumerate(self.categories)
                         if ident in {r.ident for r in c.reglages}
-                        or (ident == RESOLUTION and c.ident == "ecran"))
+                        or ((ident == RESOLUTION or ident in self._libres) and c.ident == "ecran"))
             self.montrer(rang)
         return self._lignes[ident][0]
 
@@ -857,7 +886,7 @@ class PageImage(QWidget):
         # Une catégorie seule ne choisit rien ; peu de lignes ne se cherchent pas. Sans l'une ni
         # l'autre, la colonne entière se cache, et son écart avec elle.
         onglets = len(self.categories) + bool(self._prereglages) > 1
-        cherchable = len(self.reglages) + bool(self._resolution) >= _SEUIL_RECHERCHE
+        cherchable = len(self.reglages) + bool(self._resolution) + len(self._libres) >= _SEUIL_RECHERCHE
         rangee.setVisible(onglets)
         self.recherche.setVisible(cherchable)
         tete.setVisible(onglets or cherchable)
@@ -925,8 +954,8 @@ class PageImage(QWidget):
         if self.isVisible():
             self._placer_fiche()
         premier = next(iter(self.categories[rang].reglages), None)
-        if self._resolution and self.categories[rang].ident == "ecran":
-            self._activer(RESOLUTION, main=False)
+        if self.categories[rang].ident == "ecran" and (self._resolution or self._libres):
+            self._activer(RESOLUTION if self._resolution else next(iter(self._libres)), main=False)
         elif premier is not None:
             self._activer(premier.ident, main=False)
         self._maj()
@@ -953,8 +982,11 @@ class PageImage(QWidget):
             lay = QVBoxLayout(carte)
             lay.setContentsMargins(0, 6, 0, 6)
             lay.setSpacing(0)
-            if cat.ident == "ecran" and groupe.nom == "Affichage" and self._resolution:
-                lay.addWidget(self._ligne_resolution())
+            if cat.ident == "ecran" and groupe.nom == "Affichage":
+                if self._resolution:
+                    lay.addWidget(self._ligne_resolution())
+                for libre in self._libres.values():
+                    lay.addWidget(self._ligne_libre(libre))
             presents = {r.ident for r in groupe.reglages}
             for r in groupe.reglages:
                 lay.addWidget(self._ligne(r, retrait=r.depend_de in presents))
@@ -965,6 +997,14 @@ class PageImage(QWidget):
             v.addSpacing(6)
             v.addWidget(carte)
             v.addSpacing(16)
+        if cat.ident == "ecran" and self._note_ecran:
+            note = QLabel(self._note_ecran)
+            note.setObjectName("noteEcran")
+            note.setFont(police(13))
+            note.setWordWrap(True)
+            note.setTextFormat(Qt.TextFormat.PlainText)
+            note.setStyleSheet(f"color: {_COULEUR_AVERTIR}; background: transparent;")
+            v.addWidget(note)
         v.addStretch()
         return contenu
 
@@ -1183,8 +1223,22 @@ class PageImage(QWidget):
         self._lignes.setdefault(RESOLUTION, []).append(ligne)
         return ligne
 
-    @staticmethod
-    def _aide_resolution() -> str:
+    def _ligne_libre(self, libre: LigneLibre) -> _LigneImage:
+        ligne = _LigneImage(libre.ident, libre.nom, None, libre.controle, False)
+        ligne.setToolTip(_bulle(libre.aide))
+        ligne.fiche_ouverte = self._fiche_ouverte
+        ligne.survolee.connect(self._activer)
+        ligne.quittee.connect(self._quitter)
+        self._lignes.setdefault(libre.ident, []).append(ligne)
+        return ligne
+
+    def _aide_resolution(self) -> str:
+        if self.game.resolution is not None and not resolution_jeu.du_correctif(self.game.resolution):
+            # HP1/HP2 : une fenêtre à cadre, que le moteur ouvre lui-même.
+            return tr("La taille de l'image du jeu. Par défaut, la plus grande dont la fenêtre tient à "
+                      "l'écran, barre de titre comprise, sans passer sous la barre des tâches. Une taille "
+                      "plus petite allège le travail de la carte graphique. Appliquée à chaque lancement, "
+                      "même si le menu du jeu ou Alt+Entrée l'a changée entre-temps.")
         return tr("La taille de l'image du jeu. Par défaut, celle de votre écran : l'image la plus nette. "
                   "Une taille plus petite allège le travail de la carte graphique. La « Résolution de rendu » "
                   "s'ajoute par-dessus : elle calcule l'image plus grande que cette taille, puis la réduit. "
@@ -1209,11 +1263,11 @@ class PageImage(QWidget):
         if r.choix and valeur not in r.choix and not rc.sur_le_curseur(r, valeur):
             return   # l'entrée « réglé à la main » : c'est déjà ce que porte le fichier
         try:
-            rc.ecrire(self.ini, r, valeur)
+            self._magasins[ident].ecrire(r, valeur)
         except (OSError, ValueError):
-            log.warning("Correctif : %s non écrit", ident, exc_info=True)
+            log.warning("Image : %s non écrit", ident, exc_info=True)
             self._relire(r)
-            self._montrer_erreur()
+            self._montrer_erreur(r)
             self._maj()
             return
         self._relire(r)
@@ -1228,10 +1282,10 @@ class PageImage(QWidget):
                 or not rc.allume(autre, self._valeurs.get(autre.ident)):
             return
         try:
-            rc.ecrire(self.ini, autre, rc.eteint(autre))
+            self._magasins[autre.ident].ecrire(autre, rc.eteint(autre))
         except (OSError, ValueError):
-            log.warning("Correctif : %s non éteint", autre.ident, exc_info=True)
-            self._montrer_erreur()
+            log.warning("Image : %s non éteint", autre.ident, exc_info=True)
+            self._montrer_erreur(autre)
         self._relire(autre)
 
     def _vers(self, cible: dict[str, object]) -> None:
@@ -1240,22 +1294,24 @@ class PageImage(QWidget):
             if cible is self._accio:
                 self.liste_resolution.setCurrentIndex(0)
             return
+        if self._actif in self._libres:
+            return
         voulue = cible.get(self._actif)
         if voulue is not None:
             self.regler(self._actif, voulue)
 
     def choisir_prereglage(self, ident: str) -> None:
         voulues = next(v for i, _n, _t, v in self._prereglages if i == ident)
-        rates = False
+        rate: Reglage | None = None
         for cle, valeur in voulues.items():
             try:
-                rc.ecrire(self.ini, self.reglages[cle], valeur)
+                self._magasins[cle].ecrire(self.reglages[cle], valeur)
             except (OSError, ValueError):
-                log.warning("Correctif : préréglage %s non écrit", ident, exc_info=True)
-                rates = True
+                log.warning("Image : préréglage %s non écrit", ident, exc_info=True)
+                rate = self.reglages[cle]
             self._relire(self.reglages[cle])
-        if rates:
-            self._montrer_erreur()
+        if rate is not None:
+            self._montrer_erreur(rate)
         else:
             self._apres_ecriture()
         self._maj()
@@ -1266,7 +1322,7 @@ class PageImage(QWidget):
 
     def _maj(self) -> None:
         for ident, lignes in self._lignes.items():
-            if ident == RESOLUTION:
+            if ident == RESOLUTION or ident in self._libres:
                 continue
             for ligne in lignes:
                 self._poser(ligne, self.reglages[ident])
@@ -1299,7 +1355,7 @@ class PageImage(QWidget):
         trouvees = {id(ligne) for _n, _a, ligne in (self._trouvables or {}).values()}
         for ident, lignes in self._lignes.items():
             r = self.reglages.get(ident)
-            bloquant = rc.bloque_par(r, self._valeurs) if r is not None else None
+            bloquant = rc.bloque_par(r, self._valeurs, self.reglages) if r is not None else None
             for ligne in lignes:
                 if id(ligne) not in trouvees:
                     ligne.setVisible(bloquant is None)
@@ -1373,6 +1429,14 @@ class PageImage(QWidget):
             f.bouton_accio.setEnabled(self.liste_resolution.currentIndex() != 0)
             f.bouton_jeu.setEnabled(False)
             return
+        if (libre := self._libres.get(self._actif)) is not None:
+            f.titre.setText(libre.nom)
+            f.texte.setText(typo(f"<p>{e(libre.aide)}</p>"))
+            f.valeurs.setText("")
+            f.notes.setText("")
+            f.bouton_accio.setEnabled(False)
+            f.bouton_jeu.setEnabled(False)
+            return
         r = self.reglages.get(self._actif)
         if r is None:
             # Une recherche sans résultat : la fiche ne parle plus du réglage d'avant (v45).
@@ -1384,7 +1448,7 @@ class PageImage(QWidget):
         libelle, aide = rc.textes(r)
         f.titre.setText(f"{libelle} ({tr(r.technique)})" if r.technique else libelle)
         note = any(not ligne.note.isHidden() for ligne in self._lignes.get(r.ident, ()))
-        f.texte.setText(typo(_html_fiche(r, aide, self._declares, note)))
+        f.texte.setText(typo(_html_fiche(r, aide, self.reglages, note)))
         v = self._valeurs.get(r.ident) if en_cours is None else en_cours
         jeu = self._jeu.get(r.ident)
         accio = self._accio.get(r.ident)
@@ -1426,7 +1490,7 @@ class PageImage(QWidget):
             ligne.setVisible(ident in trouves)
         self._compte_trouves.setText(trn(len(trouves), "{} réglage", "{} réglages").format(len(trouves)))
         self._compte_trouves.setVisible(bool(trouves))
-        self._carte_trouves.setVisible(any(i != RESOLUTION for i in trouves))
+        self._carte_trouves.setVisible(any(i in self.reglages for i in trouves))
         self._aucun.setText(tr("Aucun réglage ne parle de « {} ».").format(texte))
         self._aucun.setVisible(not trouves)
         self._groupe_onglets.setExclusive(False)
@@ -1438,16 +1502,20 @@ class PageImage(QWidget):
         self._maj()
 
     def _batir_resultats(self) -> None:
-        """Une ligne par réglage, cachée ; la Résolution mène à sa place dans « Écran »."""
+        """Une ligne par réglage, cachée ; la Résolution et les lignes libres mènent à leur place dans
+        « Écran »."""
         lay = self._lay_resultats
         self._trouvables = {}
         self._compte_trouves = petit_titre("")
         lay.addWidget(self._compte_trouves)
+        ailleurs = [(li.ident, li.nom, li.aide) for li in self._libres.values()]
         if self._resolution:
-            vers = lien(tr("Résolution, dans « Écran »"))
-            vers.clicked.connect(self._vers_resolution)
+            ailleurs.insert(0, (RESOLUTION, tr("Résolution"), self._aide_resolution()))
+        for ident, nom, aide in ailleurs:
+            vers = lien(tr("{}, dans « Écran »").format(nom))
+            vers.clicked.connect(lambda _c=False, i=ident: self._vers_ecran(i))
             lay.addWidget(vers, alignment=Qt.AlignmentFlag.AlignLeft)
-            self._trouvables[RESOLUTION] = (tr("Résolution"), self._aide_resolution(), vers)
+            self._trouvables[ident] = (nom, aide, vers)
         self._carte_trouves = QFrame()
         self._carte_trouves.setObjectName("carteImage")
         dedans = QVBoxLayout(self._carte_trouves)
@@ -1477,11 +1545,12 @@ class PageImage(QWidget):
                 w.deleteLater()
         self._trouvables = None
 
-    def _vers_resolution(self) -> None:
+    def _vers_ecran(self, ident: str) -> None:
         rang = next(i for i, cat in enumerate(self.categories) if cat.ident == "ecran")
         self.recherche.clear()          # vide les résultats et rouvre la catégorie d'avant…
-        self.montrer(rang)              # …puis Écran, la Résolution active
-        self.liste_resolution.setFocus(Qt.FocusReason.TabFocusReason)
+        self.montrer(rang)              # …puis Écran, la ligne trouvée active
+        controle = self.liste_resolution if ident == RESOLUTION else self._libres[ident].controle
+        controle.setFocus(Qt.FocusReason.TabFocusReason)
 
     # ── place ──
 

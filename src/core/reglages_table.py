@@ -532,6 +532,15 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Affiche les images par seconde en haut à gauche. En jeu, F10 le masque ou le "
             "remet.",
             defaut=False, onglet="perfs"),
+    # Le même pour HP3 (dinput8.ini, panneau F10 VU le 2026-10-21), sous un AUTRE identifiant, comme
+    # `son_arriere_plan_hp3` : un launcher 1.3.0 masquait la page Image de HP3 dès qu'un réglage du
+    # correctif y était déclaré. Pas de `panneau_perfs` pour HP3 : son panneau n'a que le temps par image
+    # et le graphe, F10 les montre.
+    Reglage("compteur_fps_hp3", "Accio.Overlay", "ShowFPS",
+            "Compteur d'images (FPS)",
+            "Affiche les images par seconde en haut à gauche. En jeu, F10 le masque ou le "
+            "remet.",
+            defaut=False, onglet="perfs"),
     Reglage("panneau_perfs", "Accio.Overlay", "",
             "Panneau de performances",
             "Temps par image et son graphe, processeur, carte graphique, mémoire vidéo et "
@@ -650,6 +659,8 @@ CURSEURS: dict[str, tuple[float, float, float]] = {
     "textures_lointaines": (-1.5, 0, 0.1),
     "force_halo": (0, 100, 5),
     "ciel_heure": (0, 24, 0.25),
+    # Le rendu D3D11 de HP1/HP2 (`qualite_rendu`) : SSRIntensity, 0,35 installé, ×0,5 encore sur un mur nu.
+    "rendu_reflets_force": (0.1, 0.6, 0.05),
 }
 
 # Ce que fait le JEU livré, sans le correctif : le repère argent de l'onglet Image, à côté de la valeur

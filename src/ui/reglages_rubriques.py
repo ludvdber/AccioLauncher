@@ -21,9 +21,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from src.core import (captures, difficulte_jeu, manette, preference_gpu, qualite_rendu,
-                      reglages_correctif, reglages_graphiques, reprise, resolution_jeu, texte_ue1,
-                      videos_lancement)
+from src.core import (captures, difficulte_jeu, manette, preference_gpu, reglages_correctif, reprise,
+                      resolution_jeu, texte_ue1, videos_lancement)
 from src.core import difficulte_presets as dp
 from src.core.i18n import tr
 from src.core.reglages_table import Reglage
@@ -255,21 +254,11 @@ class RubriquesDuJeu:
             self._note_preregle.setVisible(etat.personnalise)
 
     def _section_affichage(self, corps: QVBoxLayout) -> None:
-        """Jeu sans réglage de correctif : la résolution si le catalogue dit où
-        l'écrire (HP1, HP2), et ce qui vient, verrouillé."""
-        reglable = self.game.resolution is not None
+        """Jeu sans aucun réglage d'image : ce qui vient, verrouillé (HP1 à HP3 ont leur page Image)."""
         carte = Carte()
-        if reglable:
-            self._ligne_resolution(carte)
-            if texte_ue1.gere(self.game.id):
-                self._ligne_texte(carte)
-            if qualite_rendu.gere(self.game):
-                self._ligne_qualite_rendu(carte)
-                if preference_gpu.proposee():
-                    self._ligne_carte_puissante(carte)
         # Sous une rubrique active, des choix grisés sans « BIENTÔT » auraient
-        # l'air de réglages cassés (règle 119) : on ne les annonce plus ici.
-        for nom in (() if reglable else _A_VENIR):
+        # l'air de réglages cassés (règle 119) : seulement sous la rubrique verrouillée.
+        for nom in _A_VENIR:
             item = QRadioButton(tr(nom))
             item.setFont(police(14))
             item.setEnabled(False)
@@ -282,7 +271,7 @@ class RubriquesDuJeu:
             h.addWidget(item)
             carte.ajouter(ligne)
         self._egaliser(carte)
-        self._section(corps, self._titre_rubrique(tr("Affichage"), verrouille=not reglable), carte)
+        self._section(corps, self._titre_rubrique(tr("Affichage"), verrouille=True), carte)
         if self.game.display_locked:
             # Cette rubrique est exactement l'endroit où va celui qui cherche la
             # résolution — donc celui qui, ne la trouvant pas ici, ira la
@@ -291,9 +280,7 @@ class RubriquesDuJeu:
                 "Ne touchez pas aux options vidéo DANS le jeu : l'affichage "
                 "est déjà réglé au mieux par le launcher, et le modifier ici "
                 "peut empêcher le jeu de redémarrer.\n"
-                "Ces réglages viendront ici.") if not reglable else tr(
-                "Réglez la résolution ici, pas dans le menu du jeu : ses options "
-                "vidéo peuvent l'empêcher de redémarrer."))
+                "Ces réglages viendront ici."))
             note.setFont(police(13))
             note.setWordWrap(True)
             note.setTextFormat(Qt.TextFormat.PlainText)
@@ -301,47 +288,8 @@ class RubriquesDuJeu:
             corps.addSpacing(10)
             corps.addWidget(note)
 
-    def _ligne_resolution(self, carte: Carte) -> None:
-        """La taille de l'image du jeu : la plus grande que l'écran permet, par défaut.
-
-        Enregistrée dans la config du launcher, ÉCRITE dans l'ini au lancement
-        (`resolution_jeu`) : le jeu, son menu vidéo ou un Alt+Entrée peuvent la
-        changer, le lancement suivant remet celle-ci.
-        """
-        place = resolution_jeu.place_pour(self.game, self.manager.config)
-        choix = self._liste()
-        if place is not None:
-            choix.addItem(tr("Remplir l'écran ({} × {})").format(*place), "")
-        else:
-            choix.addItem(tr("Remplir l'écran"), "")
-        for taille in resolution_jeu.proposees(place):
-            choix.addItem("{} × {}".format(*taille), resolution_jeu.ecrire(taille))
-        courant = self.manager.config.resolution_jeu.get(self.game.id, "")
-        if courant and choix.findData(courant) < 0:
-            taille = resolution_jeu.lire(courant)
-            if taille is not None:
-                # Choisie sur un autre écran, plus grand : la montrer telle quelle,
-                # le lancement repliera sur la place disponible tant qu'elle ne tient pas.
-                choix.addItem(tr("{} × {} (plus grande que cet écran)").format(*taille), courant)
-        choix.setCurrentIndex(max(0, choix.findData(courant)))
-        choix.currentIndexChanged.connect(lambda _i, c=choix: self._on_resolution(c.currentData()))
-        self._choix_resolution = choix
-        carte.ajouter(self._ligne(tr("Résolution"), choix, tr(
-            "La taille de l'image du jeu. Par défaut, la plus grande dont la fenêtre tient à "
-            "l'écran, barre de titre comprise, sans passer sous la barre des tâches. Une taille "
-            "plus petite allège le travail de la carte graphique. Appliquée à chaque lancement, "
-            "même si le menu du jeu ou Alt+Entrée l'a changée entre-temps.")))
-
-    def _on_resolution(self, valeur: str) -> None:
-        resolutions = self.manager.config.resolution_jeu
-        if valeur:
-            resolutions[self.game.id] = valeur
-        else:
-            resolutions.pop(self.game.id, None)
-        self.manager.config.save()
-
-    def _ligne_texte(self, carte: Carte) -> None:
-        """La taille du texte de HP1/HP2 : automatique, ou plus petite ou plus grande.
+    def _controle_texte(self) -> QComboBox:
+        """La taille du texte de HP1/HP2 : automatique, ou plus petite ou plus grande (ligne d'« Écran »).
 
         Une liste et non un curseur : à la manette, ← → réglaient le curseur
         sans pouvoir en sortir (`manette_nav`). Posée au lancement (`texte_ue1`).
@@ -359,11 +307,14 @@ class RubriquesDuJeu:
         courant = self.manager.config.taille_texte.get(self.game.id, "")
         choix.setCurrentIndex(max(0, choix.findData(courant)))
         choix.currentIndexChanged.connect(lambda _i, c=choix: self._on_taille_texte(c.currentData()))
-        carte.ajouter(self._ligne(tr("Taille du texte"), choix, tr(
+        return choix
+
+    def _aide_texte(self) -> str:
+        return tr(
             "Le jeu agrandit ses menus avec l'écran, mais garde le texte de {annee}, minuscule en "
             "haute définition. Le launcher redessine ses lettres à la taille de l'image : "
             "automatique, le texte retrouve sa place d'origine dans les cadres. Plus grand peut "
-            "déborder de certains cadres.").format(annee=self.game.year)))
+            "déborder de certains cadres.").format(annee=self.game.year)
 
     def _on_taille_texte(self, valeur: str) -> None:
         tailles = self.manager.config.taille_texte
@@ -373,35 +324,19 @@ class RubriquesDuJeu:
             tailles.pop(self.game.id, None)
         self.manager.config.save()
 
-    def _ligne_qualite_rendu(self, carte: Carte) -> None:
-        """La qualité du rendu D3D11 de HP1/HP2, écrite dans l'ini au lancement (`qualite_rendu`)."""
-        choix = self._liste()
-        for niveau, libelle in ((qualite_rendu.MAXIMALE, tr("Maximale")),
-                                (qualite_rendu.EQUILIBREE, tr("Équilibrée")),
-                                (qualite_rendu.LEGERE, tr("Légère"))):
-            choix.addItem(libelle, niveau)
-        choix.setCurrentIndex(max(0, choix.findData(qualite_rendu.choisi(self.game, self.manager.config))))
-        choix.currentIndexChanged.connect(lambda _i, c=choix: self._on_qualite_rendu(c.currentData()))
-        carte.ajouter(self._ligne(tr("Qualité du rendu"), choix, tr(
-            "Les effets que la carte graphique calcule à chaque image. Maximale : tout, tel "
-            "qu'installé. Équilibrée : bords lissés moins fort, sans reflets ni relief des "
-            "surfaces, à distance de vue normale. Légère : sans lissage ni aucun de ces effets, "
-            "pour un PC portable ou un jeu qui saccade. Appliquée au prochain lancement ; le "
-            "menu du jeu ne règle pas ces effets.")))
-
-    def _on_qualite_rendu(self, niveau: str) -> None:
-        self.manager.config.qualite_rendu[self.game.id] = niveau
-        self.manager.config.save()
-
-    def _ligne_carte_puissante(self, carte: Carte) -> None:
+    def _controle_carte_puissante(self) -> ToggleSwitch:
         """Deux cartes graphiques (Windows) : demander la plus puissante pour l'exe du jeu."""
         exe = self.manager.config.install_path / self.game.executable
         bascule = ToggleSwitch(preference_gpu.active(exe))
         bascule.toggled.connect(lambda oui: self._on_carte_puissante(bascule, exe, oui))
-        carte.ajouter(self._ligne(tr("Lancer sur la carte graphique la plus puissante"), bascule, tr(
+        return bascule
+
+    @staticmethod
+    def _aide_carte_puissante() -> str:
+        return tr(
             "Ce PC a deux cartes graphiques, et Windows lance souvent ce jeu sur la plus "
             "économe. Allumé, le launcher le note dans les réglages graphiques de Windows "
-            "(Paramètres > Affichage > Graphiques), pour ce jeu seulement ; éteint, il le retire.")))
+            "(Paramètres > Affichage > Graphiques), pour ce jeu seulement ; éteint, il le retire.")
 
     def _on_carte_puissante(self, bascule: ToggleSwitch, exe: Path, oui: bool) -> None:
         preference_gpu.poser(exe, oui)
@@ -418,96 +353,6 @@ class RubriquesDuJeu:
         choix.setCursor(Qt.CursorShape.PointingHandCursor)
         choix.setStyleSheet(themed(_LISTE_STYLE))
         return choix
-
-    def _section_graphiques(self, corps: QVBoxLayout, onglet: str, titre: str = "") -> bool:
-        """HP3 : les réglages graphiques rangés dans CET onglet (`reglages_graphiques`).
-
-        Même présentation que le correctif (ligne, « ? », repères), écrite
-        aussitôt dans le fichier de son traducteur. False si ce jeu n'en a pas.
-        """
-        conf = self._conf_graph
-        reglages = reglages_graphiques.du_onglet(onglet)
-        if conf is None or not reglages:
-            return False
-        carte = self._carte_effets() if onglet == "image" else Carte()
-        for reglage in reglages:
-            self._controle_graph(carte, conf, reglage)
-        self._egaliser(carte)
-        if onglet == "image":
-            self._section(corps, self._entete_effets(tr("Qualité d'image")), carte)
-            self._bouton_origine_graph()
-        else:
-            self._section(corps, surtitre(titre) if titre else None, carte)
-        return True
-
-    def _controle_graph(self, carte, conf: Path, reglage) -> None:
-        try:
-            etat = reglages_graphiques.lire(conf, reglage)
-        except OSError:
-            log.warning("Réglages graphiques : %s illisible", conf, exc_info=True)
-            return
-        libelle_txt, aide_txt = tr(reglage.libelle), tr(reglage.aide)
-        if reglage.choix:
-            controle = self._liste()
-            noms = dict(reglage.noms_choix)
-            for valeur in reglage.choix:
-                controle.addItem(tr(reglage.zero) if valeur == reglage.choix[0]
-                                 else tr(noms[valeur]), valeur)
-            if etat.personnalise:
-                controle.addItem(tr("{} (réglé à la main)").format(
-                    reglages_correctif.texte_valeur(etat.valeur)), etat.valeur)
-            controle.setCurrentIndex(max(0, controle.findData(etat.valeur)))
-            controle.currentIndexChanged.connect(
-                lambda _i, c=controle, r=reglage: self._on_graph(r, c.currentData(), c))
-        else:
-            controle = ToggleSwitch(bool(etat.valeur))
-            controle.toggled.connect(
-                lambda coche, r=reglage, b=controle: self._on_graph(r, coche, b))
-        self._controles_graph[reglage.ident] = controle
-        carte.ajouter(self._ligne(libelle_txt, controle, aide_txt, reglage))
-
-    def _remettre_controle_graph(self, controle: QWidget, reglage) -> None:
-        """Remet un contrôle sur ce que porte VRAIMENT le fichier."""
-        try:
-            etat = reglages_graphiques.lire(self._conf_graph, reglage)
-        except OSError:
-            return
-        controle.blockSignals(True)
-        if isinstance(controle, QComboBox):
-            index = controle.findData(etat.valeur)
-            if index < 0:
-                controle.addItem(tr("{} (réglé à la main)").format(
-                    reglages_correctif.texte_valeur(etat.valeur)), etat.valeur)
-                index = controle.count() - 1
-            controle.setCurrentIndex(index)
-        else:
-            controle.setChecked(bool(etat.valeur))
-        controle.blockSignals(False)
-
-    def _on_graph(self, reglage, valeur, controle: QWidget) -> None:
-        """Écrit AUSSITÔT, comme les réglages du correctif."""
-        if reglage.choix and valeur not in reglage.choix:
-            return   # l'entrée « réglé à la main » : c'est déjà ce que porte le fichier
-        try:
-            reglages_graphiques.ecrire(self._conf_graph, reglage, valeur)
-        except (OSError, ValueError):
-            log.warning("Réglages graphiques : %s non écrit", reglage.ident, exc_info=True)
-            self._remettre_controle_graph(controle, reglage)
-            self._montrer_erreur(tr(
-                "Réglage non enregistré : le fichier des réglages graphiques du jeu "
-                "n'a pas pu être modifié (jeu en cours, ou fichier en lecture seule)."))
-            return
-        if self._bouton_reset is not None:
-            self._bouton_reset.setEnabled(reglages_graphiques.a_une_origine(self._conf_graph))
-        if not self._erreur.isHidden():
-            self._erreur.hide()
-
-    def _bouton_origine_graph(self) -> None:
-        """« Revenir à l'installation » : ceux du fichier tel qu'installé."""
-        btn = self._nouveau_bouton_reset()
-        btn.setEnabled(reglages_graphiques.a_une_origine(self._conf_graph))
-        btn.setToolTip(tr("Remet image et performances comme à l'installation du jeu."))
-        btn.clicked.connect(self._remettre_origine_graph)
 
     def _nouveau_bouton_reset(self) -> QPushButton:
         """Le bouton du pied de page : bordé comme un vrai bouton, jamais un lien
@@ -542,22 +387,6 @@ class RubriquesDuJeu:
         """Le pied le dit quatre secondes, puis reprend ce qu'il disait."""
         self._poser_pied(tr("Réglages de l'installation remis."))
         self._minuteur_pied.start()
-
-    def _remettre_origine_graph(self) -> None:
-        if not self._confirmer_origine(self._pages_remises(("image", "perfs"))):
-            return
-        try:
-            reglages_graphiques.remettre_origine(self._conf_graph)
-        except OSError:
-            log.warning("Réglages graphiques : remise à l'origine impossible", exc_info=True)
-            self._montrer_erreur(tr(
-                "Réglage non enregistré : le fichier des réglages graphiques du jeu "
-                "n'a pas pu être modifié (jeu en cours, ou fichier en lecture seule)."))
-            return
-        for ident, controle in self._controles_graph.items():
-            self._remettre_controle_graph(controle, reglages_graphiques.REGLAGES[ident])
-        self._erreur.hide()
-        self._annoncer_remise()
 
     def _note(self, corps: QVBoxLayout, texte: str, entete: QWidget | None = None) -> None:
         """Une phrase seule dans une carte : ce que la rubrique ne peut pas encore faire."""

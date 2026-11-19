@@ -214,13 +214,14 @@ def _entete(ligne: str) -> str | None:
     return propre[1:-1] if propre.startswith("[") and propre.endswith("]") else None
 
 
-def lire_cle_ini(patch: IniPatch, game: GameData, config: Config) -> str | None:
-    """La valeur que porte `[section] clé` du fichier du patch, None si absente.
+def lire_section(fichier: str, section: str, game: GameData, config: Config) -> dict[str, str] | None:
+    """Les clés de `[section]` du fichier (en minuscules) et leur valeur, en UNE lecture (règle 140) ;
+    None si le fichier ne se lit pas.
 
-    Même lecture que l'écriture (encodage du moteur, fins de ligne
-    universelles) : ce qu'on compare est exactement ce qu'on écrirait.
+    Même lecture que l'écriture (encodage du moteur, fins de ligne universelles, sections et clés sans
+    casse, la PREMIÈRE ligne d'une clé) : ce qu'on compare est exactement ce qu'on écrirait.
     """
-    ini_path = resolve_safe_path(patch.file, game, config)
+    ini_path = resolve_safe_path(fichier, game, config)
     if ini_path is None:
         return None
     try:
@@ -228,17 +229,24 @@ def lire_cle_ini(patch: IniPatch, game: GameData, config: Config) -> str | None:
             lignes = f.read().splitlines()
     except (OSError, UnicodeError):
         return None
-    section: str | None = None
+    cles: dict[str, str] = {}
+    courante: str | None = None
     for ligne in lignes:
         if (nom := _entete(ligne)) is not None:
-            section = nom
+            courante = nom
             continue
-        if section is not None and _meme_nom(section, patch.section):
+        if courante is not None and _meme_nom(courante, section):
             propre = ligne.strip()
             egal = propre.find("=")
-            if egal > 0 and _meme_nom(propre[:egal].rstrip(), patch.key):
-                return propre[egal + 1:].strip()
-    return None
+            if egal > 0:
+                cles.setdefault(propre[:egal].rstrip().casefold(), propre[egal + 1:].strip())
+    return cles
+
+
+def lire_cle_ini(patch: IniPatch, game: GameData, config: Config) -> str | None:
+    """La valeur que porte `[section] clé` du fichier du patch, None si absente."""
+    cles = lire_section(patch.file, patch.section, game, config)
+    return None if cles is None else cles.get(patch.key.casefold())
 
 
 def ecrire_cle_ini(patch: IniPatch, game: GameData, config: Config,

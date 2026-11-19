@@ -46,7 +46,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from src.core import reglages_correctif, reglages_graphiques, resolution_jeu
+from src.core import (preference_gpu, qualite_rendu, reglages_correctif, reglages_graphiques, resolution_jeu,
+                      texte_ue1)
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
@@ -66,7 +67,9 @@ from src.ui.bandeau_jeu import badge_dans_la_pastille, bandeau_du_jeu, pastille_
 from src.ui.editeur_touches import EditeurTouches
 from src.ui.entree_focus import entree_suit_le_focus
 from src.ui.icon_button import pixmap_icone
-from src.ui.page_image import LARGEUR_LISTE, PageAvecFiche, PageImage, _LigneImage
+from src.core.reglages_image import Magasin, MagasinCorrectif
+from src.core.reglages_table import Reglage
+from src.ui.page_image import LARGEUR_LISTE, LigneLibre, PageAvecFiche, PageImage, _LigneImage
 from src.ui.theme import accent_qcolor, themed
 from src.ui.theme import current as theme_courant
 from src.ui.toggle_switch import ToggleSwitch
@@ -126,8 +129,6 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         # (oui) -> bool : prévient, écrit, dit si c'est pris. None = pas de rubrique.
         self._appliquer_manette = appliquer_manette
         self._bascule_manette = None
-        # La liste des résolutions (HP1, HP2) ; None pour les autres jeux.
-        self._choix_resolution: QComboBox | None = None
         self._groupe = QButtonGroup(self)
         self._boutons: dict[str, QRadioButton] = {}
         # Réglages du correctif que le catalogue déclare confirmés pour ce jeu,
@@ -141,7 +142,10 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         # 2026-10-28 (déclarer `son_arriere_plan` masquait toute la page Image).
         conf = reglages_graphiques.chemin(manager.config.install_path / Path(game.executable).parent)
         self._conf_graph: Path | None = conf if reglages_graphiques.disponible(conf) else None
-        self._controles_graph: dict[str, QWidget] = {}
+        # Les réglages d'image qui ne vivent pas dans l'ini du correctif (rendu D3D11 de HP1/HP2,
+        # réglages graphiques de HP3), avec leur magasin : « Revenir à l'installation » les remet aussi.
+        self._magasins_image: list[tuple[qualite_rendu.MagasinRendu | reglages_graphiques.MagasinGraphique,
+                                         tuple[Reglage, ...]]] = []
         self._erreur: QLabel | None = None
         self._compte_captures: QLabel | None = None
         # Le contrôle de chaque réglage du correctif, par identifiant : la remise
@@ -315,17 +319,17 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         return self._page_fichiers(corps)
 
     def _page_image_et_fluidite(self, corps: QVBoxLayout) -> bool:
-        """L'image, puis la fluidité, qui avait sa page de quatre lignes (audit UI reg21). La page
-        Image du correctif la range dans sa catégorie « Fluidité » ; les autres la posent dessous."""
-        if self._section_graphiques(corps, "image"):
-            self._section_graphiques(corps, "perfs", titre=tr("Fluidité"))
-            return True
-        # HP1/HP2 : la résolution est au launcher, leurs réglages du correctif ne la retirent pas.
-        # HP4 à HP6 l'ont aussi, mais dans la page Image de leur correctif (rubrique « Écran »).
+        """L'image, la fluidité comprise (audit UI reg21), dans la page Image (`page_image`).
+
+        HP1 et HP2 (rendu D3D11, résolution du launcher) et HP3 (réglages graphiques) l'ont même sans
+        le nouveau correctif : leurs réglages d'image n'en dépendent pas, ceux du correctif s'y
+        ajoutent quand il est là."""
         resolution = self.game.resolution
-        if not self._reglages or (resolution is not None and not resolution_jeu.du_correctif(resolution)):
+        du_launcher = resolution is not None and not resolution_jeu.du_correctif(resolution)
+        if qualite_rendu.gere(self.game) or self._conf_graph is not None or du_launcher:
+            return self._page_image(corps)
+        if not self._reglages:
             self._section_affichage(corps)
-            self._section_correctif(corps, "perfs", titre=tr("Fluidité"))
             return True
         if not self._correctif_actif():
             # Jeu absent ou ancien correctif : une seule note pour toute la page.
@@ -351,14 +355,45 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         pas ») ; chaque effet reste réglable, et désormais VISIBLE à côté : on
         voit ce que change un préréglage au moment où on le choisit.
         """
-        reglages = tuple(r for r in self._reglages if r.onglet in ("affichage", "image", "perfs"))
-        if self._ini is None or (not reglages and self.game.resolution is None):
+        config = self.manager.config
+        magasins: list[tuple[Magasin, tuple[Reglage, ...]]] = []
+        if self._ini is not None and self._correctif_actif():
+            portes = tuple(r for r in self._reglages if r.onglet in ("affichage", "image", "perfs"))
+            if portes:
+                magasins.append((MagasinCorrectif(self._ini), portes))
+        prereglages = None
+        if qualite_rendu.gere(self.game):
+            self._magasins_image.append((qualite_rendu.MagasinRendu(self.game, config, config.save),
+                                         tuple(qualite_rendu.REGLAGES.values())))
+            prereglages = qualite_rendu.PREREGLAGES
+        elif self._conf_graph is not None:
+            self._magasins_image.append((reglages_graphiques.MagasinGraphique(self._conf_graph),
+                                         tuple(reglages_graphiques.REGLAGES.values())))
+            prereglages = reglages_graphiques.PREREGLAGES
+        magasins += self._magasins_image
+        libres = self._lignes_libres()
+        if not magasins and self.game.resolution is None and not libres:
             return False
-        self._page_img = PageImage(self.game, self.manager.config, self._ini, reglages,
-                                   self._montrer_erreur, self._apres_ecriture)
+        note = (tr("Réglez la résolution ici, pas dans le menu du jeu : ses options vidéo peuvent "
+                   "l'empêcher de redémarrer.")
+                if self.game.display_locked and self.game.resolution is not None else "")
+        self._page_img = PageImage(self.game, config, magasins, self._erreur_image, self._apres_ecriture,
+                                   prereglages=prereglages, libres=libres, note_ecran=note)
         corps.addWidget(self._page_img, stretch=1)
         self._bouton_origine()
         return True
+
+    def _lignes_libres(self) -> tuple[LigneLibre, ...]:
+        """Ce que le launcher règle lui-même dans « Écran » : la taille du texte de HP1/HP2 et, sur un PC
+        à deux cartes graphiques, la plus puissante pour leur rendu D3D11."""
+        libres = []
+        if texte_ue1.gere(self.game.id) and self.game.resolution is not None:
+            libres.append(LigneLibre("taille_texte", tr("Taille du texte"), self._aide_texte(),
+                                     self._controle_texte()))
+        if qualite_rendu.gere(self.game) and preference_gpu.proposee():
+            libres.append(LigneLibre("carte_puissante", tr("Lancer sur la carte graphique la plus puissante"),
+                                     self._aide_carte_puissante(), self._controle_carte_puissante()))
+        return tuple(libres)
 
     @staticmethod
     def _surtitre_cale(titre: str) -> QLabel:
@@ -564,29 +599,53 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         maintenant que les couleurs se règlent). Au pied : il vaut pour toutes
         les pages qui portent un réglage du correctif, d'où la confirmation.
         """
-        if self._ini is None or not self._ini.is_file():
+        if not self._ini_present() and not self._magasins_image:
             return
         btn = self._nouveau_bouton_reset()
-        btn.setEnabled(reglages_correctif.a_une_origine(self._ini))
-        btn.setToolTip(tr("Ceux du jeu tel qu'il a été installé. "
-                          "Rien n'a encore été changé depuis le launcher."))
-        if btn.isEnabled():
-            btn.setToolTip(self._infobulle_origine())
         btn.clicked.connect(self._remettre_origine)
+        self._maj_bouton_origine()
+
+    def _ini_present(self) -> bool:
+        return self._ini is not None and self._ini.is_file()
+
+    def _a_remettre(self) -> bool:
+        """Quelque chose a changé depuis l'installation : l'ini du correctif, le rendu, les réglages graphiques."""
+        ini = self._ini
+        return (ini is not None and self._ini_present() and reglages_correctif.a_une_origine(ini)) \
+            or any(m.a_change() for m, _r in self._magasins_image)
+
+    def _maj_bouton_origine(self) -> None:
+        btn = self._bouton_reset
+        if btn is None:
+            return
+        btn.setEnabled(self._a_remettre())
+        btn.setToolTip(self._infobulle_origine() if btn.isEnabled() else tr(
+            "Ceux du jeu tel qu'il a été installé. Rien n'a encore été changé depuis le launcher."))
+
+    def _onglets_remis(self) -> list[str]:
+        onglets = [r.onglet for r in self._reglages] if self._ini_present() else []
+        return onglets + [r.onglet for _m, portes in self._magasins_image for r in portes]
 
     def _infobulle_origine(self) -> str:
-        return tr("Pages remises comme à l'installation : {}.").format(
-            self._pages_remises(r.onglet for r in self._reglages))
+        return tr("Pages remises comme à l'installation : {}.").format(self._pages_remises(self._onglets_remis()))
 
     def _remettre_origine(self) -> None:
-        if not self._confirmer_origine(self._pages_remises(r.onglet for r in self._reglages)):
+        if not self._confirmer_origine(self._pages_remises(self._onglets_remis())):
             return
         try:
-            reglages_correctif.remettre_origine(self._ini, self._reglages)
+            if self._ini is not None and self._ini_present() and self._reglages:
+                reglages_correctif.remettre_origine(self._ini, self._reglages)
         except OSError:
             log.warning("Correctif : remise à l'origine impossible", exc_info=True)
             self._montrer_erreur()
             return
+        for magasin, portes in self._magasins_image:
+            try:
+                magasin.remettre()
+            except OSError:
+                log.warning("Image : remise à l'origine impossible", exc_info=True)
+                self._erreur_image(portes[0])
+                return
         for reglage in self._reglages:
             widget = self._controles.get(reglage.ident)
             if widget is not None:
@@ -597,6 +656,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
             self._editeur.rafraichir()
         self._maj_preregle()
         self._maj_dependances()
+        self._maj_bouton_origine()
         self._erreur.hide()
         self._annoncer_remise()
 
@@ -615,6 +675,15 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         else:
             widget.setChecked(bool(etat.valeur))
         widget.blockSignals(False)
+
+    def _erreur_image(self, reglage: Reglage) -> None:
+        """Un réglage de la page Image non écrit : le message nomme le fichier où il vit."""
+        if reglage.ident in reglages_graphiques.REGLAGES:
+            self._montrer_erreur(tr(
+                "Réglage non enregistré : le fichier des réglages graphiques du jeu "
+                "n'a pas pu être modifié (jeu en cours, ou fichier en lecture seule)."))
+        else:
+            self._montrer_erreur()
 
     def _montrer_erreur(self, texte: str = "") -> None:
         # Le nom du VRAI fichier : HP1 à HP3 n'ont pas de d3d9.ini (winmm.ini,
@@ -709,7 +778,5 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
     def _apres_ecriture(self) -> None:
         """Ce que change toute écriture réussie : le bouton de remise à l'origine
         (la première retouche vient de garder l'ini d'origine), et l'erreur passée."""
-        if self._bouton_reset is not None and self._conf_graph is None and not self._bouton_reset.isEnabled():
-            self._bouton_reset.setEnabled(reglages_correctif.a_une_origine(self._ini))
-            self._bouton_reset.setToolTip(self._infobulle_origine())
+        self._maj_bouton_origine()
         self._erreur.hide()

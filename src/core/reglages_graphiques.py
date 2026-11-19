@@ -22,6 +22,14 @@ diablotin figé et portraits qui ne s'ouvrent plus : `notes/HP3.md`).
 
 Windows seulement : sous Linux, Proton rend HP3 sans ce traducteur (2026-10-01),
 et ces clés ne seraient lues par personne.
+
+Laissé hors du launcher (inventaire du 2026-11-19, `notes/HP3.md` de l'atelier) : ce qui fait
+marcher le jeu (sortie, carte simulée, mémoire vidéo, modes d'écran, profondeur, tramage,
+`Mipmapping`, `SmoothedDepthSampling`), ce qui ne doit jamais changer (filigrane, Alt+Entrée,
+`FPSLimit` au-delà de 60), et ce qu'aucun essai n'a encore vu (`Brightness`, `Color`, `Contrast`,
+`PhongShadingWhenPossible`, `Bilinear2DOperations`, `ScalingMode`). Les clés d'image de
+`hppoa.ini` (`[D3DDrv.D3DRenderDevice]`, détails de `[WinDrv.WindowsClient]`) sont livrées au
+plus haut, et le traducteur force déjà le filtrage et la synchronisation.
 """
 
 import logging
@@ -31,8 +39,8 @@ import sys
 from pathlib import Path
 
 from src.core.lecture_ini import differe
-from src.core.reglages_correctif import Etat, _bornes, _ecrire, _lire
-from src.core.reglages_table import Reglage
+from src.core.reglages_correctif import Etat, Prereglage, _bornes, _ecrire, _lire
+from src.core.reglages_table import Reglage, ValeurChoix
 
 log = logging.getLogger(__name__)
 
@@ -93,6 +101,65 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
 )}
 
 
+# Le jeu de 2004, sans traducteur : la taille et le filtrage qu'il demandait, sans anticrénelage, ses
+# ombres à leur taille. Sa limite d'images et sa synchronisation dépendaient de la carte.
+DU_JEU: dict[str, ValeurChoix | bool] = {
+    "graph_resolution": "unforced", "graph_antialiasing": "off", "graph_textures_rendu": False,
+    "graph_filtrage": "appdriven",
+}
+
+# Les préréglages de la page Image. Maximale = l'installation. Légère : la carte d'un PC portable, et
+# les ombres et reflets à leur taille, ce qui a fait cesser l'arrêt au lancement sur une puce Intel UHD
+# (2026-10-15, `repli_apres_echec`).
+PREREGLAGES: tuple[Prereglage, ...] = (
+    ("legere", "Légère",
+     "Pour un PC portable ou une puce graphique modeste : image jusqu'à 1080p, contours non lissés.",
+     {"graph_resolution": "max_fhd", "graph_antialiasing": "off", "graph_textures_rendu": False,
+      "graph_filtrage": "16"}),
+    ("equilibree", "Équilibrée",
+     "Image à la taille de l'écran, contours lissés un peu moins fort.",
+     {"graph_resolution": "max", "graph_antialiasing": "4x", "graph_textures_rendu": True,
+      "graph_filtrage": "16"}),
+    ("maximale", "Maximale",
+     "Tous les effets, tels qu'installés, pour une carte graphique récente.",
+     {"graph_resolution": "max", "graph_antialiasing": "8x", "graph_textures_rendu": True,
+      "graph_filtrage": "16"}),
+)
+
+
+class MagasinGraphique:
+    """Où la page Image lit et écrit ces réglages (`reglages_image.Magasin`)."""
+
+    def __init__(self, conf: Path) -> None:
+        self.conf = conf
+
+    def lire(self, reglage: Reglage) -> object:
+        return lire(self.conf, reglage).valeur
+
+    def ecrire(self, reglage: Reglage, valeur: object) -> None:
+        if not isinstance(valeur, (str, bool)):
+            raise ValueError(f"{reglage.ident} : {valeur!r} non proposé")
+        ecrire(self.conf, reglage, valeur)
+
+    def accio(self, reglage: Reglage) -> object:
+        """Ce que porte le fichier tel qu'installé (sa copie d'origine), sinon le fichier."""
+        for fichier in (chemin_origine(self.conf), self.conf):
+            try:
+                return lire(fichier, reglage).valeur
+            except OSError:
+                continue
+        return None
+
+    def jeu(self, reglage: Reglage) -> object:
+        return DU_JEU.get(reglage.ident)
+
+    def a_change(self) -> bool:
+        return a_une_origine(self.conf)
+
+    def remettre(self) -> None:
+        remettre_origine(self.conf)
+
+
 def chemin(dossier_exe: Path) -> Path:
     return dossier_exe / NOM
 
@@ -100,10 +167,6 @@ def chemin(dossier_exe: Path) -> Path:
 def disponible(conf: Path | None) -> bool:
     """Un `dgVoodoo.conf` à régler, et un système où le traducteur le lira."""
     return sys.platform == "win32" and conf is not None and conf.is_file()
-
-
-def du_onglet(onglet: str) -> tuple[Reglage, ...]:
-    return tuple(r for r in REGLAGES.values() if r.onglet == onglet)
 
 
 def _motif(cle: str) -> re.Pattern[str]:

@@ -58,8 +58,10 @@ class TestRangement:
 class TestCurseurs:
     def test_les_paliers_sont_dans_les_bornes(self):
         """Les crans nommés du réglage restent des paliers du curseur."""
+        from src.core import qualite_rendu
+        tous = REGLAGES | qualite_rendu.REGLAGES
         for ident, (bas, haut, _pas) in CURSEURS.items():
-            for v in REGLAGES[ident].choix:
+            for v in tous[ident].choix:
                 assert bas <= v <= haut, (ident, v)
 
     def test_une_valeur_du_pas_s_ecrit_et_se_relit_sans_etre_a_la_main(self, ini):

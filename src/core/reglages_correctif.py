@@ -104,18 +104,20 @@ def eteint(reglage: Reglage) -> Valeur:
     return reglage.choix[0] if reglage.choix else False
 
 
-def bloque_par(reglage: Reglage, valeurs: Mapping[str, object]) -> Reglage | None:
+def bloque_par(reglage: Reglage, valeurs: Mapping[str, object],
+               table: Mapping[str, Reglage] = REGLAGES) -> Reglage | None:
     """Le réglage ÉTEINT dont dépend celui-ci (directement ou non), ou None s'il agit.
 
     `valeurs` : identifiant → valeur, pour les réglages présents dans la fenêtre.
-    Un parent absent (non déclaré pour ce jeu) ne bloque rien.
+    Un parent absent (non déclaré pour ce jeu) ne bloque rien. `table` : où chercher
+    les parents (ceux du rendu D3D11 de HP1/HP2 ou de HP3 ne sont pas ceux du correctif).
     """
-    enfant, parent = reglage, REGLAGES.get(reglage.depend_de)
+    enfant, parent = reglage, table.get(reglage.depend_de)
     while parent is not None and parent.ident in valeurs:
         valeur, voulue = valeurs[parent.ident], enfant.depend_de_valeur
         if not (valeur == voulue if voulue is not None else allume(parent, valeur)):
             return parent
-        enfant, parent = parent, REGLAGES.get(parent.depend_de)
+        enfant, parent = parent, table.get(parent.depend_de)
     return None
 
 

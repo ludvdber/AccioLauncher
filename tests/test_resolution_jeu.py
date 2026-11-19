@@ -172,7 +172,7 @@ class TestPleinEcranHp3:
 
 
 class TestFenetre:
-    """La rubrique « Affichage » de la fenêtre de réglages."""
+    """La Résolution de HP1/HP2, dans « Écran » de la page Image."""
 
     def _dialogue(self, qtbot, game, config, monkeypatch, ecran=(2560, 1440)):
         from src.ui import game_settings_dialog as gsd
@@ -193,8 +193,8 @@ class TestFenetre:
     def test_l_ecran_par_defaut_et_le_choix_enregistre(self, qtbot, jeu, monkeypatch):
         game, config, _ = jeu
         dlg = self._dialogue(qtbot, self._jeu_complet(game), config, monkeypatch)
-        choix = dlg._choix_resolution
-        assert choix.currentText() == "Remplir l'écran (2560 × 1440)"
+        choix = dlg._page_img.liste_resolution
+        assert choix.currentText() == "Remplir l'écran (2560 × 1440)  ◆"   # la valeur Accio
         choix.setCurrentIndex(choix.findData("1920x1080"))
         assert config.resolution_jeu == {"hp2": "1920x1080"}
         choix.setCurrentIndex(0)
@@ -204,14 +204,14 @@ class TestFenetre:
         game, config, _ = jeu
         config.resolution_jeu["hp2"] = "3840x2160"
         dlg = self._dialogue(qtbot, self._jeu_complet(game), config, monkeypatch, (1920, 1080))
-        assert dlg._choix_resolution.currentText() == "3840 × 2160 (plus grande que cet écran)"
+        assert dlg._page_img.liste_resolution.currentText() == "3840 × 2160 (plus grande que cet écran)"
 
     def test_pas_de_liste_pour_un_jeu_sans_bloc(self, qtbot, jeu, monkeypatch):
         game, config, _ = jeu
         sans = self._jeu_complet(SimpleNamespace(id="hp3", name="HP3", executable="HP3/x.exe",
                                                  resolution=None))
         dlg = self._dialogue(qtbot, sans, config, monkeypatch)
-        assert dlg._choix_resolution is None
+        assert dlg._page_img is None
 
 
 class TestPlaceDisponible:

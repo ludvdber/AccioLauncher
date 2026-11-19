@@ -7,16 +7,16 @@
       "points_forts": [
         {
           "icone": "ecran",
-          "jeux": ["hp1", "hp2"],
+          "jeux": ["hp1", "hp2", "hp3"],
           "titre": {
-            "fr": "Qualité du rendu pour les PC portables",
-            "en": "Rendering quality for laptops",
-            "es": "Calidad de renderizado para portátiles"
+            "fr": "Toute l'image de HP1, HP2 et HP3 dans le launcher",
+            "en": "All of HP1, HP2 and HP3 graphics in the launcher",
+            "es": "Todos los gráficos de HP1, HP2 y HP3 en el launcher"
           },
           "texte": {
-            "fr": "Dans les réglages de HP1 et HP2, onglet Image : « Qualité du rendu » Maximale, Équilibrée ou Légère, et, sur un PC à deux cartes graphiques, le lancement sur la plus puissante.",
-            "en": "In the HP1 and HP2 settings, Graphics tab: “Rendering quality” Maximum, Balanced or Light, and, on a PC with two graphics cards, running on the most powerful one.",
-            "es": "En los ajustes de HP1 y HP2, pestaña Gráficos: «Calidad de renderizado» Máxima, Equilibrada o Ligera y, en un PC con dos tarjetas gráficas, el inicio en la más potente."
+            "fr": "Dans leurs réglages, onglet Image : chaque effet se règle et s'explique (contours, relief, ombres, lumière, reflets, distance, images par seconde), avec trois préréglages, dont un léger pour les PC portables ; HP1 et HP2 peuvent aussi se lancer sur la plus puissante de deux cartes graphiques.",
+            "en": "In their settings, Graphics tab: every effect can be set and is explained (edges, relief, shadows, lighting, reflections, distance, frames per second), with three presets, including a light one for laptops; HP1 and HP2 can also run on the more powerful of two graphics cards.",
+            "es": "En sus ajustes, pestaña Gráficos: cada efecto se ajusta y se explica (contornos, relieve, sombras, luz, reflejos, distancia, imágenes por segundo), con tres preajustes, uno ligero para portátiles; HP1 y HP2 también pueden iniciarse en la más potente de dos tarjetas gráficas."
           }
         }
       ],
@@ -24,9 +24,9 @@
         {
           "genre": "nouveau",
           "texte": {
-            "fr": "HP1 et HP2 : la qualité du rendu se règle dans le launcher, pour retrouver de la fluidité sur un PC portable.",
-            "en": "HP1 and HP2: rendering quality can be set in the launcher, to get smooth play back on a laptop.",
-            "es": "HP1 y HP2: la calidad de renderizado se ajusta en el launcher, para recuperar fluidez en un portátil."
+            "fr": "HP1, HP2 et HP3 : chaque réglage d'image se règle dans le launcher, pour retrouver de la fluidité sur un PC portable ou la plus belle image sur un PC récent.",
+            "en": "HP1, HP2 and HP3: every graphics setting can be set in the launcher, to get smooth play back on a laptop or the finest image on a recent PC.",
+            "es": "HP1, HP2 y HP3: cada ajuste gráfico se ajusta en el launcher, para recuperar fluidez en un portátil o la mejor imagen en un PC reciente."
           }
         }
       ]

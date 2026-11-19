@@ -13,8 +13,10 @@ Ce qui est tranché (la maquette, « Déjà tranché ») :
 
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Literal
+from pathlib import Path
+from typing import Literal, Protocol
 
+from src.core import reglages_correctif as rc
 from src.core.reglages_correctif import curseur, libelle_choix
 from src.core.reglages_table import Reglage
 
@@ -68,6 +70,28 @@ _PLACES: dict[str, tuple[str, str]] = {
     "ciel_heure": ("ciel", "Ciel"),
     "ciel_couleur": ("ciel", "Ciel"),
     "brouillard": ("ciel", "Atmosphère"),
+    # Le rendu D3D11 de HP1/HP2 (`qualite_rendu`) et les réglages graphiques de HP3
+    # (`reglages_graphiques`), aux places de leurs pareils du correctif.
+    "graph_resolution": ("qualite", "Contours"),
+    "rendu_anticrenelage": ("qualite", "Contours"),
+    "graph_antialiasing": ("qualite", "Contours"),
+    "rendu_feuillage": ("qualite", "Contours"),
+    "graph_textures_rendu": ("qualite", "Contours"),
+    "rendu_filtrage": ("qualite", "Textures"),
+    "graph_filtrage": ("qualite", "Textures"),
+    "rendu_textures_lointaines": ("qualite", "Textures"),
+    "rendu_relief": ("qualite", "Relief des surfaces"),
+    "rendu_parallaxe": ("qualite", "Relief des surfaces"),
+    "rendu_occlusion": ("lumiere", "Ombres de contact"),
+    "rendu_hdr": ("lumiere", "Lumière"),
+    "rendu_volumetrique": ("lumiere", "Lumière"),
+    "rendu_reflets": ("lumiere", "Reflets"),
+    "rendu_reflets_force": ("lumiere", "Reflets"),
+    "rendu_distance": ("distance", "Décor"),
+    "rendu_limite": ("fluidite", "Images par seconde"),
+    "graph_limite": ("fluidite", "Images par seconde"),
+    "rendu_vsync": ("fluidite", "Images par seconde"),
+    "graph_vsync": ("fluidite", "Images par seconde"),
     "limite_fps": ("fluidite", "Images par seconde"),
     "limite_fps_60": ("fluidite", "Images par seconde"),
     "synchro_verticale": ("fluidite", "Images par seconde"),
@@ -75,6 +99,7 @@ _PLACES: dict[str, tuple[str, str]] = {
     "camera_fluide": ("fluidite", "Images par seconde"),
     "fermeture_sans_plantage": ("fluidite", "Stabilité"),
     "compteur_fps": ("fluidite", "Compteurs"),
+    "compteur_fps_hp3": ("fluidite", "Compteurs"),
     "panneau_perfs": ("fluidite", "Compteurs"),
 }
 # L'ordre des lignes dans leur groupe : celui de la maquette (le suréchantillonnage, qui se voit le
@@ -105,6 +130,39 @@ class Categorie:
     @property
     def reglages(self) -> tuple[Reglage, ...]:
         return tuple(r for g in self.groupes for r in g.reglages)
+
+
+class Magasin(Protocol):
+    """Où la page Image lit et écrit un réglage : l'ini du correctif (`MagasinCorrectif`), le rendu D3D11
+    de HP1/HP2 (`qualite_rendu.MagasinRendu`), les réglages graphiques de HP3
+    (`reglages_graphiques.MagasinGraphique`). `lire` lève OSError, `ecrire` OSError ou ValueError."""
+
+    def lire(self, reglage: Reglage) -> object: ...
+
+    def ecrire(self, reglage: Reglage, valeur: object) -> None: ...
+
+    def accio(self, reglage: Reglage) -> object: ...
+
+    def jeu(self, reglage: Reglage) -> object: ...
+
+
+class MagasinCorrectif:
+    """L'ini du correctif (`d3d9.ini`, `winmm.ini`, `dinput8.ini`)."""
+
+    def __init__(self, ini: Path) -> None:
+        self.ini = ini
+
+    def lire(self, reglage: Reglage) -> object:
+        return rc.lire(self.ini, reglage).valeur
+
+    def ecrire(self, reglage: Reglage, valeur: object) -> None:
+        rc.ecrire(self.ini, reglage, valeur)
+
+    def accio(self, reglage: Reglage) -> object:
+        return rc.valeur_accio(self.ini, reglage)
+
+    def jeu(self, reglage: Reglage) -> object:
+        return rc.valeur_du_jeu(reglage)
 
 
 def place(reglage: Reglage) -> tuple[str, str]:

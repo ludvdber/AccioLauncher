@@ -1,15 +1,19 @@
-"""Qualité du rendu D3D11 de HP1/HP2 et carte graphique la plus puissante (1.3.6-beta.1).
+"""Le rendu D3D11 de HP1/HP2 réglé dans le launcher, et la carte graphique la plus puissante.
 
-Constat du 2026-11-18 : HP1 et HP2 à 5 images/s sur un portable, leur rendu
-installé au maximum et rien pour le régler dans le launcher.
+Constat du 2026-11-18 (1.3.6-beta.1) : HP1 et HP2 à 5 images/s sur un portable, leur rendu
+installé au maximum et rien pour le régler dans le launcher. Depuis le 2026-11-19, chaque
+réglage utile de `[D3D11Drv.D3D11RenderDevice]` a sa ligne dans la page Image, et les trois
+niveaux de la bêta en sont les préréglages.
 """
 
+import json
 import sys
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
-from src.core import preference_gpu, qualite_rendu
+from src.core import preference_gpu, qualite_rendu, reglages_image, resolution_jeu
 from src.core.config import Config
 from src.core.game_data import GameData
 from src.core.pre_launch import _INI_ENCODING
@@ -17,6 +21,7 @@ from src.core.pre_launch import _INI_ENCODING
 B = chr(92)
 CRLF = "\r\n"
 FICHIER = "%DOCUMENTS%" + B + "Harry Potter II" + B + "Game.ini"
+R = qualite_rendu.REGLAGES
 
 JEU = {
     "id": "hp2", "name": "HP2", "year": 2002, "description": "d",
@@ -27,24 +32,27 @@ JEU = {
     ]},
 }
 
-# Tel que l'installation le livre, avec ce qui ne nous regarde pas autour (profil
-# accentué, une autre section qui porte des clés du même nom).
+# La section telle que l'installation la livre (HP2 config/Game.ini, relevé le 2026-11-19 ; HP1 la même),
+# avec ce qui ne nous regarde pas autour (profil accentué, une autre section qui porte des clés du même nom).
+LIVREE = (
+    "Coronas=True", "HighDetailActors=True", "VolumetricLighting=True", "ShinySurfaces=True",
+    "DetailTextures=True", "Precache=True", "Antialiasing=8", "Anisotropy=16", "VSync=True",
+    "ParallaxOcclusionMapping=True", "LODBias=0", "BumpMapping=True", "HDR=True", "AlphaToCoverage=True",
+    "AutoFOV=True", "FPSLimit=100", "UnlimitedViewDistance=True", "ASSAO=True", "ASSAOContrast=0.500000",
+    "ASSAOScale=0.400000", "HDRLuminance=0.600000", "HDRAdaptationSpeed=0.200000", "HDRBloom=0.200000",
+    "HDRFilmicTonemapping=True", "SSR=True", "SSRIntensity=0.350000", "SSRFresnelAmount=0.300000",
+    "ParallaxRange=1.000000", "BumpMappingContrast=0.500000", "SSRNonTransparentWater=True",
+    "SSRModelIntensity=0.200000", "OneXBlending=False", "Tesselation=False", "TessDefaultFactor=0.300000",
+    "FullMeshLOD=True", "SupportMETextEnabled=False", "FastAltTab=True", "DisableTextureFiltering=False",
+    "Borderless=True",
+)
 INI = (
     "[Engine.Engine]" + CRLF
     + "GameRenderDevice=D3D11Drv.D3D11RenderDevice" + CRLF
     + "[Core.System]" + CRLF
     + "SavePath=C:" + B + "Users" + B + "Frédéric" + B + "Save" + CRLF
     + "[D3D11Drv.D3D11RenderDevice]" + CRLF
-    + "Coronas=True" + CRLF
-    + "VolumetricLighting=True" + CRLF
-    + "Antialiasing=8" + CRLF
-    + "Anisotropy=16" + CRLF
-    + "ParallaxOcclusionMapping=True" + CRLF
-    + "HDR=True" + CRLF
-    + "UnlimitedViewDistance=True" + CRLF
-    + "ASSAO=True" + CRLF
-    + "SSR=True" + CRLF
-    + "Borderless=True" + CRLF
+    + "".join(ligne + CRLF for ligne in LIVREE)
     + CRLF
     + "[D3DDrv.D3DRenderDevice]" + CRLF
     + "Antialiasing=8" + CRLF
@@ -69,37 +77,81 @@ def _section(ini, nom="[D3D11Drv.D3D11RenderDevice]"):
     return dict(ligne.split("=", 1) for ligne in lignes[debut + 1:fin] if "=" in ligne)
 
 
+def _magasin(game, config):
+    sauvegardes = []
+    return qualite_rendu.MagasinRendu(game, config, lambda: sauvegardes.append(1)), sauvegardes
+
+
+class TestTable:
+    def test_la_valeur_accio_est_la_section_livree(self):
+        """ACCIO dit ce que porte l'installation, clé par clé, dans l'écriture du moteur."""
+        livree = dict(ligne.split("=", 1) for ligne in LIVREE)
+        for ident, r in R.items():
+            assert qualite_rendu.texte(r, qualite_rendu.ACCIO[ident]) == livree[r.cle], ident
+
+    def test_maximale_est_l_installation(self):
+        _i, _n, _t, maximale = next(p for p in qualite_rendu.PREREGLAGES if p[0] == qualite_rendu.MAXIMALE)
+        assert all(v == qualite_rendu.ACCIO[i] for i, v in maximale.items())
+
+    def test_chaque_valeur_des_prereglages_est_proposee(self):
+        for _i, _n, _t, valeurs in qualite_rendu.PREREGLAGES:
+            for ident, v in valeurs.items():
+                r = R[ident]
+                assert (v in r.choix) if r.choix else isinstance(v, bool), (ident, v)
+
+    def test_chaque_reglage_a_sa_place_dans_la_page(self):
+        assert all(reglages_image.place(r) != reglages_image._AILLEURS for r in R.values())
+
+    def test_la_limite_ne_depasse_jamais_l_installation(self):
+        """Au-delà de 100 images/s, rien n'a été vu en jeu."""
+        assert max(R["rendu_limite"].choix) == 100
+
+    def test_jamais_ce_que_le_catalogue_pose(self):
+        """`Borderless` et `FastAltTab` sont posés par le catalogue à chaque lancement."""
+        assert not {r.cle for r in R.values()} & {"Borderless", "FastAltTab"}
+
+    def test_chaque_texte_est_traduit(self):
+        textes = set()
+        for r in R.values():
+            textes |= {r.libelle, r.aide, r.zero, r.technique} | {n for _v, n in r.etiquettes}
+        textes |= {t for _i, n, tx, _v in qualite_rendu.PREREGLAGES for t in (n, tx)}
+        sans_mots = {"100", "HDR", "SSR", "MSAA", "parallax occlusion mapping"}
+        for code in ("en", "es"):
+            cles = json.loads(Path(f"src/data/i18n/{code}.json").read_text(encoding="utf-8"))["strings"]
+            manquants = sorted(t for t in textes if t and t not in cles and t not in sans_mots)
+            assert not manquants, (code, manquants)
+
+
 class TestEcriture:
-    def test_legere_eteint_tout(self, hp2):
+    def test_rien_n_est_ecrit_sans_reglage(self, hp2):
         game, config, ini = hp2
-        config.qualite_rendu["hp2"] = qualite_rendu.LEGERE
+        origine = ini.read_bytes()
+        assert not qualite_rendu.appliquer(game, config)
+        assert ini.read_bytes() == origine
+
+    def test_seules_les_cles_reglees_sont_ecrites(self, hp2):
+        game, config, ini = hp2
+        magasin, _s = _magasin(game, config)
+        magasin.ecrire(R["rendu_anticrenelage"], 2)
+        magasin.ecrire(R["rendu_reflets_force"], 0.5)
+        assert config.rendu_d3d11 == {"hp2": {"Antialiasing": "2", "SSRIntensity": "0.500000"}}
         assert qualite_rendu.appliquer(game, config)
         section = _section(ini)
-        assert section["Antialiasing"] == "0"
-        for cle in ("ASSAO", "SSR", "HDR", "ParallaxOcclusionMapping", "VolumetricLighting",
-                    "UnlimitedViewDistance"):
-            assert section[cle] == "False", cle
-
-    def test_equilibree(self, hp2):
-        game, config, ini = hp2
-        config.qualite_rendu["hp2"] = qualite_rendu.EQUILIBREE
-        qualite_rendu.appliquer(game, config)
-        section = _section(ini)
-        assert section["Antialiasing"] == "4"
-        assert section["SSR"] == section["ParallaxOcclusionMapping"] == "False"
-        assert section["UnlimitedViewDistance"] == "False"
-        assert section["ASSAO"] == section["HDR"] == section["VolumetricLighting"] == "True"
+        assert section["Antialiasing"] == "2" and section["SSRIntensity"] == "0.500000"
+        assert section["ASSAO"] == "True"
 
     def test_les_autres_lignes_restent_intactes_a_l_octet(self, hp2):
-        """Seules les lignes des clés du niveau changent ; l'autre section qui porte
+        """Seules les lignes des clés réglées changent ; l'autre section qui porte
         `Antialiasing` et `HDR`, le profil accentué, l'ordre, les CRLF restent."""
         game, config, ini = hp2
         avant = ini.read_bytes().split(CRLF.encode("ascii"))
-        config.qualite_rendu["hp2"] = qualite_rendu.LEGERE
+        magasin, _s = _magasin(game, config)
+        for ident, v in next(p for p in qualite_rendu.PREREGLAGES if p[0] == qualite_rendu.LEGERE)[3].items():
+            magasin.ecrire(R[ident], v)
         qualite_rendu.appliquer(game, config)
         apres = ini.read_bytes().split(CRLF.encode("ascii"))
         assert len(apres) == len(avant)
-        touchees = {cle.encode("ascii") for cle in qualite_rendu.valeurs(qualite_rendu.LEGERE)}
+        touchees = {cle.encode("ascii") for cle in config.rendu_d3d11["hp2"]}
         debut = avant.index(b"[D3D11Drv.D3D11RenderDevice]")
         fin = avant.index(b"[D3DDrv.D3DRenderDevice]")
         for i, (a, b) in enumerate(zip(avant, apres, strict=True)):
@@ -108,22 +160,19 @@ class TestEcriture:
             assert a == b, (i, a, b)
         assert _section(ini, "[D3DDrv.D3DRenderDevice]") == {"Antialiasing": "8", "HDR": "True"}
 
-    def test_maximale_remet_l_installation(self, hp2):
+    def test_remettre_rend_l_installation_a_l_octet(self, hp2):
         game, config, ini = hp2
         origine = ini.read_bytes()
-        config.qualite_rendu["hp2"] = qualite_rendu.LEGERE
+        magasin, _s = _magasin(game, config)
+        magasin.ecrire(R["rendu_anticrenelage"], 0)
+        magasin.ecrire(R["rendu_vsync"], False)
         qualite_rendu.appliquer(game, config)
-        config.qualite_rendu["hp2"] = qualite_rendu.MAXIMALE
+        assert ini.read_bytes() != origine
+        assert magasin.a_change()
+        magasin.remettre()
         qualite_rendu.appliquer(game, config)
         assert ini.read_bytes() == origine
-
-    def test_sans_choix_rien_n_est_ecrit(self, hp2):
-        game, config, ini = hp2
-        origine = ini.read_bytes()
-        assert not qualite_rendu.appliquer(game, config)
-        config.qualite_rendu["hp2"] = "inconnu"
-        assert not qualite_rendu.appliquer(game, config)
-        assert ini.read_bytes() == origine
+        assert not qualite_rendu.MagasinRendu(game, config, lambda: None).a_change()
 
     def test_section_et_cles_sans_casse(self, hp2):
         """Le moteur lit sans casse : réécrire « [d3d11drv.d3d11renderdevice] » en ajoutant
@@ -132,28 +181,28 @@ class TestEcriture:
         ini.write_bytes(INI.replace("[D3D11Drv.D3D11RenderDevice]", "[d3d11drv.d3d11renderdevice]")
                         .replace("Antialiasing=8" + CRLF + "Anisotropy", "antialiasing=8" + CRLF
                                  + "Anisotropy").encode(_INI_ENCODING))
-        config.qualite_rendu["hp2"] = qualite_rendu.LEGERE
+        config.rendu_d3d11["hp2"] = {"Antialiasing": "0"}
         qualite_rendu.appliquer(game, config)
         texte = ini.read_bytes().decode(_INI_ENCODING)
         assert texte.casefold().count("[d3d11drv.d3d11renderdevice]") == 1
         assert _section(ini, "[d3d11drv.d3d11renderdevice]")["Antialiasing"] == "0"
 
     def test_une_seule_ecriture_pour_toutes_les_cles(self, hp2, monkeypatch):
-        """Règle 140 : un fichier, une ouverture (sept écritures avant le regroupement)."""
+        """Règle 140 : un fichier, une ouverture."""
         from src.core import pre_launch
         game, config, _ini = hp2
         ecritures = []
         vraie = pre_launch.ecrire_octets_atomique
         monkeypatch.setattr(pre_launch, "ecrire_octets_atomique",
                             lambda chemin, octets: (ecritures.append(chemin), vraie(chemin, octets)))
-        config.qualite_rendu["hp2"] = qualite_rendu.LEGERE
+        config.rendu_d3d11["hp2"] = {"Antialiasing": "0", "SSR": "False", "HDR": "False"}
         qualite_rendu.appliquer(game, config)
         assert len(ecritures) == 1
 
     def test_l_ini_absent_n_est_pas_cree(self, hp2):
         game, config, ini = hp2
         ini.unlink()
-        config.qualite_rendu["hp2"] = qualite_rendu.LEGERE
+        config.rendu_d3d11["hp2"] = {"Antialiasing": "0"}
         assert not qualite_rendu.appliquer(game, config)
         assert not ini.exists()
 
@@ -169,9 +218,96 @@ class TestEcriture:
         chemin = tmp_path / "config.json"
         monkeypatch.setattr("src.core.config.CONFIG_FILE_PATH", chemin)
         config = Config(install_path=tmp_path)
-        config.qualite_rendu["hp1"] = qualite_rendu.EQUILIBREE
+        config.rendu_d3d11["hp1"] = {"Antialiasing": "4"}
         config.save()
-        assert Config.load().qualite_rendu == {"hp1": qualite_rendu.EQUILIBREE}
+        assert Config.load().rendu_d3d11 == {"hp1": {"Antialiasing": "4"}}
+
+
+class TestNiveauDeLaBeta:
+    """La 1.3.6-beta.1 gardait un niveau par jeu : il devient ses clés, une fois."""
+
+    def test_legere_eteint_tout(self, hp2):
+        game, config, ini = hp2
+        config.qualite_rendu["hp2"] = qualite_rendu.LEGERE
+        assert qualite_rendu.appliquer(game, config)
+        section = _section(ini)
+        assert section["Antialiasing"] == "0"
+        for cle in ("ASSAO", "SSR", "HDR", "ParallaxOcclusionMapping", "VolumetricLighting",
+                    "UnlimitedViewDistance"):
+            assert section[cle] == "False", cle
+        assert config.qualite_rendu == {}
+
+    def test_equilibree(self, hp2):
+        game, config, ini = hp2
+        config.qualite_rendu["hp2"] = qualite_rendu.EQUILIBREE
+        qualite_rendu.appliquer(game, config)
+        section = _section(ini)
+        assert section["Antialiasing"] == "4"
+        assert section["SSR"] == section["ParallaxOcclusionMapping"] == "False"
+        assert section["UnlimitedViewDistance"] == "False"
+        assert section["ASSAO"] == section["HDR"] == section["VolumetricLighting"] == "True"
+
+    def test_un_reglage_deja_fait_l_emporte(self, hp2):
+        game, config, _ini = hp2
+        config.rendu_d3d11["hp2"] = {"Antialiasing": "2"}
+        config.qualite_rendu["hp2"] = qualite_rendu.LEGERE
+        qualite_rendu.appliquer(game, config)
+        assert config.rendu_d3d11 == {"hp2": {"Antialiasing": "2"}} and config.qualite_rendu == {}
+
+    def test_un_niveau_inconnu_n_ecrit_rien(self, hp2):
+        game, config, ini = hp2
+        origine = ini.read_bytes()
+        config.qualite_rendu["hp2"] = "inconnu"
+        assert not qualite_rendu.appliquer(game, config)
+        assert ini.read_bytes() == origine
+
+
+class TestMagasin:
+    def test_sans_reglage_la_page_montre_l_ini(self, hp2):
+        """Une valeur posée à la main dans l'ini se montre telle quelle ; rien n'est écrit pour autant."""
+        game, config, ini = hp2
+        ini.write_bytes(INI.replace("Antialiasing=8" + CRLF + "Anisotropy",
+                                    "Antialiasing=2" + CRLF + "Anisotropy").encode(_INI_ENCODING))
+        magasin, _s = _magasin(game, config)
+        assert magasin.lire(R["rendu_anticrenelage"]) == 2
+        assert magasin.lire(R["rendu_reflets_force"]) == pytest.approx(0.35)
+        assert magasin.lire(R["rendu_hdr"]) is True
+        assert config.rendu_d3d11 == {}
+
+    def test_l_ini_illisible_montre_l_installation(self, hp2):
+        game, config, ini = hp2
+        ini.unlink()
+        magasin, _s = _magasin(game, config)
+        assert all(magasin.lire(r) == qualite_rendu.ACCIO[i] for i, r in R.items())
+
+    def test_ecrire_enregistre_la_config(self, hp2):
+        game, config, _ini = hp2
+        magasin, sauvegardes = _magasin(game, config)
+        magasin.ecrire(R["rendu_reflets"], False)
+        assert magasin.lire(R["rendu_reflets"]) is False
+        assert sauvegardes == [1]
+
+    def test_une_valeur_non_proposee_est_refusee(self, hp2):
+        game, config, _ini = hp2
+        magasin, sauvegardes = _magasin(game, config)
+        with pytest.raises(ValueError):
+            magasin.ecrire(R["rendu_limite"], 144)
+        with pytest.raises(ValueError):
+            magasin.ecrire(R["rendu_anticrenelage"], 16)
+        assert config.rendu_d3d11 == {} and not sauvegardes
+
+    def test_le_curseur_des_reflets_arrondit_au_pas(self, hp2):
+        game, config, _ini = hp2
+        magasin, _s = _magasin(game, config)
+        magasin.ecrire(R["rendu_reflets_force"], 0.30000000000000004)
+        assert config.rendu_d3d11["hp2"]["SSRIntensity"] == "0.300000"
+
+    def test_accio_et_jeu(self, hp2):
+        game, config, _ini = hp2
+        magasin, _s = _magasin(game, config)
+        assert magasin.accio(R["rendu_anticrenelage"]) == 8
+        assert magasin.jeu(R["rendu_anticrenelage"]) == 0
+        assert magasin.jeu(R["rendu_limite"]) is None, "le jeu de 2002 n'avait pas de limite connue"
 
 
 class TestDonneeDeWindows:
@@ -246,14 +382,14 @@ class TestDeuxCartes:
 
 
 class TestFenetre:
-    """Les deux lignes dans la carte « Affichage » de HP1/HP2."""
+    """La page Image de HP1/HP2 : la résolution et ce que règle le launcher dans « Écran », les
+    réglages du rendu dans leurs catégories, les trois niveaux de la bêta en préréglages."""
 
     def _dialogue(self, qtbot, game, config, monkeypatch, deux_cartes):
         from src.ui import game_settings_dialog as gsd
-        from src.ui import reglages_rubriques as rr
-        monkeypatch.setattr(rr.resolution_jeu, "place_disponible", lambda: (1920, 1080))
-        monkeypatch.setattr(rr.preference_gpu, "proposee", lambda: deux_cartes)
-        monkeypatch.setattr(rr.preference_gpu, "active", lambda _exe: False)
+        monkeypatch.setattr(resolution_jeu, "place_disponible", lambda: (1920, 1080))
+        monkeypatch.setattr(preference_gpu, "proposee", lambda: deux_cartes)
+        monkeypatch.setattr(preference_gpu, "active", lambda _exe: False)
         manager = SimpleNamespace(config=config, game_language=lambda _g: None)
         dlg = gsd.GameSettingsDialog(game, manager, appliquer_langue=lambda _c: True)
         qtbot.addWidget(dlg)
@@ -267,28 +403,59 @@ class TestFenetre:
         assert jeu.resolution is not None, "sans résolution, la rubrique Affichage est verrouillée"
         return jeu
 
-    @staticmethod
-    def _liste_qualite(dlg):
-        from PyQt6.QtWidgets import QComboBox
-        return next((c for c in dlg.findChildren(QComboBox)
-                     if c.count() and c.itemData(0) == qualite_rendu.MAXIMALE), None)
+    def test_tous_les_reglages_du_rendu_sont_dans_la_page(self, qtbot, hp2, monkeypatch):
+        _game, config, _ini = hp2
+        page = self._dialogue(qtbot, self._jeu(), config, monkeypatch, deux_cartes=False)._page_img
+        assert page is not None and set(page.reglages) == set(R)
+        assert [c.ident for c in page.categories] == ["ecran", "qualite", "lumiere", "distance", "fluidite"]
+        assert page.ligne("resolution_ecran").controle is page.liste_resolution
 
-    @staticmethod
-    def _bascule_gpu(dlg):
-        from src.ui.toggle_switch import ToggleSwitch
-        return next((b for b in dlg.findChildren(ToggleSwitch)
-                     if "deux cartes graphiques" in b.accessibleDescription()), None)
+    def test_un_prereglage_s_ecrit_dans_la_config(self, qtbot, hp2, monkeypatch):
+        _game, config, _ini = hp2
+        page = self._dialogue(qtbot, self._jeu(), config, monkeypatch, deux_cartes=False)._page_img
+        assert page.onglet_prereglages is not None
+        assert not page.sur_mesure.isVisibleTo(page) or page._cartes_prereglage[qualite_rendu.MAXIMALE].isChecked()
+        page.choisir_prereglage(qualite_rendu.LEGERE)
+        assert config.rendu_d3d11["hp2"]["Antialiasing"] == "0"
+        assert config.rendu_d3d11["hp2"]["SSR"] == "False"
+        assert page._cartes_prereglage[qualite_rendu.LEGERE].isChecked()
 
-    def test_la_qualite_se_choisit_et_s_enregistre(self, qtbot, hp2, monkeypatch):
+    def test_un_reglage_seul_et_sa_dependance(self, qtbot, hp2, monkeypatch):
+        """Sans anticrénelage, « Feuillage et grilles lissés » n'a pas d'effet : il se replie."""
         _game, config, _ini = hp2
         dlg = self._dialogue(qtbot, self._jeu(), config, monkeypatch, deux_cartes=False)
-        liste = self._liste_qualite(dlg)
-        assert liste is not None and liste.currentData() == qualite_rendu.MAXIMALE
-        liste.setCurrentIndex(liste.findData(qualite_rendu.LEGERE))
-        assert config.qualite_rendu == {"hp2": qualite_rendu.LEGERE}
+        page = dlg._page_img
+        ligne = page.ligne("rendu_feuillage")
+        assert not ligne.isHidden()
+        page.regler("rendu_anticrenelage", 0)
+        assert ligne.isHidden()
+        assert config.rendu_d3d11["hp2"] == {"Antialiasing": "0"}
+        assert dlg._bouton_reset.isEnabled()
+
+    def test_revenir_a_l_installation(self, qtbot, hp2, monkeypatch):
+        _game, config, _ini = hp2
+        dlg = self._dialogue(qtbot, self._jeu(), config, monkeypatch, deux_cartes=False)
+        page = dlg._page_img
+        assert not dlg._bouton_reset.isEnabled()
+        page.regler("rendu_reflets", False)
+        dlg._confirmer_origine = lambda _pages: True
+        dlg._bouton_reset.click()
+        assert page.valeur("rendu_reflets") is True
+        assert config.rendu_d3d11["hp2"]["SSR"] == "True"
+        assert not dlg._bouton_reset.isEnabled()
 
     def test_la_carte_puissante_seulement_avec_deux_cartes(self, qtbot, hp2, monkeypatch):
         _game, config, _ini = hp2
-        assert self._bascule_gpu(self._dialogue(qtbot, self._jeu(), config, monkeypatch, False)) is None
-        dlg = self._dialogue(qtbot, self._jeu(), config, monkeypatch, True)
-        assert self._bascule_gpu(dlg) is not None
+        page = self._dialogue(qtbot, self._jeu(), config, monkeypatch, False)._page_img
+        assert "carte_puissante" not in page._libres
+        page = self._dialogue(qtbot, self._jeu(), config, monkeypatch, True)._page_img
+        assert page.ligne("carte_puissante").controle is page._libres["carte_puissante"].controle
+
+    def test_la_mise_en_garde_du_menu_du_jeu_reste(self, qtbot, hp2, monkeypatch):
+        """Celui qui cherche la résolution ne doit pas aller la changer dans le menu du jeu."""
+        from PyQt6.QtWidgets import QLabel
+        _game, config, _ini = hp2
+        page = self._dialogue(qtbot, self._jeu(), config, monkeypatch, False)._page_img
+        page.montrer(0)
+        notes = [n for n in page.findChildren(QLabel, "noteEcran") if "menu du jeu" in n.text()]
+        assert notes

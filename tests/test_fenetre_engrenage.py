@@ -174,13 +174,14 @@ class TestEngrenageReglagesDuJeu:
         self._poser(win, jeu, GameState.INSTALLED)
         # Un jeu dont le catalogue ne dit pas où écrire la résolution, et sans
         # réglage du correctif (HP1 en déclare depuis le catalogue du 2026-10-27).
-        sans = replace(jeu, resolution=None, fix_settings=())
+        # Ni rendu D3D11 (HP1/HP2) ni réglages graphiques (HP3) : ceux-là ont leur page Image.
+        sans = replace(jeu, resolution=None, fix_settings=(), pre_launch=None)
         dlg = GameSettingsDialog(sans, win.manager, lambda code: True, parent=win)
         desactives = [b.text() for b in dlg.findChildren(QRadioButton)
                       if not b.isEnabled()]
         for nom in _A_VENIR:
             assert tr(nom) in desactives, nom
-        assert dlg._choix_resolution is None
+        assert dlg._page_img is None
 
     def test_la_resolution_se_regle_quand_le_catalogue_dit_ou(self, make_window_multilingue):
         """HP1/HP2 (bloc `resolution`) : la rubrique devient un vrai réglage, et
@@ -197,7 +198,7 @@ class TestEngrenageReglagesDuJeu:
             "%DOCUMENTS%\\Harry Potter\\HP.ini", "WinDrv.WindowsClient",
             "WindowedViewportX", "WindowedViewportY"))
         dlg = GameSettingsDialog(avec, win.manager, lambda code: True, parent=win)
-        assert dlg._choix_resolution is not None and dlg._choix_resolution.count() >= 1
+        assert dlg._page_img is not None and dlg._page_img.liste_resolution.count() >= 1
         assert not [b for b in dlg.findChildren(QRadioButton) if not b.isEnabled()]
 
     def test_les_reglages_du_correctif_ne_retirent_pas_la_resolution(self, make_window_multilingue):
@@ -221,7 +222,7 @@ class TestEngrenageReglagesDuJeu:
             f"[{reglages_correctif._MARQUE_V2}]\r\n\r\n[Accio.Window]\r\nMuteInBackground=0\r\n\r\n"
             "[Accio.Game]\r\nQuidditchDifficulty=0\r\n".encode("ascii"))
         dlg = GameSettingsDialog(avec, win.manager, lambda code: True, parent=win)
-        assert dlg._choix_resolution is not None and dlg._choix_resolution.count() >= 1
+        assert dlg._page_img is not None and dlg._page_img.liste_resolution.count() >= 1
         assert "son_arriere_plan" in dlg._controles
         # Le Quidditch seul : ses trois crans SONT les presets, pas de liste à part.
         assert "quidditch" not in dlg._controles
