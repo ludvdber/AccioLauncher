@@ -15,6 +15,7 @@ from PyQt6.QtGui import QColor, QImage
 
 from src.core import captures
 from src.core.game_data import GameData
+from tests.rubriques import toutes
 
 INI_V2 = "[Accio.Window]\r\nWindowed=1\r\nScreenshotKey=123\r\n\r\n[Accio.Game]\r\nFOV=1.0\r\n"
 
@@ -307,6 +308,7 @@ class TestToucheDuCorrectif:
                                   config=SimpleNamespace(install_path=tmp_path, reprise={}))
         dlg = GameSettingsDialog(_jeu(screenshots={"collect": ["HP4/screenshots/*.png"]}), manager, lambda c: True)
         qtbot.addWidget(dlg)
+        toutes(dlg)
         assert any("F9" in lbl.text() for lbl in dlg.findChildren(QLabel))
 
 
@@ -317,7 +319,7 @@ class TestFenetre:
                                   config=SimpleNamespace(install_path=tmp_path, reprise={}))
         dlg = GameSettingsDialog(jeu, manager, lambda code: True)
         qtbot.addWidget(dlg)
-        return dlg
+        return toutes(dlg)
 
     def test_rubrique_absente_sans_capture_possible(self, qtbot, tmp_path):
         dlg = self._dialogue(qtbot, _jeu(), tmp_path)

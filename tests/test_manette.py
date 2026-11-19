@@ -12,6 +12,7 @@ import pytest
 
 from src.core import manette
 from src.core.manette import Manette
+from tests.rubriques import toutes
 
 
 def test_chaque_maison_a_sa_couleur_et_poudlard_par_defaut():
@@ -363,7 +364,7 @@ class TestFenetreDeReglages:
                               config=SimpleNamespace(install_path=tmp_path))
         dlg = GameSettingsDialog(_jeu(), mgr, lambda c: True, appliquer_manette=appliquer)
         qtbot.addWidget(dlg)
-        return dlg
+        return toutes(dlg)
 
     def test_l_interrupteur_montre_le_registre(self, qtbot, monkeypatch, tmp_path):
         dlg = self._dialogue(qtbot, monkeypatch, tmp_path, {"CurrentSelection": 4}, lambda oui: True)

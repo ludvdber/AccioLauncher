@@ -71,12 +71,12 @@ from src.ui.page_image import LARGEUR_LISTE, LigneLibre, PageAvecFiche, PageImag
 from src.ui.theme import themed
 from src.ui.theme import current as theme_courant
 from src.ui.toggle_switch import ToggleSwitch
-from src.ui.utils import zone_defilable
 from src.ui.reglages_widgets import (  # réexportés
     _STYLE,
     _Disposition,
     _texte_beta,
 )
+from src.ui.difficulte_panneau import pastille_beta
 from src.ui.reglages_rubriques import (  # noqa: F401  (réexportés)
     log,
     _ONGLETS,
@@ -88,14 +88,14 @@ from src.ui.reglages_rubriques import (  # noqa: F401  (réexportés)
     RubriquesDuJeu,
 )
 
-# Le rail : le jeu, ses rubriques, ses fichiers. 270 : à 260, quand le rail défile (fenêtre de
-# 660 à 700 px de haut), sa barre de 10 px coupait « RÉGLAGES DU / JEU » (audit UI f65).
+# Les rubriques du correctif que montre la page Image (la fluidité comprise, audit UI reg21).
+_ONGLETS_IMAGE = ("affichage", "image", "perfs")
+
 # Taille d'ouverture, celle de la maquette, quand la page s'ouvre seule (sans fenêtre pour
 # l'accueillir) ; le plancher est celui de toutes les pages (`TAILLE_MINIMALE_PAGE`).
 _TAILLE_VOULUE = QSize(1320, 860)
-# Une hauteur commune aux en-têtes de cartes voisines : la légende de « Chaque
-# effet » (œil et points de 18 px) décalait sa carte de 3 px par rapport à la
-# colonne de gauche.
+# La hauteur des surtitres de section (18 px, celle de l'ancienne légende des effets, retirée avec sa
+# carte) : les pages gardent la même ligne de départ qu'avant.
 _HAUTEUR_ENTETE = 18
 
 class GameSettingsDialog(RubriquesDuJeu, QDialog):
@@ -143,8 +143,15 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         self._conf_graph: Path | None = conf if reglages_graphiques.disponible(conf) else None
         # Les réglages d'image qui ne vivent pas dans l'ini du correctif (rendu D3D11 de HP1/HP2,
         # réglages graphiques de HP3), avec leur magasin : « Revenir à l'installation » les remet aussi.
+        # Posés dès l'ouverture : la page Image se bâtit à la demande, le bouton du pied non.
         self._magasins_image: list[tuple[qualite_rendu.MagasinRendu | reglages_graphiques.MagasinGraphique,
                                          tuple[Reglage, ...]]] = []
+        if qualite_rendu.gere(game):
+            self._magasins_image.append((qualite_rendu.MagasinRendu(game, manager.config, manager.config.save),
+                                         tuple(qualite_rendu.REGLAGES.values())))
+        elif self._conf_graph is not None:
+            self._magasins_image.append((reglages_graphiques.MagasinGraphique(self._conf_graph),
+                                         tuple(reglages_graphiques.REGLAGES.values())))
         self._erreur: QLabel | None = None
         self._compte_captures: QLabel | None = None
         # Le contrôle de chaque réglage du correctif, par identifiant : la remise
@@ -168,7 +175,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
 
         self.setWindowTitle(tr("Réglages de {}").format(game.name))
         self.setStyleSheet(themed(_STYLE) + feuille_de_style())
-        self._build_ui()
+        self._build_ui(onglet)
         self.ouvrir_onglet(onglet)   # la page Difficulté ouvre « jeu » ; "" : la première
         self._taille_de_depart()
 
@@ -186,7 +193,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
 
     # ── Construction ──
 
-    def _build_ui(self) -> None:
+    def _build_ui(self, onglet: str) -> None:
         # Maquette B « L'En-tête » (Ludo, 2026-11-13) : le bandeau du jeu en haut, ses rubriques en
         # pastilles, la page sur toute la largeur. Le rail de gauche (270 px) n'existe plus.
         racine = QVBoxLayout(self)
@@ -206,43 +213,25 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         self._defile = QStackedWidget()
         transparent(self._defile)
         droite.addWidget(self._defile, stretch=1)
-        self._contenus: list[QWidget] = []
         self._beta: dict[str, QWidget] = {}
-        pages = []
-        for ident, libelle, icone in _ONGLETS:
-            contenu = QWidget()
-            transparent(contenu)
-            page = QVBoxLayout(contenu)
-            # Le nom de la rubrique est dans sa pastille, cochée : la page n'a plus de grand titre.
-            page.setContentsMargins(MARGES_PAGE[0], 24, MARGES_PAGE[2], MARGES_PAGE[3])
-            page.setSpacing(0)
-            corps = QVBoxLayout()
-            corps.setContentsMargins(0, 0, 0, 0)
-            corps.setSpacing(0)
-            page.addLayout(corps)
-            self._lignes_de_page = []
-            if not self._remplir(ident, corps):
-                contenu.deleteLater()
-                continue
-            if ident == "difficulte" and self._panneau is not None:
-                self._beta[ident] = self._panneau.pastille_beta
-            self._contenus.append(contenu)
-            if ident == "image" and self._page_img is not None:
-                # La page Image défile en dedans : ses onglets, sa recherche et sa fiche restent en place.
-                corps.setStretch(0, 1)
-                page.setStretch(page.count() - 1, 1)
-                self._defile.addWidget(contenu)
+        # Seule la rubrique ouverte se bâtit ici ; chaque autre a sa place dans la pile, bâtie au premier
+        # clic sur sa pastille (`_montrer_rubrique`). Les rubriques cachées faisaient plus de la moitié
+        # de l'ouverture (banc du 2026-11-19). Qu'une rubrique existe se sait sans la bâtir (`_a_une_page`).
+        pages = [o for o in _ONGLETS if self._a_une_page(o[0])]
+        ouverte = next((i for i, _l, _p in pages if i == onglet), pages[0][0] if pages else "")
+        self._a_batir: set[str] = set()
+        for ident, _libelle, _icone in pages:
+            if ident == ouverte:
+                self._batir_page(ident, self._defile.addWidget)
             else:
-                page.addStretch()
-                if ident != "difficulte":
-                    # Une colonne de lignes : à 1 920 px, le nom partait à 1 500 px de son
-                    # contrôle (audit UI reg11). La Difficulté garde sa largeur, pour le cadran.
-                    contenu.setMaximumWidth(LARGEUR_LISTE + MARGES_PAGE[0] + MARGES_PAGE[2])
-                # La fiche à droite, comme la page Image (audit UI reg20) ; une page sans ligne
-                # de réglage (Langue, Fichiers) n'en a pas.
-                self._defile.addWidget(PageAvecFiche(contenu, self._lignes_de_page)
-                                       if self._lignes_de_page else zone_defilable(contenu))
-            pages.append((ident, libelle, icone))
+                attente = QWidget()
+                transparent(attente)
+                self._defile.addWidget(attente)
+                self._a_batir.add(ident)
+            if ident == "difficulte":
+                self._beta[ident] = pastille_beta()
+        if self._forme_image() == "page":
+            self._bouton_origine()
 
         # Le bandeau sur toute la largeur, au-dessus de la colonne centrée (audit plein écran).
         racine.insertWidget(0, self._bandeau(pages))
@@ -255,8 +244,79 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         self._erreur.hide()
         droite.addWidget(self._erreur)
         droite.addWidget(self._pied())
-        if self._onglets:
-            next(iter(self._onglets.values())).setChecked(True)
+        if ouverte:
+            self._onglets[ouverte].setChecked(True)
+
+    def _batir_page(self, ident: str, poser: Callable[[QWidget], object]) -> None:
+        """La page d'une rubrique, que `poser` met à sa place dans la pile.
+
+        Du haut vers le bas (règle 143) : la page de lignes est posée VIDE, puis remplie. Remplie d'abord,
+        sa feuille de style repassait sur chaque ligne à chaque étage (zone qui défile, fiche, pile) :
+        la Difficulté de HP5 prenait 350 ms à sa première ouverture (banc du 2026-11-19). La page Image
+        se bâtit entière, hors de la fenêtre, puis se rattache d'un geste."""
+        contenu = QWidget()
+        transparent(contenu)
+        page = QVBoxLayout(contenu)
+        # Le nom de la rubrique est dans sa pastille, cochée : la page n'a plus de grand titre.
+        page.setContentsMargins(MARGES_PAGE[0], 24, MARGES_PAGE[2], MARGES_PAGE[3])
+        page.setSpacing(0)
+        corps = QVBoxLayout()
+        corps.setContentsMargins(0, 0, 0, 0)
+        corps.setSpacing(0)
+        page.addLayout(corps)
+        self._lignes_de_page = []
+        if ident == "image" and self._forme_image() == "page":
+            self._remplir_annoncee(ident, corps)
+            # La page Image défile en dedans : ses onglets, sa recherche et sa fiche restent en place.
+            corps.setStretch(0, 1)
+            page.setStretch(page.count() - 1, 1)
+            poser(contenu)
+            return
+        page.addStretch()
+        if ident != "difficulte":
+            # Une colonne de lignes : à 1 920 px, le nom partait à 1 500 px de son
+            # contrôle (audit UI reg11). La Difficulté garde sa largeur, pour le cadran.
+            contenu.setMaximumWidth(LARGEUR_LISTE + MARGES_PAGE[0] + MARGES_PAGE[2])
+        # La fiche à droite, comme la page Image (audit UI reg20) ; une page sans ligne de réglage
+        # (Langue, Fichiers) la garde cachée.
+        enveloppe = PageAvecFiche(contenu)
+        poser(enveloppe)
+        self._remplir_annoncee(ident, corps)
+        enveloppe.suivre(self._lignes_de_page)
+
+    def _remplir_annoncee(self, ident: str, corps: QVBoxLayout) -> None:
+        if not self._remplir(ident, corps):
+            # `_a_une_page` l'a annoncée : leurs conditions ont divergé (`test_reglages_a_la_demande`).
+            log.error("Réglages : la rubrique %s annoncée n'a rien à montrer", ident)
+
+    def _montrer_rubrique(self, ident: str, rang: int) -> None:
+        """La rubrique `ident`, bâtie à sa première ouverture à la place qui l'attendait."""
+        if ident in self._a_batir:
+            self._a_batir.discard(ident)
+            attente = self._defile.widget(rang)
+            self._batir_page(ident, lambda page: self._defile.insertWidget(rang, page))
+            self._defile.removeWidget(attente)
+            attente.deleteLater()
+        self._defile.setCurrentIndex(rang)
+
+    def _a_une_page(self, ident: str) -> bool:
+        """La rubrique a-t-elle quelque chose à montrer ? Sans la bâtir : chaque page s'appuie sur la même
+        réponse (`_forme_image`, `_quoi_demarrage`, `_quoi_captures`, `_etat_manette`, `_difficulte_proposee`)."""
+        if ident == "image":
+            return bool(self._forme_image())
+        if ident == "langue":
+            # La langue n'a sa rubrique que si elle se RÈGLE : jeu qui en déclare,
+            # et registre atteignable pour ceux qui la lisent là.
+            return self.manager.game_language(self.game) is not None
+        if ident == "jeu":
+            etat, reprend, demarrage = self._quoi_demarrage
+            n, touche = self._quoi_captures
+            return (etat is not None or reprend or bool(demarrage) or self._etat_manette is not None
+                    or any(r.onglet in ("jeu", "commandes", "manette") for r in self._reglages)
+                    or bool(touche or n or self.game.captures))
+        if ident == "difficulte":
+            return self._difficulte_proposee()
+        return bool(self._actions)
 
     def _bandeau(self, pages) -> QWidget:
         """Le bandeau du jeu : retour, nom, rubriques en pastilles (celles du Carnet et des Collections)."""
@@ -271,7 +331,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         self._onglets: dict[str, QPushButton] = {}
         for rang, (ident, libelle, icone) in enumerate(pages):
             btn = pastille_rubrique(tr(libelle), icone)
-            btn.toggled.connect(lambda oui, r=rang: oui and self._defile.setCurrentIndex(r))
+            btn.toggled.connect(lambda oui, i=ident, r=rang: oui and self._montrer_rubrique(i, r))
             btn.toggled.connect(lambda oui, i=ident: oui and self._noter_pied(i))
             self._groupe_onglets.addButton(btn)
             self._onglets[ident] = btn
@@ -300,9 +360,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         if onglet == "image":
             return self._page_image_et_fluidite(corps)
         if onglet == "langue":
-            # La langue n'a sa rubrique que si elle se RÈGLE : jeu qui en déclare,
-            # et registre atteignable pour ceux qui la lisent là.
-            if self.manager.game_language(self.game) is None:
+            if not self._a_une_page("langue"):
                 return False
             self._section_langue(corps)
             return True
@@ -323,17 +381,29 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         HP1 et HP2 (rendu D3D11, résolution du launcher) et HP3 (réglages graphiques) l'ont même sans
         le nouveau correctif : leurs réglages d'image n'en dépendent pas, ceux du correctif s'y
         ajoutent quand il est là."""
+        forme = self._forme_image()
+        if forme == "affichage":
+            self._section_affichage(corps)
+            return True
+        if forme == "notes":
+            # Jeu absent ou ancien correctif : une seule note pour toute la page.
+            return any(self._section_correctif(corps, o) for o in _ONGLETS_IMAGE)
+        return forme == "page" and self._page_image(corps)
+
+    def _forme_image(self) -> str:
+        """Ce que montre la rubrique Image : "page" (`page_image`), "affichage" (verrouillée), "notes" (jeu
+        absent ou ancien correctif), "" (pas de rubrique)."""
         resolution = self.game.resolution
         du_launcher = resolution is not None and not resolution_jeu.du_correctif(resolution)
         if qualite_rendu.gere(self.game) or self._conf_graph is not None or du_launcher:
-            return self._page_image(corps)
+            return "page"
         if not self._reglages:
-            self._section_affichage(corps)
-            return True
+            return "affichage"
+        portes = any(r.onglet in _ONGLETS_IMAGE for r in self._reglages)
         if not self._correctif_actif():
-            # Jeu absent ou ancien correctif : une seule note pour toute la page.
-            return any(self._section_correctif(corps, o) for o in ("affichage", "image", "perfs"))
-        return self._page_image(corps)
+            return "notes" if portes else ""
+        # Les lignes libres d'« Écran » n'existent qu'avec un magasin ou une résolution (`_lignes_libres`).
+        return "page" if portes or resolution is not None else ""
 
     def _section_commandes(self, corps: QVBoxLayout) -> bool:
         """Manette ou touches, dans la page Jeu (audit UI reg21 : la page Commandes avait deux lignes)."""
@@ -357,17 +427,13 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         config = self.manager.config
         magasins: list[tuple[Magasin, tuple[Reglage, ...]]] = []
         if self._ini is not None and self._correctif_actif():
-            portes = tuple(r for r in self._reglages if r.onglet in ("affichage", "image", "perfs"))
+            portes = tuple(r for r in self._reglages if r.onglet in _ONGLETS_IMAGE)
             if portes:
                 magasins.append((MagasinCorrectif(self._ini), portes))
         prereglages = None
         if qualite_rendu.gere(self.game):
-            self._magasins_image.append((qualite_rendu.MagasinRendu(self.game, config, config.save),
-                                         tuple(qualite_rendu.REGLAGES.values())))
             prereglages = qualite_rendu.PREREGLAGES
         elif self._conf_graph is not None:
-            self._magasins_image.append((reglages_graphiques.MagasinGraphique(self._conf_graph),
-                                         tuple(reglages_graphiques.REGLAGES.values())))
             prereglages = reglages_graphiques.PREREGLAGES
         magasins += self._magasins_image
         libres = self._lignes_libres()
@@ -379,7 +445,6 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         self._page_img = PageImage(self.game, config, magasins, self._erreur_image, self._apres_ecriture,
                                    prereglages=prereglages, libres=libres, note_ecran=note)
         corps.addWidget(self._page_img, stretch=1)
-        self._bouton_origine()
         return True
 
     def _lignes_libres(self) -> tuple[LigneLibre, ...]:
@@ -396,8 +461,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
 
     @staticmethod
     def _surtitre_cale(titre: str) -> QLabel:
-        """Un surtitre de la hauteur de l'en-tête à légende : leurs cartes voisines
-        commencent à la même ligne."""
+        """Un surtitre à la hauteur commune `_HAUTEUR_ENTETE`."""
         entete = surtitre(titre)
         entete.setMinimumHeight(_HAUTEUR_ENTETE)
         return entete

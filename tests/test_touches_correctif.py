@@ -9,6 +9,7 @@ from src.core import touches_correctif as tc
 from src.core.i18n import tr
 
 from tests.test_reglages_correctif import INI_V2, _dialogue, _jeu, _manager
+from tests.rubriques import pages
 
 
 @pytest.fixture
@@ -210,7 +211,7 @@ class TestFenetre:
     def test_l_editeur_est_dans_l_onglet_commandes(self, qtbot, tmp_path):
         from src.ui.editeur_touches import EditeurTouches
         dlg, _ = _fenetre(qtbot, tmp_path, ("touches_zqsd", "surechantillonnage"))
-        image, commandes = dlg._contenus[:2]
+        image, commandes = pages(dlg)[:2]
         assert commandes.findChildren(EditeurTouches) and not image.findChildren(EditeurTouches)
 
     def test_pas_d_editeur_sans_le_preregle(self, qtbot, tmp_path):

@@ -506,11 +506,12 @@ class _Fiche(QFrame):
 
 
 class PageAvecFiche(QWidget):
-    """Une page de lignes (Jeu, Difficulté, l'Image de HP1 à HP3) et, à sa droite, la même fiche
-    que la page Image (audit UI reg20 : l'explication était tantôt à droite, tantôt derrière un
-    « ? »). Trop étroite pour la fiche, la page la remplace par l'infobulle de chaque ligne."""
+    """Une page de lignes (Jeu, Difficulté) et, à sa droite, la même fiche que la page Image (audit UI
+    reg20 : l'explication était tantôt à droite, tantôt derrière un « ? »). Trop étroite pour la fiche,
+    la page la remplace par l'infobulle de chaque ligne. Posée vide, puis remplie (règle 143) : ses
+    lignes arrivent par `suivre` ; sans ligne (Langue, Fichiers), la fiche reste cachée."""
 
-    def __init__(self, contenu: QWidget, lignes: list[tuple[_LigneImage, str, str]]) -> None:
+    def __init__(self, contenu: QWidget) -> None:
         super().__init__()
         transparent(self)
         self.setStyleSheet(themed(_STYLE))
@@ -531,12 +532,18 @@ class PageAvecFiche(QWidget):
         # Assez large pour la colonne de lignes ET la fiche, sans rogner la colonne.
         self._seuil = LARGEUR_LISTE + MARGES_PAGE[0] + MARGES_PAGE[2] + _LARGEUR_FICHE + MARGES_PAGE[2]
         self._active: _LigneImage | None = None
+        self._lignes = False
+
+    def suivre(self, lignes: list[tuple[_LigneImage, str, str]]) -> None:
+        """Les lignes de la page, que la fiche suit (survol et focus)."""
+        self._lignes = bool(lignes)
         for ligne, titre, corps in lignes:
             ligne.setToolTip(typo(corps))
             ligne.fiche_ouverte = self._zone_fiche.isVisible
             ligne.survolee.connect(lambda _i, li=ligne, ti=titre, co=corps: self._montrer(li, ti, co))
         if lignes:
             self._montrer(*lignes[0])
+        self._ajuster()
 
     def _montrer(self, ligne: _LigneImage, titre: str, corps: str) -> None:
         self.fiche.titre.setText(titre)
@@ -548,7 +555,10 @@ class PageAvecFiche(QWidget):
 
     def resizeEvent(self, event) -> None:  # noqa: N802 (Qt)
         super().resizeEvent(event)
-        large = self.width() >= self._seuil
+        self._ajuster()
+
+    def _ajuster(self) -> None:
+        large = self._lignes and self.width() >= self._seuil
         if self._zone_fiche.isVisibleTo(self) != large:
             self._zone_fiche.setVisible(large)
             if self._active is not None:

@@ -5,6 +5,7 @@ autoplay=False. Fixtures `make_window*` dans `conftest.py`.
 """
 
 import pytest
+from tests.rubriques import pages, toutes
 
 pytest.importorskip("pytestqt")
 
@@ -103,7 +104,7 @@ class TestEngrenageReglagesDuJeu:
         assert next(iter(dlg._onglets)) == "langue"
         assert dlg._onglets["langue"].isChecked()
         assert dlg._boutons
-        textes = " ".join(lb.text() for lb in dlg._contenus[0].findChildren(QLabel))
+        textes = " ".join(lb.text() for lb in pages(dlg)[0].findChildren(QLabel))
         assert "Ce jeu a ses propres langues, parfois plus nombreuses que celles du launcher" in textes
         autre = next(g.game for g in win.manager.get_games() if g.game.langues is None)
         sans = GameSettingsDialog(autre, win.manager, lambda code: True, parent=win)
@@ -176,7 +177,7 @@ class TestEngrenageReglagesDuJeu:
         # réglage du correctif (HP1 en déclare depuis le catalogue du 2026-10-27).
         # Ni rendu D3D11 (HP1/HP2) ni réglages graphiques (HP3) : ceux-là ont leur page Image.
         sans = replace(jeu, resolution=None, fix_settings=(), pre_launch=None)
-        dlg = GameSettingsDialog(sans, win.manager, lambda code: True, parent=win)
+        dlg = toutes(GameSettingsDialog(sans, win.manager, lambda code: True, parent=win))
         desactives = [b.text() for b in dlg.findChildren(QRadioButton)
                       if not b.isEnabled()]
         for nom in _A_VENIR:
@@ -197,7 +198,7 @@ class TestEngrenageReglagesDuJeu:
         avec = replace(jeu, resolution=Resolution(
             "%DOCUMENTS%\\Harry Potter\\HP.ini", "WinDrv.WindowsClient",
             "WindowedViewportX", "WindowedViewportY"))
-        dlg = GameSettingsDialog(avec, win.manager, lambda code: True, parent=win)
+        dlg = toutes(GameSettingsDialog(avec, win.manager, lambda code: True, parent=win))
         assert dlg._page_img is not None and dlg._page_img.liste_resolution.count() >= 1
         assert not [b for b in dlg.findChildren(QRadioButton) if not b.isEnabled()]
 
@@ -221,7 +222,7 @@ class TestEngrenageReglagesDuJeu:
         (dossier / "winmm.ini").write_bytes(
             f"[{reglages_correctif._MARQUE_V2}]\r\n\r\n[Accio.Window]\r\nMuteInBackground=0\r\n\r\n"
             "[Accio.Game]\r\nQuidditchDifficulty=0\r\n".encode("ascii"))
-        dlg = GameSettingsDialog(avec, win.manager, lambda code: True, parent=win)
+        dlg = toutes(GameSettingsDialog(avec, win.manager, lambda code: True, parent=win))
         assert dlg._page_img is not None and dlg._page_img.liste_resolution.count() >= 1
         assert "son_arriere_plan" in dlg._controles
         # Le Quidditch seul : ses trois crans SONT les presets, pas de liste à part.
@@ -246,7 +247,7 @@ class TestEngrenageReglagesDuJeu:
         win, jeu = make_window_multilingue()
         jeu = dataclasses.replace(jeu, display_locked=True)
         self._poser(win, jeu, GameState.INSTALLED)
-        dlg = GameSettingsDialog(jeu, win.manager, lambda code: True, parent=win)
+        dlg = toutes(GameSettingsDialog(jeu, win.manager, lambda code: True, parent=win))
         textes = " ".join(lb.text() for lb in dlg.findChildren(QLabel))
         assert "options vid" in textes and "redémarrer" in textes
 

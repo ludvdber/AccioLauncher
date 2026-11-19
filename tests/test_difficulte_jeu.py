@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from src.core import difficulte_jeu
 from src.core.catalogue_blocs import _parse_difficulte
 from src.core.game_data import GameData
+from tests.rubriques import toutes
 
 VALEURS = ["DifficultyEasy", "DifficultyMedium", "DifficultyHard"]
 # %INSTALL_DIR% est le dossier du jeu : <install_path>/HP2.
@@ -80,6 +81,7 @@ def test_la_liste_de_la_fiche_ecrit_le_cran_choisi(qtbot, tmp_path):
                               config=SimpleNamespace(install_path=tmp_path, reprise={}))
     dlg = GameSettingsDialog(_jeu(), manager, lambda c: True)
     qtbot.addWidget(dlg)
+    toutes(dlg)
     listes = [c for c in dlg.findChildren(QComboBox) if c.count() == 3 and c.itemData(2) == 2]
     assert len(listes) == 1
     assert listes[0].currentIndex() == 0

@@ -1,6 +1,7 @@
 """Passer les vidéos de lancement de HP3 (VU dans l'atelier le 2026-10-21)."""
 from src.core import videos_lancement as v
 from src.core.catalogue_blocs import _videos_de_lancement_valides
+from tests.rubriques import toutes
 
 VIDEOS = ("HP3/Movies/eag_1920.bik", "HP3/Movies/wb_1920.bik", "HP3/Movies/KWLogo.bik")
 
@@ -58,6 +59,7 @@ def test_l_interrupteur_de_la_fiche_renomme_les_videos(qtbot, tmp_path):
                               config=SimpleNamespace(install_path=d, reprise={}))
     dlg = GameSettingsDialog(jeu, manager, lambda c: True)
     qtbot.addWidget(dlg)
+    toutes(dlg)
     # La rubrique Démarrage porte aussi « Reprendre » (HP1 à HP3, 2026-10-31).
     bascules = [b for b in dlg.findChildren(ToggleSwitch)
                 if not b.isChecked() and b.accessibleName() == "Passer les logos"]

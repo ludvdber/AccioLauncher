@@ -254,6 +254,16 @@ def titre_section(contenu: str) -> QWidget:
     return bloc
 
 
+def pastille_beta() -> QLabel:
+    """« Bêta » de la rubrique Difficulté, que la fenêtre pose DANS sa pastille : seule à gauche du cadran,
+    elle laissait 660 × 330 px vides et repoussait les préréglages sous le pli (audit UI f44, f68). Faite
+    par la fenêtre et non par le panneau : la rubrique se bâtit à sa première ouverture, sa pastille non."""
+    beta = pastille(tr("Bêta"), _OR_CLAIR, "rgba(214, 167, 44, 0.5)")
+    beta.setToolTip(tr("Bêta : ces réglages sont encore en essai. Ce qui ne va pas se signale sur le "
+                       "Discord du projet."))
+    return beta
+
+
 class PanneauDifficulte(QWidget):
     """Le haut de l'onglet Difficulté : ce qui ne change pas, le cadran, les
     presets, l'en-tête « Sur mesure ». `choisi` part après l'écriture d'un
@@ -276,12 +286,8 @@ class PanneauDifficulte(QWidget):
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(0)
-        # « Bêta » se pose à côté du titre de la page (la fenêtre le prend) : seul à gauche
-        # du cadran, il laissait 660 × 330 px vides et repoussait les préréglages sous le
-        # pli (audit UI f44, f68). Le cadran plafonne sa hauteur et se centre.
-        self.pastille_beta = pastille(tr("Bêta"), _OR_CLAIR, "rgba(214, 167, 44, 0.5)")
-        self.pastille_beta.setToolTip(tr("Bêta : ces réglages sont encore en essai. Ce qui ne va pas "
-                                         "se signale sur le Discord du projet."))
+        # Le cadran plafonne sa hauteur et se centre ; « Bêta » est dans la pastille de la rubrique
+        # (`pastille_beta`, posée par la fenêtre).
         lay.addWidget(self._bloc_cadran())
         lay.addSpacing(22)
         lay.addWidget(titre_section(tr("Préréglages")))

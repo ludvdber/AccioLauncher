@@ -5,6 +5,7 @@ rubrique est un surtitre doré et une carte de lignes, comme les Paramètres.
 
 import logging
 from collections.abc import Callable, Iterable
+from functools import cached_property
 from pathlib import Path
 from typing import NamedTuple
 
@@ -407,7 +408,7 @@ class RubriquesDuJeu:
         Deux voies, toutes deux voulues par Ludo (2026-09-27) : le menu du jeu, ou
         cet interrupteur — qui PRÉVIENT avant d'écrire (le rappel de l'appelant).
         """
-        etat = manette.activee(self.game) if self._appliquer_manette is not None else None
+        etat = self._etat_manette
         # Ce que le correctif règle de la manette (PlayStation, vibrations), sous
         # le même titre : quelqu'un qui cherche sa manette ne la cherche qu'une fois.
         du_correctif = [r for r in self._reglages if r.onglet == "manette"] \
@@ -430,17 +431,38 @@ class RubriquesDuJeu:
         self._section(corps, self._titre_rubrique(tr("Manette")), carte)
         return True
 
+    @cached_property
+    def _etat_manette(self) -> bool | None:
+        """Le choix manette du jeu (registre), None sans interrupteur : lu une fois pour la rubrique et sa page."""
+        return manette.activee(self.game) if self._appliquer_manette is not None else None
+
+    @cached_property
+    def _quoi_demarrage(self) -> tuple[bool | None, bool, list]:
+        """(logos passés, « Reprendre » proposé, réglages du correctif) : lus une fois pour la rubrique et sa page."""
+        videos = self.game.videos_lancement
+        etat = videos_lancement.passees(self.manager.config.install_path, videos) if videos else None
+        du_correctif = [r for r in self._reglages if r.onglet == "demarrage"] if self._correctif_actif() else []
+        return etat, self.game.id in reprise.JEUX, du_correctif
+
+    @cached_property
+    def _quoi_captures(self) -> tuple[int, str]:
+        """(captures déjà prises, touche du correctif ou du catalogue) : lus une fois pour la rubrique et sa page."""
+        # La touche du correctif se lit dans SON ini (seul le nouveau en a une) ;
+        # celle d'un autre moteur, le catalogue la déclare.
+        ini = reglages_correctif.ini_du_correctif(
+            self.manager.config.install_path / Path(self.game.executable).parent)
+        return captures.nombre(self.game), reglages_correctif.touche_capture(ini) or self.game.touche_capture
+
+    def _difficulte_proposee(self) -> bool:
+        """Un réglage de difficulté ou « Une seule vie » : sans eux (HP7, hors 1.4), pas de rubrique."""
+        return bool(dp.idents_du_jeu(self.game, self._ini)) or dp.une_vie_proposee(self.game, self.manager.config)
+
     def _section_demarrage(self, corps: QVBoxLayout) -> bool:
         """« Démarrage » : passer les logos (HP3, les logos que le catalogue
         nomme) et « Reprendre » qui ouvre la dernière partie (HP1 à HP3, CE jeu
         seulement : Ludo, 2026-10-31, il était dans les Paramètres du launcher,
         où personne ne le cherchait)."""
-        videos = self.game.videos_lancement
-        dossier = self.manager.config.install_path
-        etat = videos_lancement.passees(dossier, videos) if videos else None
-        reprend = self.game.id in reprise.JEUX
-        du_correctif = [r for r in self._reglages if r.onglet == "demarrage"] \
-            if self._correctif_actif() else []
+        etat, reprend, du_correctif = self._quoi_demarrage
         if etat is None and not reprend and not du_correctif:
             return False
         carte = Carte()
@@ -485,11 +507,9 @@ class RubriquesDuJeu:
         (`PanneauDifficulte`), puis chaque réglage, puis « Une seule vie ».
         Choisir un preset remet chaque contrôle sur le fichier ; changer un
         réglage déplace l'aiguille (`_maj_dependances`)."""
-        panneau = PanneauDifficulte(self.game, self.manager.config, self._ini)
-        # Ni réglage de difficulté ni une seule vie (HP7, hors 1.4) : pas d'onglet.
-        if not panneau.idents and not dp.une_vie_proposee(self.game, self.manager.config):
-            panneau.deleteLater()
+        if not self._difficulte_proposee():
             return False
+        panneau = PanneauDifficulte(self.game, self.manager.config, self._ini)
         self._panneau = panneau
         corps.addWidget(panneau)
         choix_jeu, reglages = None, []
@@ -641,12 +661,7 @@ class RubriquesDuJeu:
         le dossier en contient déjà — un jeu désinstallé garde ses captures, et
         c'est justement là qu'on vient les chercher.
         """
-        n = captures.nombre(self.game)
-        # La touche du correctif se lit dans SON ini (seul le nouveau en a une) ;
-        # celle d'un autre moteur, le catalogue la déclare.
-        ini = reglages_correctif.ini_du_correctif(
-            self.manager.config.install_path / Path(self.game.executable).parent)
-        touche = reglages_correctif.touche_capture(ini) or self.game.touche_capture
+        n, touche = self._quoi_captures
         # Un jeu dont le catalogue déclare les captures a sa rubrique même sans
         # touche connue : sous l'ancien correctif, elle disparaissait sans un
         # mot, et Ludo cherchait le bouton annoncé (2026-09-27).

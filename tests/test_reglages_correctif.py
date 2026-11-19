@@ -11,6 +11,7 @@ from src.core import reglages_correctif as rc
 from src.core.game_data import GameData
 from src.core.i18n import tr
 from src.core.reglages_table import SORTS_RETIRES
+from tests.rubriques import pages
 
 # Extrait fidèle de l'ini du NOUVEAU correctif (tools/make_ini.py), en CRLF.
 INI_V2 = "\r\n".join([
@@ -885,7 +886,7 @@ class TestFenetre:
         # Quatre rubriques au plus (audit UI reg21) : les touches dans « Jeu », avec les captures
         # (le nouveau correctif a sa touche, F12) ; le compteur d'images dans la « Fluidité » de l'Image.
         assert list(dlg._onglets) == ["image", "jeu"]
-        image, jeu = dlg._contenus
+        image, jeu = pages(dlg)
         assert jeu.isAncestorOf(dlg._controles["touches_zqsd"])
         assert not image.isAncestorOf(dlg._controles["touches_zqsd"])
         assert isinstance(dlg._page_img.ligne("compteur_fps").controle, ToggleSwitch)
@@ -1730,14 +1731,13 @@ class TestPageImage:
                 assert onglet.width() >= onglet.fontMetrics().horizontalAdvance(onglet.text()), onglet.text()
             droite = page.recherche.mapTo(page, page.recherche.rect().topRight()).x()
             assert droite <= page.width(), (langue, droite, page.width())
-            for rang, contenu in enumerate(dlg._contenus):
-                if contenu.isAncestorOf(page):
+            for rang, rubrique in enumerate(pages(dlg)):
+                if rubrique.isAncestorOf(page):
                     continue
                 dlg._defile.setCurrentIndex(rang)
-                zone = dlg._defile.currentWidget()
-                zone = getattr(zone, "zone", zone)   # une `PageAvecFiche` : sa colonne qui défile
+                zone = getattr(rubrique, "zone", rubrique)   # une `PageAvecFiche` : sa colonne qui défile
                 qtbot.waitUntil(lambda z=zone: z.viewport().width() > 0)
-                assert contenu.minimumSizeHint().width() <= zone.viewport().width(), rang
+                assert zone.widget().minimumSizeHint().width() <= zone.viewport().width(), rang
         finally:
             qapp.setStyleSheet(ancienne_feuille)
             i18n.set_language(ancienne_langue)

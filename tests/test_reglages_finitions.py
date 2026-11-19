@@ -14,6 +14,7 @@ from src.core.i18n import set_language, tr
 from src.core.reglages_table import REGLAGES
 from tests.modales import quand_ouverte
 from src.ui.fonts import cinzel_decorative
+from tests.rubriques import toutes
 
 INI = "\r\n".join([
     "[Accio.Window]", "KeepRunningInBackground=1", "FPSLimit=100",
@@ -192,7 +193,7 @@ class TestBeta:
         dlg, _ini = _fenetre(qtbot, tmp_path)
         dlg._page_img.ligne("camera_fluide")   # la Caméra vit dans « Fluidité » (audit UI reg21)
         assert _textes(dlg).count(tr("Bêta").upper()) == 2, "une en tête de la Difficulté, une sur la Caméra, seule en bêta sur sa page"
-        assert "Discord" in dlg._panneau.pastille_beta.toolTip()
+        assert "Discord" in dlg._beta["difficulte"].toolTip()
 
     def test_beta_a_cote_du_titre_de_la_difficulte(self, qtbot, tmp_path):
         """f44, f68 : seule à gauche du cadran, la gélule laissait 660 × 330 px vides. Maquette B : DANS la
@@ -203,7 +204,7 @@ class TestBeta:
         dlg.resize(1280, 800)
         dlg.show()
         qtbot.waitExposed(dlg)
-        beta = dlg._panneau.pastille_beta
+        beta = dlg._beta["difficulte"]
         pastille = dlg._onglets["difficulte"]
         assert beta.parentWidget() is pastille, "dans la pastille de sa rubrique"
         assert pastille.rect().contains(beta.geometry()), "entière, sans déborder"
@@ -236,6 +237,7 @@ class TestBeta:
 
     def test_la_fiche_de_difficulte_ne_le_redit_pas(self, qtbot, tmp_path):
         dlg, _ini = _fenetre(qtbot, tmp_path)
+        toutes(dlg)
         assert "Discord" not in dlg._aides["degats_recus"]
         page = dlg._page_img
         page._activer("camera_fluide")
@@ -283,6 +285,7 @@ class TestRangement:
 
     def test_la_langue_du_menu_est_dans_demarrage(self, qtbot, tmp_path):
         dlg, _ini = _fenetre(qtbot, tmp_path)
+        toutes(dlg)
         textes = _textes(dlg)
         assert tr("Démarrage").upper() in textes and tr("En arrière-plan").upper() in textes
         assert tr("Dans le jeu").upper() not in textes
@@ -455,6 +458,7 @@ class TestUneSeuleLigne:
         from PyQt6.QtWidgets import QPushButton
         from src.ui.page_image import _LigneImage
         dlg, _ini = _fenetre(qtbot, tmp_path)
+        toutes(dlg)
         assert not [b for b in dlg.findChildren(QPushButton) if b.text() == "?"]
         assert dlg._blocs and all(isinstance(b, _LigneImage) for b in dlg._blocs.values())
 

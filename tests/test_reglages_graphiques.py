@@ -14,6 +14,7 @@ from PyQt6.QtCore import Qt
 
 from src.core import reglages_graphiques as rg
 from src.core.game_data import GameData
+from tests.rubriques import toutes
 
 CONF = (
     "[General]\r\n"
@@ -321,7 +322,7 @@ class TestFenetre:
             "fix_settings": ["son_arriere_plan_hp3", "compteur_fps_hp3"]})
         manager = SimpleNamespace(game_language=lambda g: None, langues_disponibles=lambda g: (),
                                   config=SimpleNamespace(install_path=tmp_path, resolution_jeu={}, reprise={}))
-        d = GameSettingsDialog(jeu, manager, lambda code: True)
+        d = toutes(GameSettingsDialog(jeu, manager, lambda code: True))
         qtbot.addWidget(d)
         assert set(d._page_img.reglages) == set(R) | {"compteur_fps_hp3"}
         d._page_img.regler("compteur_fps_hp3", True)
