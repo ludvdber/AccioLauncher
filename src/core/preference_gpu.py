@@ -1,4 +1,4 @@
-"""Lancer HP1/HP2 sur la carte graphique la plus puissante (Windows, deux cartes).
+"""Lancer un jeu sur la carte graphique la plus puissante (Windows, deux cartes ; les huit jeux).
 
 Un portable à deux cartes (Intel + NVIDIA ou AMD) laisse Windows choisir, et un
 vieux jeu 32 bits part souvent sur la puce économe : c'est l'une des causes

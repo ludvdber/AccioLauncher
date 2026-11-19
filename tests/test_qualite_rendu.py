@@ -467,6 +467,15 @@ class TestFenetre:
         page = self._dialogue(qtbot, self._jeu(), config, monkeypatch, True)._page_img
         assert page.ligne("carte_puissante").controle is page._libres["carte_puissante"].controle
 
+    def test_la_carte_puissante_aussi_hors_de_hp1_hp2(self, qtbot, hp2, monkeypatch):
+        """Les huit jeux (Ludo, 2026-11-19) : la ligne ne dépend plus de la qualité du rendu de HP1/HP2."""
+        _game, config, _ini = hp2
+        monkeypatch.setattr(qualite_rendu, "gere", lambda _g: False)
+        page = self._dialogue(qtbot, self._jeu(), config, monkeypatch, True)._page_img
+        assert page is not None and "carte_puissante" in page._libres
+        page = self._dialogue(qtbot, self._jeu(), config, monkeypatch, False)._page_img
+        assert page is None or "carte_puissante" not in page._libres
+
     def test_la_mise_en_garde_du_menu_du_jeu_reste(self, qtbot, hp2, monkeypatch):
         """Celui qui cherche la résolution ne doit pas aller la changer dans le menu du jeu."""
         from PyQt6.QtWidgets import QLabel

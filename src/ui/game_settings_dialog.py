@@ -455,12 +455,13 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
 
     def _lignes_libres(self) -> tuple[LigneLibre, ...]:
         """Ce que le launcher règle lui-même dans « Écran » : la taille du texte de HP1/HP2 et, sur un PC
-        à deux cartes graphiques, la plus puissante pour leur rendu D3D11."""
+        à deux cartes graphiques, la plus puissante pour le jeu (les huit jeux, décision de Ludo du
+        2026-11-19 ; seulement HP1/HP2 avant)."""
         libres = []
         if texte_ue1.gere(self.game.id) and self.game.resolution is not None:
             libres.append(LigneLibre("taille_texte", tr("Taille du texte"), self._aide_texte(),
                                      self._controle_texte()))
-        if qualite_rendu.gere(self.game) and preference_gpu.proposee():
+        if preference_gpu.proposee():
             libres.append(LigneLibre("carte_puissante", tr("Lancer sur la carte graphique la plus puissante"),
                                      self._aide_carte_puissante(), self._controle_carte_puissante()))
         return tuple(libres)
