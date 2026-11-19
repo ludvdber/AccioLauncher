@@ -173,6 +173,21 @@ def _jamais_les_vrais_journaux_de_windows(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _jamais_les_vraies_cartes_graphiques(monkeypatch):
+    """Aucun test ne lit les cartes graphiques de la machine qui le lance.
+
+    La page Image de chaque jeu demande s'il y a deux cartes (`preference_gpu`,
+    les huit jeux depuis le 2026-11-19). Un test qui force `sys.platform` à
+    « win32 » le force pour tout le processus : sous Linux, la lecture des cartes
+    allait alors chercher `winreg` (build Linux du 2026-11-19, 8 tests rouges).
+    Une seule carte par défaut ; les tests qui en veulent deux passent leurs
+    lignes à `plusieurs_cartes` ou remplacent `proposee`.
+    """
+    monkeypatch.setattr("src.core.preference_gpu._deux_cartes", lambda: False)
+    yield
+
+
+@pytest.fixture(autouse=True)
 def _jamais_la_vraie_manette(monkeypatch):
     """Aucun test n'écrit sur une vraie manette branchée.
 
