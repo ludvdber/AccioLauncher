@@ -15,12 +15,12 @@ Les tests automatiques ne lancent aucun vrai jeu. Cet essai, si : il joue chaque
 Le pilote vit dans l'atelier, hors dépôt : `C:\Users\User\Tools\accio_fix_atelier\essai_avant_release.py`. L'essai part d'une demande déposée dans `file_essais\a_faire\` de l'atelier (modèle : `file_essais\faits\29_principal_avant_release_135\demande.sh` ; mode d'emploi : `file_essais\LISEZMOI.md`), qui ne s'exécute qu'au feu vert de Ludo. Elle appelle, un lancement par jeu, avec `ACCIO_OUI=1` :
 
 ```text
-py -3.15 essai_avant_release.py hp1 v1.3.5-hp1
-py -3.15 essai_avant_release.py hp2 v1.3.5-hp2
+py -3.15 essai_avant_release.py hp1 v1.4.0-hp1
+py -3.15 essai_avant_release.py hp2 v1.4.0-hp2
 ... jusqu'à hp6
 ```
 
-D'abord un passage à blanc, sans « oui » : `set ACCIO_A_BLANC=1` puis `python essai_avant_release.py hp4 a_blanc`. Le vrai clic JOUER part, mais le jeu est remplacé par un `ping` invisible et le launcher reste hors écran. 6/6 attendu ; un échec vient alors du pilote ou du launcher, pas du jeu.
+D'abord un passage à blanc, sans « oui », jeu par jeu : `set ACCIO_A_BLANC=1` (PowerShell : `$env:ACCIO_A_BLANC='1'`) puis `py -3.15 essai_avant_release.py hp4 a_blanc_v1.4.0-hp4`. Le vrai clic JOUER part, mais le jeu est remplacé par un `ping` invisible et le launcher reste hors écran. 6/6 attendu pour chaque jeu ; un échec vient alors du pilote ou du launcher, pas du jeu. Aucun jeu ne doit tourner (le pilote refuse sinon). Le passage à blanc ne lit que le launcher : il se refait sur l'arbre qui sera publié (après une fusion de branche).
 
 | Jeu | Ce que le pilote fait | Ce qui est vérifié |
 |---|---|---|

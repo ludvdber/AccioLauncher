@@ -142,7 +142,17 @@ class TestParJeu:
         idents = dp.idents_du_jeu(hp2)
         assert dp.NATIVE in idents
         assert dp.disponible(dp.PAR_IDENT["hardcore"], "hp2", idents)
-        assert ("Difficulté du jeu", "Difficile") in dp.changements(dp.PAR_IDENT["hardcore"], idents)
+        # Sans facteur de dégâts reçus (ini d'avant la 1.4), la difficulté du jeu fait le travail.
+        sans_facteur = idents - {"degats_recus"}
+        assert ("Difficulté du jeu", "Difficile") in dp.changements(dp.PAR_IDENT["hardcore"], sans_facteur)
+
+    def test_avec_le_facteur_la_difficulte_du_jeu_reste_facile(self):
+        """Ludo 2026-11-19 : le facteur et la difficulté du jeu se multipliaient (×7,5 en Hardcore)."""
+        hp2 = next(g for g in load_catalog().games if g.id == "hp2")
+        idents = dp.idents_du_jeu(hp2) | {"degats_recus"}
+        for ident in ("difficile", "hardcore", "impardonnable"):
+            assert dp.valeurs_pour(dp.PAR_IDENT[ident], idents)[dp.NATIVE] == 0, ident
+            assert "Difficulté du jeu" not in dict(dp.changements(dp.PAR_IDENT[ident], idents)), ident
 
     def test_normal_reconnu_avant_un_preset_qui_ne_change_rien(self):
         """HP2 : Détendu (premier de la liste) y vaut Normal ; la page disait « Détendu » choisi."""
@@ -154,10 +164,10 @@ class TestParJeu:
 
     def test_le_catalogue_embarque_propose_ce_qu_il_declare(self):
         jeux = {g.id: g for g in load_catalog().games}
-        for ident in ("hp3", "hp4", "hp7a", "hp7b"):
+        for ident in ("hp7a", "hp7b"):
             idents = dp.idents_du_jeu(jeux[ident])
             assert not dp.disponible(dp.PAR_IDENT["hardcore"], ident, idents), ident
-        for ident in ("hp1", "hp2", "hp5", "hp6"):
+        for ident in ("hp1", "hp2", "hp3", "hp4", "hp5", "hp6"):
             assert dp.disponible(dp.PAR_IDENT["hardcore"], ident, dp.idents_du_jeu(jeux[ident])), ident
 
 
@@ -384,15 +394,20 @@ class TestBoutonDeLaFiche:
         return next((b for b in win._detail._action_panel.findChildren(IconButton, "boutonDifficulte")
                      if game.name in b.accessibleName()), None)
 
-    def test_hp2_ouvre_l_onglet_et_hp3_ne_l_a_pas(self, make_window, monkeypatch):
-        """Grisée sur HP3, l'épée passait pour cassée (Ludo, 2026-10-31) : absente."""
+    def test_l_epee_sur_les_six_premiers_jeux_pas_sur_hp7(self, make_window, monkeypatch):
+        """Grisée là où rien ne se règle, l'épée passait pour cassée (Ludo, 2026-10-31) : absente
+        de HP7 (hors 1.4) ; présente sur HP1 à HP6 depuis le catalogue 0.59 (2026-11-19)."""
         from src.core.game_manager import GameManager, GameState
         from src.ui.game_settings_dialog import GameSettingsDialog
-        monkeypatch.setattr(GameManager, "is_installed", lambda self, j: j in {"hp2", "hp3"})
+        installes = {"hp1", "hp2", "hp3", "hp4", "hp5", "hp6", "hp7a", "hp7b"}
+        monkeypatch.setattr(GameManager, "is_installed", lambda self, j: j in installes)
         monkeypatch.setattr(GameManager, "get_state", lambda self, j: GameState.INSTALLED
-                            if j in {"hp2", "hp3"} else GameState.NOT_INSTALLED)
+                            if j in installes else GameState.NOT_INSTALLED)
         win = make_window()
-        assert self._bouton(win, "hp3") is None, "rien à régler dans HP3 : pas d'épée"
+        for jeu in ("hp7a", "hp7b"):
+            assert self._bouton(win, jeu) is None, f"rien à régler dans {jeu} : pas d'épée"
+        for jeu in ("hp1", "hp3", "hp4", "hp5", "hp6"):
+            assert self._bouton(win, jeu) is not None, jeu
         bouton = self._bouton(win, "hp2")
         assert bouton is not None and bouton.isEnabled()
         bouton.click()

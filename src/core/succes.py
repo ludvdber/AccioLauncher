@@ -185,7 +185,7 @@ _FINS: dict[str, Callable[[Any], bool]] = {
 FINS_PAR_PRESET: dict[str, tuple[str, ...]] = {
     "hp1": ("normal", "difficile", "hardcore", "realiste", "impardonnable"),
     "hp2": ("normal", "difficile", "hardcore", "realiste", "impardonnable"),
-    "hp3": ("normal", "realiste"),
+    "hp3": ("normal", "difficile", "hardcore", "realiste", "impardonnable"),
 }
 # Écrits en entier : ce sont des clés tr().
 _TEXTES_FIN = {

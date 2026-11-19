@@ -239,7 +239,7 @@ class _CartePreset(QFrame):
         return stylo
 
 
-def _titre_section(contenu: str) -> QWidget:
+def titre_section(contenu: str) -> QWidget:
     """Un surtitre doré suivi d'un filet qui s'efface vers la droite."""
     bloc = QWidget()
     transparent(bloc, "titreSection")
@@ -284,7 +284,7 @@ class PanneauDifficulte(QWidget):
                                          "se signale sur le Discord du projet."))
         lay.addWidget(self._bloc_cadran())
         lay.addSpacing(22)
-        lay.addWidget(_titre_section(tr("Préréglages")))
+        lay.addWidget(titre_section(tr("Préréglages")))
         lay.addSpacing(14)
         crans = {p.ident: c for p, c in self.crans}
         presets = [p for p in dp.PRESETS if not p.une_vie and dp.disponible(p, game.id, self.idents)]
@@ -361,7 +361,7 @@ class PanneauDifficulte(QWidget):
         v = QVBoxLayout(bloc)
         v.setContentsMargins(0, 0, 0, 0)
         v.setSpacing(14)
-        v.addWidget(_titre_section(tr("Une seule vie")))
+        v.addWidget(titre_section(tr("Une seule vie")))
         phrases = [tr("La première mort efface la partie : elle se joue dans un dossier à part, et vos "
                       "sauvegardes ne sont ni lues ni écrites."), tr(mode.apres)]
         if mode.note:

@@ -28,6 +28,7 @@ l'ancienne boîte à onglets :
 """
 
 import html
+from collections.abc import Callable
 from pathlib import Path
 
 from PyQt6.QtCore import QSize, Qt
@@ -108,7 +109,8 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
 
     def __init__(self, game: GameData, manager: GameManager,
                  appliquer_langue, actions=(),
-                 parent: QWidget | None = None, appliquer_manette=None, onglet: str = "") -> None:
+                 parent: QWidget | None = None, appliquer_manette=None, onglet: str = "",
+                 partie_en_cours: Callable[[], str] = lambda: "") -> None:
         super().__init__(parent)
         # Entrée choisit la carte, le segment ou l'onglet au focus, comme Espace et
         # comme les cartes de Difficulté (audit UI f56).
@@ -123,6 +125,8 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         self._actions = tuple(actions)
         # (oui) -> bool : prévient, écrit, dit si c'est pris. None = pas de rubrique.
         self._appliquer_manette = appliquer_manette
+        # () -> str : le nom du jeu qui tourne, vide sinon (`choix_sauvegarde` n'écrit pas sous un jeu ouvert).
+        self._partie_en_cours = partie_en_cours
         self._bascule_manette = None
         self._groupe = QButtonGroup(self)
         self._boutons: dict[str, QRadioButton] = {}
