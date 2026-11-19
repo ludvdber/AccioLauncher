@@ -1,6 +1,137 @@
 {
   "versions": [
     {
+      "version": "1.4.0",
+      "nom": "Protego Maxima",
+      "depuis": "1.3.5",
+      "points_forts": [
+        {
+          "icone": "jauge",
+          "jeux": ["hp1", "hp2", "hp3", "hp4", "hp5", "hp6"],
+          "titre": {
+            "fr": "La difficulté, à votre mesure",
+            "en": "Difficulty, your way",
+            "es": "La dificultad, a tu medida"
+          },
+          "texte": {
+            "fr": "Un bouton Difficulté sur la fiche du jeu : Détendu, Normal, Difficile ou Hardcore, Récit dans L'Ordre du Phénix, et « Sur mesure » pour régler chaque modificateur à part. Revenir à Normal rend le jeu tel qu'il est sorti. Encore en test : vos retours sont attendus sur le Discord.",
+            "en": "A Difficulty button on the game's page: Relaxed, Normal, Hard or Hardcore, Story in Order of the Phoenix, and “Custom” to set each modifier on its own. Going back to Normal gives you the game as it shipped. Still being tested: your feedback is welcome on the Discord.",
+            "es": "Un botón Dificultad en la ficha del juego: Relajado, Normal, Difícil o Hardcore, Relato en La Orden del Fénix, y «Personalizada» para ajustar cada modificador por separado. Volver a Normal devuelve el juego tal como salió. Todavía en pruebas: esperamos tus comentarios en el Discord."
+          }
+        },
+        {
+          "icone": "epee",
+          "jeux": ["hp1", "hp2", "hp3", "hp4", "hp6"],
+          "titre": {
+            "fr": "Une seule vie",
+            "en": "One life",
+            "es": "Una sola vida"
+          },
+          "texte": {
+            "fr": "Réaliste (le jeu de base) et Impardonnable (Hardcore) : la partie se joue dans son propre dossier, et la première mort la termine. Vos parties habituelles ne sont jamais touchées.",
+            "en": "Realistic (the base game) and Unforgivable (Hardcore): the run is played in its own folder, and the first death ends it. Your usual saves are never touched.",
+            "es": "Realista (el juego base) e Imperdonable (Hardcore): la partida se juega en su propia carpeta y la primera muerte la termina. Tus partidas habituales nunca se tocan."
+          }
+        },
+        {
+          "icone": "ecran",
+          "jeux": ["hp1", "hp2", "hp3"],
+          "titre": {
+            "fr": "Toute l'image de HP1, HP2 et HP3 dans le launcher",
+            "en": "All of HP1, HP2 and HP3 graphics in the launcher",
+            "es": "Todos los gráficos de HP1, HP2 y HP3 en el launcher"
+          },
+          "texte": {
+            "fr": "Dans leurs réglages, onglet Image : chaque effet se règle et s'explique (contours, relief, ombres, lumière, reflets, distance, images par seconde), avec trois préréglages, dont un léger pour les PC portables.",
+            "en": "In their settings, Graphics tab: every effect can be set and is explained (edges, relief, shadows, lighting, reflections, distance, frames per second), with three presets, including a light one for laptops.",
+            "es": "En sus ajustes, pestaña Gráficos: cada efecto se ajusta y se explica (contornos, relieve, sombras, luz, reflejos, distancia, imágenes por segundo), con tres preajustes, uno ligero para portátiles."
+          }
+        }
+      ],
+      "changements": [
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "HP6 : Difficile et Hardcore se ressentent en duel, Harry tombe bien plus vite.",
+            "en": "HP6: Hard and Hardcore are felt in duels, Harry falls far sooner.",
+            "es": "HP6: Difícil y Hardcore se notan en los duelos, Harry cae mucho antes."
+          }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "HP4 : les créatures encaissent plus de sorts en Difficile et en Hardcore.",
+            "en": "HP4: creatures take more spells on Hard and Hardcore.",
+            "es": "HP4: las criaturas aguantan más hechizos en Difícil y Hardcore."
+          }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "HP3 : en Difficile et en Hardcore, chaque coup reçu fait plus mal ; en Détendu, moins.",
+            "en": "HP3: on Hard and Hardcore, every hit you take hurts more; on Relaxed, less.",
+            "es": "HP3: en Difícil y Hardcore, cada golpe recibido duele más; en Relajado, menos."
+          }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "HP2 : en Difficile et en Hardcore, chaque coup reçu fait plus mal ; en Détendu, moins.",
+            "en": "HP2: on Hard and Hardcore, every hit you take hurts more; on Relaxed, less.",
+            "es": "HP2: en Difícil y Hardcore, cada golpe recibido duele más; en Relajado, menos."
+          }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "Une seule vie : dans HP3, seule la mort du héros que vous jouez compte, même dans les épreuves de Ron et d'Hermione ; dans HP4, seule celle du personnage choisi ; dans HP6, « Continuer » ne répond plus après la fin, une nouvelle partie ouvre une nouvelle vie.",
+            "en": "One life: in HP3, only the death of the hero you play counts, even in Ron's and Hermione's challenges; in HP4, only the character you chose; in HP6, “Continue” no longer responds after the end, a new game starts a new life.",
+            "es": "Una sola vida: en HP3 solo cuenta la muerte del héroe que juegas, incluso en las pruebas de Ron y Hermione; en HP4, solo la del personaje elegido; en HP6, «Continuar» ya no responde tras el final, una partida nueva abre una vida nueva."
+          }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "Les morts se comptent, partie par partie.",
+            "en": "Deaths are counted, run by run.",
+            "es": "Las muertes se cuentan, partida a partida."
+          }
+        },
+        {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "HP1 et HP2 : la qualité du rendu se règle dans le launcher, pour retrouver de la fluidité sur un PC portable ou la plus belle image sur un PC récent.",
+            "en": "HP1 and HP2: rendering quality can be set in the launcher, to get smooth play back on a laptop or the finest image on a recent PC.",
+            "es": "HP1 y HP2: la calidad de renderizado se ajusta en el launcher, para recuperar fluidez en un portátil o la mejor imagen en un PC reciente."
+          }
+        },
+        {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "Les huit jeux peuvent se lancer sur la plus puissante de deux cartes graphiques (réglages du jeu, onglet Image).",
+            "en": "All eight games can run on the more powerful of two graphics cards (game settings, Graphics tab).",
+            "es": "Los ocho juegos pueden iniciarse en la más potente de dos tarjetas gráficas (ajustes del juego, pestaña Gráficos)."
+          }
+        },
+        {
+          "genre": "ameliore",
+          "texte": {
+            "fr": "Un avertissement quand l'écran est branché sur la puce graphique du processeur au lieu de la carte graphique.",
+            "en": "A warning when the screen is plugged into the processor's graphics chip instead of the graphics card.",
+            "es": "Un aviso cuando la pantalla está conectada al chip gráfico del procesador en lugar de la tarjeta gráfica."
+          }
+        },
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "HP5 : avec « Caméra fluide », les gestes des sorts retrouvent leur rythme d'origine.",
+            "en": "HP5: with “Smooth camera”, spell gestures are back to their original pace.",
+            "es": "HP5: con «Cámara fluida», los gestos de los hechizos recuperan su ritmo original."
+          }
+        }
+      ]
+    },
+    {
       "version": "1.3.6-beta.1",
       "nom": "",
       "depuis": "1.3.5",
