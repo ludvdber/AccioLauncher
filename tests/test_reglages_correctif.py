@@ -337,9 +337,11 @@ class TestModeDifficile:
         # de HP6 (ZoneCulling, vu à l'image le 2026-11-13, livré à 2), et les textures HD de
         # HP6 (TextureReplace, pack HD bêta de la 1.3.4), et la définition des ombres, « expérimentale »
         # dans l'ini livré et qui tache HP6 à ×4 (audit UI f101), et le bord des ombres flouté de HP5 et
-        # HP6 (ShadowBlur, écrit le 2026-11-18, pas encore vu en jeu).
+        # HP6 (ShadowBlur, écrit le 2026-11-18, pas encore vu en jeu), et les petits objets et l'horizon
+        # de HP4 (CullDistance, MaxFarClip : posés au camping fermé, pas encore vus dans un extérieur).
         assert {r.ident for r in rc.REGLAGES.values() if r.beta and r.ident not in hardcore} == {
-            "quidditch", "camera_fluide", "decor_entier", "textures_hd", "ombres_nettes", "ombres_floutees"}
+            "quidditch", "camera_fluide", "decor_entier", "textures_hd", "ombres_nettes", "ombres_floutees",
+            "petits_objets_lointains", "horizon"}
 
     def test_le_bord_des_ombres_floute_attend_son_archive(self, tmp_path):
         """ShadowBlur : l'écart entre les prélèvements du flou, écrit tel quel ; aucun jeu ne le propose tant

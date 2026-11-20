@@ -22,7 +22,7 @@ from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 
 from PyQt6.QtCore import QEvent, QObject, QPointF, QRectF, QSize, Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QFocusEvent, QFontMetrics, QKeyEvent, QMouseEvent, QPainter, QPainterPath, QPen, QWheelEvent
+from PyQt6.QtGui import QColor, QFocusEvent, QFont, QFontMetrics, QKeyEvent, QMouseEvent, QPainter, QPainterPath, QPen, QWheelEvent
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QComboBox,
@@ -116,6 +116,10 @@ QPushButton#retourAccio {{
     background: transparent; border: none; border-radius: 6px; padding: 0px 2px;
 }}
 QPushButton#retourAccio:hover {{ background: rgba(214, 167, 44, 0.14); }}
+QPushButton#deplierFins {{
+    color: {ENCRE_DOUCE}; background: transparent; border: none; border-radius: 6px; padding: 2px 4px;
+}}
+QPushButton#deplierFins:hover {{ color: #f2e6c4; }}
 QLineEdit#recherche {{
     color: #ecebf3; background: #10101d; border: 1px solid rgba(255, 255, 255, 0.10);
     border-radius: 6px; padding: 6px 10px;
@@ -807,6 +811,8 @@ class PageImage(QWidget):
         self._actif = ""
         self._sous_la_main = ""      # la ligne sous la souris ou au focus (fenêtre sans fiche)
         self._construites: set[int] = set()
+        # Les groupes repliés des catégories bâties : (bouton, carte, réglages qu'elle porte).
+        self._fins: list[tuple[QPushButton, QFrame, tuple[Reglage, ...]]] = []
         self._rang = 0                  # la catégorie ouverte, rouverte quand la recherche se vide
         # Les résultats de recherche, bâtis à la première lettre : identifiant → (nom, aide, ligne).
         self._trouvables: dict[str, tuple[str, str, QWidget]] | None = None
@@ -1010,10 +1016,13 @@ class PageImage(QWidget):
             ecran = cat.ident == "ecran" and groupe.nom == "Affichage"
             if not groupe.reglages and not (ecran and (self._resolution or self._libres)):
                 continue
-            v.addWidget(petit_titre(tr(groupe.nom)))
-            v.addSpacing(6)
             carte = QFrame()
             carte.setObjectName("carteImage")
+            if groupe.nom == reglages_image.GROUPE_FIN:
+                v.addWidget(self._bouton_fins(carte, groupe.reglages), alignment=Qt.AlignmentFlag.AlignLeft)
+            else:
+                v.addWidget(petit_titre(tr(groupe.nom)))
+            v.addSpacing(6)
             v.addWidget(carte)
             v.addSpacing(16)
             lay = QVBoxLayout(carte)
@@ -1036,6 +1045,28 @@ class PageImage(QWidget):
             note.setStyleSheet(f"color: {_COULEUR_AVERTIR}; background: transparent;")
             v.addWidget(note)
         v.addStretch()
+
+    def _bouton_fins(self, carte: QFrame, reglages: tuple[Reglage, ...]) -> QPushButton:
+        """Le titre du groupe replié (Ludo, 2026-11-20) : un clic montre ou cache ses dosages. Fermé à
+        chaque ouverture de la fenêtre ; la recherche trouve ses lignes, qu'il soit ouvert ou non."""
+        b = QPushButton(tr("Réglages fins").upper())
+        b.setObjectName("deplierFins")
+        f = cinzel(8, bold=True)
+        f.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 1.8)
+        b.setFont(f)
+        b.setCheckable(True)
+        b.setCursor(Qt.CursorShape.PointingHandCursor)
+        b.setAutoDefault(False)
+        b.setAccessibleName(tr("Réglages fins"))
+
+        def basculer(ouvert: bool) -> None:
+            b.setIcon(icone_de_bouton("replier" if ouvert else "deplier", 12, QColor(ENCRE_DOUCE)))
+            carte.setVisible(ouvert)
+
+        b.toggled.connect(basculer)
+        basculer(False)
+        self._fins.append((b, carte, reglages))
+        return b
 
     def _page_prereglages(self) -> QWidget:
         """Leur propre page, en tête de la liste : un préréglage règle d'un coup plusieurs catégories.
@@ -1404,6 +1435,12 @@ class PageImage(QWidget):
                     ligne.haut.setGraphicsEffect(effet)
                 ligne.note.setText(rc.phrase_blocage(r, bloquant))
                 ligne.note.show()
+        # Un groupe replié dont aucune ligne n'agit (« Couleurs retravaillées » éteint) disparaît avec elles :
+        # ouvert, il montrait une carte vide.
+        for bouton_, carte, reglages in self._fins:
+            utile = any(rc.bloque_par(r, self._valeurs, self.reglages) is None for r in reglages)
+            bouton_.setVisible(utile)
+            carte.setVisible(utile and bouton_.isChecked())
 
     def _maj_prereglage(self) -> None:
         if not self._cartes_prereglage:

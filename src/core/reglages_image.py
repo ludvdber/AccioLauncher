@@ -9,6 +9,9 @@ Ce qui est tranché (la maquette, « Déjà tranché ») :
 - chaque réglage montre deux repères : le jeu d'origine (argent) et la valeur Accio (or) ;
 - des boutons pour 2 à 5 choix courts, un curseur pour les nombres (`CURSEURS`), une liste
   seulement pour ce qui a trop de choix ou de trop longs noms (la résolution, le mode d'affichage).
+
+Les dosages qu'on ne touche presque jamais (Ludo, 2026-11-20 : « Avancé, repliée ») vont dans le
+groupe `GROUPE_FIN` de leur catégorie, le dernier, que la page montre replié.
 """
 
 from collections.abc import Iterable, Sequence
@@ -32,6 +35,9 @@ CATEGORIES: tuple[tuple[str, str], ...] = (
     ("fluidite", "Fluidité"),
 )
 
+# Le groupe replié d'une catégorie : ses dosages fins.
+GROUPE_FIN = "Réglages fins"
+
 # Où va chaque réglage : (catégorie, groupe). L'ordre de la table fait l'ordre des lignes.
 _PLACES: dict[str, tuple[str, str]] = {
     "resolution": ("ecran", "Affichage"),
@@ -39,6 +45,7 @@ _PLACES: dict[str, tuple[str, str]] = {
     "plein_ecran": ("ecran", "Affichage"),
     "format_image": ("ecran", "Affichage"),
     "champ_vision": ("ecran", "Affichage"),
+    "fov_course": ("ecran", "Affichage"),
     "ecran_principal": ("ecran", "Fenêtre"),
     "premier_plan": ("ecran", "Fenêtre"),
     "surechantillonnage": ("qualite", "Contours"),
@@ -50,13 +57,23 @@ _PLACES: dict[str, tuple[str, str]] = {
     "textures_lointaines": ("qualite", "Textures"),
     "textures_hd": ("qualite", "Textures"),
     "occlusion": ("lumiere", "Ombres de contact"),
+    "force_occlusion": ("lumiere", "Ombres de contact"),
     "ombres_nettes": ("lumiere", "Ombres portées"),
     "ombres_douces": ("lumiere", "Ombres portées"),
+    "ombres_fines": ("lumiere", "Ombres portées"),
     "ombres_floutees": ("lumiere", "Ombres portées"),
     "halo": ("lumiere", "Halo et rayons"),
+    "intensite_halo": ("lumiere", "Halo et rayons"),
     "force_halo": ("lumiere", "Halo et rayons"),
+    "halo_fin": ("lumiere", "Halo et rayons"),
     "rayons": ("lumiere", "Halo et rayons"),
+    "force_rayons": ("lumiere", "Halo et rayons"),
+    "portee_occlusion": ("lumiere", GROUPE_FIN),
+    "seuil_halo": ("lumiere", GROUPE_FIN),
+    "longueur_rayons": ("lumiere", GROUPE_FIN),
     "decor_entier": ("distance", "Décor"),
+    "petits_objets_lointains": ("distance", "Décor"),
+    "horizon": ("distance", "Décor"),
     "particules_lointaines": ("distance", "Effets"),
     "feuillage_lointain": ("distance", "Végétation"),
     # À côté du feuillage dense : rangés dans deux catégories, les deux réglages d'arbres
@@ -66,7 +83,15 @@ _PLACES: dict[str, tuple[str, str]] = {
     "vivacite": ("couleurs", "Couleurs"),
     "contraste": ("couleurs", "Couleurs"),
     "vignette": ("couleurs", "Couleurs"),
+    "tons_moyens": ("couleurs", "Couleurs"),
+    "temperature": ("couleurs", "Couleurs"),
+    "retenue_vert": ("couleurs", "Couleurs"),
     "vert_relief": ("couleurs", "Couleurs"),
+    "noirs_releves": ("couleurs", GROUPE_FIN),
+    "exposition": ("couleurs", GROUPE_FIN),
+    "teinte": ("couleurs", GROUPE_FIN),
+    "virage": ("couleurs", GROUPE_FIN),
+    "retenue_jaune": ("couleurs", GROUPE_FIN),
     "ciel": ("ciel", "Ciel"),
     "ciel_heure": ("ciel", "Ciel"),
     "ciel_couleur": ("ciel", "Ciel"),
@@ -202,7 +227,9 @@ def ranger(reglages: Iterable[Reglage]) -> tuple[Categorie, ...]:
             if cat == ident:
                 groupes.setdefault(groupe, []).append(r)
         if groupes:
-            categories.append(Categorie(ident, nom, tuple(Groupe(n, tuple(m)) for n, m in groupes.items())))
+            # Le groupe replié ferme toujours sa catégorie, où que tombe son premier réglage.
+            ordre = sorted(groupes.items(), key=lambda g: g[0] == GROUPE_FIN)
+            categories.append(Categorie(ident, nom, tuple(Groupe(n, tuple(m)) for n, m in ordre)))
     return tuple(categories)
 
 

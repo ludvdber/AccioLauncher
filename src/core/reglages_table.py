@@ -177,6 +177,14 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "vue du jeu.",
             choix=(0, 1.15, 1.25, 1.4), zero="D'origine", format_choix="×{}",
             onglet="affichage"),
+    # HP6, [Accio.Game] AdaptiveFov du correctif (VU le 2026-10-30 nuit, livré allumé ; clé absente = allumé) :
+    # au-delà de ×1,15, la course faisait « TGV » et la caméra voyait à travers les vêtements de Harry.
+    Reglage("fov_course", "Accio.Game", "AdaptiveFov",
+            "Vue resserrée en courant",
+            "Quand le champ de vision est élargi, la caméra revient doucement à la vue du jeu pendant que "
+            "Harry court : la course ne donne plus une impression de vitesse excessive. Éteint, le champ de "
+            "vision choisi vaut partout.",
+            onglet="affichage", depend_de="champ_vision"),
     Reglage("ecran_principal", "Accio.Window", "UsePrimaryMonitor",
             "Toujours sur l'écran principal",
             "Avec plusieurs écrans, ouvre toujours le jeu sur l'écran principal de Windows. "
@@ -388,6 +396,20 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "gagne en relief (occlusion ambiante). Les allumer éteint l'anticrénelage (MSAA).",
             defaut=False, onglet="image", cout=(("GPU", 2),), se_voit=True,
             depend_de="lissage", exclut="anticrenelage"),
+    # HP4-HP6, les dosages des effets du correctif (settings.cpp : SSAOStrength 0,50 et SSAORadius 6 quand
+    # la clé manque, sans borne ; BloomThreshold 0-1, GodRaysDecay 0,80-0,999). Le premier choix est la
+    # valeur d'une clé absente ; l'ini livré peut porter un autre cran (HP4 : BloomStrength 0,25).
+    Reglage("force_occlusion", "Accio.Graphics", "SSAOStrength",
+            "Force des ombres de contact",
+            "Plus ou moins sombres, les recoins et le pied des murs. Seulement avec « Ombres de contact ».",
+            choix=(0.5, 0.3, 0.75), zero="Moyennes", etiquettes=((0.3, "Légères"), (0.75, "Marquées")),
+            chiffre=True, onglet="image", se_voit=True, depend_de="occlusion"),
+    Reglage("portee_occlusion", "Accio.Graphics", "SSAORadius",
+            "Étendue des ombres de contact",
+            "Jusqu'où l'ombre d'un recoin déborde sur le mur et le sol autour de lui. Seulement avec « Ombres "
+            "de contact ».",
+            choix=(6, 4, 9), zero="Moyenne", etiquettes=((4, "Courte"), (9, "Longue")),
+            chiffre=True, onglet="image", depend_de="occlusion"),
     # « Expérimental » dans l'ini livré : agrandit aussi les reflets. En bêta (audit UI f101) :
     # l'étiquette dit l'essai, la fiche n'a plus à dire « à vos risques ».
     Reglage("ombres_nettes", "Accio.Graphics", "ShadowMapScale",
@@ -398,13 +420,24 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             choix=(1, 2, 4), zero="D'origine", format_choix="×{}",
             onglet="image", cout=(("GPU", 2), ("RAM", 1)), beta=True),
     # HP5, vu en jeu le 2026-10-22 depuis la DLL seule : bords des ombres de Harry
-    # et Ron adoucis, forme gardée. Pas HP6 tant que ses ombres tachent quand la
-    # caméra tourne.
+    # et Ron adoucis, forme gardée. HP6 au catalogue 0.61 (2026-11-20) : VU le 2026-10-21 caméra fixe, avec
+    # ShadowTextureSize=512 ; à revoir caméra en mouvement avant la 1.4.1 (les ombres ×4 y tachaient).
     Reglage("ombres_douces", "Accio.Graphics", "SoftShadows",
             "Ombres douces",
             "Adoucit le bord des ombres portées, découpé en escalier dans le jeu livré, comme "
             "une vraie ombre au soleil. Leur forme ne change pas.",
             defaut=False, onglet="image", cout=(("GPU", 1),), se_voit=True),
+    # HP5 et HP6, [Accio.Graphics] ShadowTextureSize du correctif (game.cpp, `SizeShadowTextures` : 128 livré).
+    # VU à 512 : HP5 le 2026-10-21 soir (livré depuis), HP6 le 2026-10-21 aux pierres dressées (silhouette de
+    # l'ombre plus nette, tête et épaules). Toute autre valeur que 128 à 2048 en puissance de deux : livré.
+    Reglage("ombres_fines", "Accio.Graphics", "ShadowTextureSize",
+            "Précision des ombres",
+            "Le jeu dessine ses ombres dans de petites images (128 points de côté). Plus grandes, les "
+            "silhouettes des ombres sont plus nettes, la tête et les épaules en particulier. Contrairement à "
+            "« Définition des ombres », les reflets ne changent pas.",
+            choix=(0, 512, 1024, 2048), zero="D'origine",
+            etiquettes=((512, "Fine"), (1024, "Très fine"), (2048, "La plus fine")),
+            onglet="image", cout=(("GPU", 1), ("RAM", 1)), se_voit=True),
     # HP5 et HP6, [Accio.Graphics] ShadowBlur du correctif (2026-11-18, décision D6 de Ludo : « on peut
     # toujours essayer ») : la carte d'ombre du jeu floutée avant d'être lue ; la valeur est l'écart entre
     # les prélèvements, en texels de la carte. Dans la table, mais dans le `fix_settings` d'AUCUN jeu tant
@@ -416,6 +449,8 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             choix=(0, 1, 2, 4), zero="D'origine",
             etiquettes=((1, "Léger"), (2, "Moyen"), (4, "Fort")),
             onglet="image", cout=(("GPU", 1),), se_voit=True, beta=True),
+    # HP6 au catalogue 0.61 (2026-11-20) : stable à 120, rien de visible sur la scène essayée ; à revoir près
+    # d'un feu ou d'un sort avant la 1.4.1.
     # HP4, vu en jeu le 2026-10-22 au camping de la Coupe du monde : plus de
     # braises et d'escarbilles autour du feu, rien de cassé. 20 = livré.
     Reglage("particules_lointaines", "Accio.Graphics", "ParticleCullDistance",
@@ -440,11 +475,41 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             choix=(1, 2, 0), zero="D'origine",
             etiquettes=((2, "En caméra libre"), (0, "Toujours")),
             onglet="image", cout=(("GPU", 2), ("CPU", 2)), se_voit=True, beta=True),
+    # HP4, [Accio.Graphics] CullDistance et MaxFarClip du correctif (livrés 64 et 100 dans l'exe ; la clé
+    # absente ou 0 les laisse). Posés ensemble le 2026-10-22 au camping de la Coupe du monde (16 et 1000) :
+    # rien de cassé, mais le camping est fermé. En bêta jusqu'à un extérieur dégagé (lac, Forêt).
+    Reglage("petits_objets_lointains", "Accio.Graphics", "CullDistance",
+            "Petits objets au loin",
+            "Le jeu cesse de dessiner un petit objet du décor dès qu'il paraît petit à l'écran. « Plus loin » "
+            "les garde plus longtemps, « Tous » presque toujours.",
+            choix=(0, 16, 1), zero="D'origine", etiquettes=((16, "Plus loin"), (1, "Tous")),
+            onglet="image", cout=(("GPU", 1), ("CPU", 1)), beta=True),
+    Reglage("horizon", "Accio.Graphics", "MaxFarClip",
+            "Horizon plus loin",
+            "Recule la limite au-delà de laquelle la caméra ne dessine plus rien : moins de décor coupé au "
+            "loin, dans les grands extérieurs.",
+            choix=(0, 1000, 10000), zero="D'origine",
+            etiquettes=((1000, "Dix fois plus loin"), (10000, "Cent fois plus loin")),
+            onglet="image", cout=(("GPU", 1),), beta=True),
     Reglage("halo", "Accio.Graphics", "Bloom",
             "Halo ajouté par Accio",
             "Les lumières vives (fenêtres, torches, sorts) débordent doucement autour "
             "d'elles.",
             defaut=False, onglet="image", cout=(("GPU", 1),), depend_de="lissage"),
+    Reglage("intensite_halo", "Accio.Graphics", "BloomStrength",
+            "Force du halo ajouté",
+            "Plus ou moins de lumière autour des fenêtres, des torches et des sorts. Seulement avec « Halo "
+            "ajouté par Accio ».",
+            choix=(0.35, 0.2, 0.5), zero="Moyenne", etiquettes=((0.2, "Douce"), (0.5, "Forte")),
+            chiffre=True, onglet="image", se_voit=True, depend_de="halo"),
+    Reglage("seuil_halo", "Accio.Graphics", "BloomThreshold",
+            "Lumières qui ont un halo",
+            "À partir de quelle clarté une lumière reçoit le halo : « Davantage » en donne aussi aux lumières "
+            "moins vives, « Les plus vives » le garde pour le soleil et les flammes. Seulement avec « Halo "
+            "ajouté par Accio ».",
+            choix=(0.75, 0.6, 0.9), zero="Les vives",
+            etiquettes=((0.6, "Davantage"), (0.9, "Les plus vives")),
+            chiffre=True, onglet="image", depend_de="halo"),
     # HP5, [Accio.Graphics] NativeBloomStrength du correctif (settings.cpp, glow.h ; lu au démarrage seulement) :
     # la part de la lueur DU JEU posée sur l'image, 0 à 100, 100 = livré et clé absente. Indépendante du FXAA et
     # du `halo` (le Bloom du correctif). VU en jeu le 2026-11-12 (essai 73, Ron de profil) : à 100 le liseré orangé
@@ -460,11 +525,29 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             choix=(100, 60, 30, 0), zero="D'origine",
             etiquettes=((60, "Douce"), (30, "Faible"), (0, "Aucune")),
             onglet="image", se_voit=True),
+    # HP5 et HP6, [Accio.Graphics] NativeBloomSize du correctif (512 livré en Qualité ; 1024 ou 2048, toute
+    # autre valeur : livré). HP5 : VU le 2026-11-12, 1024 livré. HP6 : 1024 léger sur le ciel (2026-10-21).
+    Reglage("halo_fin", "Accio.Graphics", "NativeBloomSize",
+            "Finesse de la lueur du jeu",
+            "Le jeu calcule la lueur de ses lumières dans une image plus petite que l'écran. Plus grande, la "
+            "lueur est plus fine et bave moins autour des lampes et sur le ciel.",
+            choix=(0, 1024, 2048), zero="D'origine", etiquettes=((1024, "Fine"), (2048, "Très fine")),
+            onglet="image", cout=(("GPU", 1),)),
     Reglage("rayons", "Accio.Graphics", "GodRays",
             "Rayons de lumière",
             "Des rayons partent des sources de lumière fortes, comme le soleil à travers les "
             "arbres.",
             defaut=False, onglet="image", cout=(("GPU", 1),), depend_de="lissage"),
+    Reglage("force_rayons", "Accio.Graphics", "GodRaysStrength",
+            "Force des rayons",
+            "Des rayons de lumière plus ou moins marqués. Seulement avec « Rayons de lumière ».",
+            choix=(0.45, 0.25, 0.7), zero="Moyenne", etiquettes=((0.25, "Douce"), (0.7, "Forte")),
+            chiffre=True, onglet="image", se_voit=True, depend_de="rayons"),
+    Reglage("longueur_rayons", "Accio.Graphics", "GodRaysDecay",
+            "Longueur des rayons",
+            "Jusqu'où les rayons s'étirent avant de s'effacer. Seulement avec « Rayons de lumière ».",
+            choix=(0.96, 0.92, 0.98), zero="Moyens", etiquettes=((0.92, "Courts"), (0.98, "Longs")),
+            chiffre=True, onglet="image", depend_de="rayons"),
     Reglage("couleurs", "Accio.Graphics", "ColorGrading",
             "Couleurs retravaillées",
             "Active la vivacité, le contraste et la vignette ci-dessous, en épargnant les visages. "
@@ -488,6 +571,60 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "rend des coins aussi clairs que le reste. Seulement avec « Couleurs retravaillées ».",
             choix=tuple(v for v, _ in VIGNETTES), zero="Aucune", etiquettes=VIGNETTES, chiffre=True,
             onglet="image", se_voit=True, depend_de="couleurs"),
+    # HP4-HP6, l'étalonnage du correctif (shaders/fxaa.hlsl, `grade`) : Gain multiplie, Lift ajoute, Gamma
+    # est l'exposant (sous 1 = plus clair) ; Temperature et Tint -1 à 1, SplitTone et YellowRestraint 0 à 1.
+    # Le premier choix est le neutre, la valeur d'une clé absente. Le jeu d'origine n'a pas d'étalonnage :
+    # ses valeurs (`VALEURS_DU_JEU`) sont ces neutres.
+    Reglage("tons_moyens", "Accio.Graphics", "Gamma",
+            "Luminosité des tons moyens",
+            "Éclaircit ou assombrit les tons moyens sans toucher au noir ni au blanc. Seulement avec "
+            "« Couleurs retravaillées ».",
+            choix=(1, 0.85, 1.15), zero="Neutres", etiquettes=((0.85, "Plus clairs"), (1.15, "Plus sombres")),
+            chiffre=True, onglet="image", se_voit=True, depend_de="couleurs"),
+    Reglage("temperature", "Accio.Graphics", "Temperature",
+            "Température des couleurs",
+            "Une image plus chaude (vers l'orangé) ou plus froide (vers le bleu), sans changer sa clarté. "
+            "Seulement avec « Couleurs retravaillées ».",
+            choix=(0, -0.2, 0.2), zero="Neutre", etiquettes=((-0.2, "Plus froide"), (0.2, "Plus chaude")),
+            chiffre=True, onglet="image", se_voit=True, depend_de="couleurs"),
+    Reglage("noirs_releves", "Accio.Graphics", "Lift",
+            "Noirs",
+            "Éclaircit les parties les plus sombres : on y distingue plus de détails, au prix de noirs moins "
+            "profonds. Seulement avec « Couleurs retravaillées ».",
+            choix=(0, 0.03, 0.06), zero="Neutres", etiquettes=((0.03, "Un peu relevés"), (0.06, "Relevés")),
+            chiffre=True, onglet="image", depend_de="couleurs"),
+    Reglage("exposition", "Accio.Graphics", "Gain",
+            "Exposition",
+            "Toute l'image un peu plus claire ou plus sombre, blancs compris. Seulement avec « Couleurs "
+            "retravaillées ».",
+            choix=(1, 0.95, 1.05), zero="Neutre", etiquettes=((0.95, "Plus sombre"), (1.05, "Plus claire")),
+            chiffre=True, onglet="image", depend_de="couleurs"),
+    Reglage("teinte", "Accio.Graphics", "Tint",
+            "Teinte vert-rose",
+            "Déplace toute l'image vers le vert ou vers le rose, sans changer sa clarté. Seulement avec "
+            "« Couleurs retravaillées ».",
+            choix=(0, -0.5, 0.5), zero="Neutre", etiquettes=((-0.5, "Plus verte"), (0.5, "Plus rose")),
+            chiffre=True, onglet="image", depend_de="couleurs"),
+    Reglage("virage", "Accio.Graphics", "SplitTone",
+            "Ombres bleutées, lumières dorées",
+            "Teinte les ombres de bleu et les lumières d'or, comme au cinéma. Seulement avec « Couleurs "
+            "retravaillées ».",
+            choix=(0, 0.1, 0.25), zero="Aucun", etiquettes=((0.1, "Léger"), (0.25, "Marqué")),
+            chiffre=True, onglet="image", depend_de="couleurs"),
+    Reglage("retenue_jaune", "Accio.Graphics", "YellowRestraint",
+            "Jaunes adoucis",
+            "Tient les jaunes à l'écart de la vivacité et les calme un peu : un décor moins criard. "
+            "Seulement avec « Couleurs retravaillées ».",
+            choix=(0, 0.5, 1), zero="Aucun", etiquettes=((0.5, "Adoucis"), (1, "Très adoucis")),
+            chiffre=True, onglet="image", depend_de="couleurs"),
+    # HP5 et HP6, la retenue du vert menthe (ciel et lointain). `vert_relief` en rend une part au relief : à 0
+    # (livré sur HP5), il n'a rien à rendre, d'où sa dépendance.
+    Reglage("retenue_vert", "Accio.Graphics", "GreenRestraint",
+            "Vert menthe du ciel",
+            "Retire la brume vert menthe dont le jeu teinte le ciel et le lointain. Seulement avec « Couleurs "
+            "retravaillées ».",
+            choix=(0, 0.5, 1), zero="Gardé", etiquettes=((0.5, "Atténué"), (1, "Retiré")),
+            chiffre=True, onglet="image", se_voit=True, depend_de="couleurs"),
     # HP6, vu en jeu le 2026-09-26 : le voile vert du décor lointain (ce que
     # Ludo trouvait « très flou au loin, comme un brouillard »). Éteint, les
     # collines du parc sont nettes (contraste du tiers lointain 21-27 → 25-31).
@@ -508,7 +645,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             choix=(1, 0.6, 0.4, 0.2, 0), zero="Gris",
             etiquettes=((0.6, "Légèrement vert"), (0.4, "Vert"), (0.2, "Très vert"),
                         (0, "Vert du jeu")), chiffre=True,
-            onglet="image", se_voit=True, depend_de="couleurs"),
+            onglet="image", se_voit=True, depend_de="retenue_vert"),
     # HP6, le ciel ([Accio.Graphics] SkyMode, SkyHour, SkyColor de source/sky.h du
     # correctif), vu en jeu le 2026-10-26 ; relu dans la seconde, partie en cours
     # comprise. L'ini livré porte SkyMode=1 (bleu) : le premier choix (0) vaut pour
@@ -667,6 +804,22 @@ CURSEURS: dict[str, tuple[float, float, float]] = {
     "vert_relief": (0, 1, 0.05),
     "textures_lointaines": (-1.5, 0, 0.1),
     "force_halo": (0, 100, 5),
+    # Les dosages de HP4-HP6, dans les bornes du correctif (settings.cpp, 2026-11-20) ; sans borne chez lui
+    # (SSAOStrength, SSAORadius, BloomStrength, GodRaysStrength, Lift, Gain, Gamma), celles d'un goût sensé.
+    "force_occlusion": (0.1, 1, 0.05),
+    "portee_occlusion": (2, 12, 0.5),
+    "intensite_halo": (0.05, 0.8, 0.05),
+    "seuil_halo": (0.4, 0.95, 0.05),
+    "force_rayons": (0.05, 1, 0.05),
+    "longueur_rayons": (0.9, 0.99, 0.01),
+    "tons_moyens": (0.7, 1.3, 0.05),
+    "temperature": (-0.5, 0.5, 0.05),
+    "noirs_releves": (0, 0.1, 0.01),
+    "exposition": (0.8, 1.2, 0.05),
+    "teinte": (-1, 1, 0.05),
+    "virage": (0, 0.5, 0.05),
+    "retenue_jaune": (0, 1, 0.05),
+    "retenue_vert": (0, 1, 0.05),
     "ciel_heure": (0, 24, 0.25),
     # Le rendu D3D11 de HP1/HP2 (`qualite_rendu`) : SSRIntensity, 0,35 installé, ×0,5 encore sur un mur nu.
     "rendu_reflets_force": (0.1, 0.6, 0.05),
@@ -684,6 +837,9 @@ VALEURS_DU_JEU: dict[str, ValeurChoix | bool] = {
     "ombres_douces": False, "ombres_floutees": 0, "particules_lointaines": 0, "decor_entier": 1, "halo": False,
     "force_halo": 100, "rayons": False, "couleurs": False, "vivacite": 0, "contraste": 0,
     "vignette": 0, "brouillard": True, "vert_relief": 0, "ciel": 0,
+    "ombres_fines": 0, "halo_fin": 0, "petits_objets_lointains": 0, "horizon": 0,
+    "tons_moyens": 1, "temperature": 0, "noirs_releves": 0, "exposition": 1, "teinte": 0, "virage": 0,
+    "retenue_jaune": 0, "retenue_vert": 0,
 }
 
 # Les préréglages de « Qualité d'image » : (identifiant, nom, ce qu'il fait,
