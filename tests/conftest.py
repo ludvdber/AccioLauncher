@@ -188,6 +188,14 @@ def _jamais_les_vraies_cartes_graphiques(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _journaux_des_jeux_hors_du_vrai_dossier(tmp_path, monkeypatch):
+    """Chaque lancement de test range des journaux (`journaux_jeux.au_lancement`) : jamais
+    dans le `_Launcher` de la personne qui lance la suite."""
+    monkeypatch.setattr("src.core.journaux_jeux.DOSSIER", tmp_path / "_journaux_jeux")
+    yield
+
+
+@pytest.fixture(autouse=True)
 def _jamais_la_vraie_manette(monkeypatch):
     """Aucun test n'écrit sur une vraie manette branchée.
 

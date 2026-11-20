@@ -1608,6 +1608,10 @@
     "La sauvegarde n'a pas pu être écrite. Le journal du launcher en dit la raison.": "No se pudo escribir la partida guardada. El registro del launcher indica el motivo.",
     "C'est écrit": "Hecho",
     "La partie {} vous attend dans le menu du jeu.": "La partida {} te espera en el menú del juego.",
-    "Les dégâts changent à tout moment, partie en cours comprise ; la résistance des créatures, au prochain niveau.": "El daño cambia cuando quieras, incluso en plena partida; la resistencia de las criaturas, en el siguiente nivel."
+    "Les dégâts changent à tout moment, partie en cours comprise ; la résistance des créatures, au prochain niveau.": "El daño cambia cuando quieras, incluso en plena partida; la resistencia de las criaturas, en el siguiente nivel.",
+    "Rapport du jeu": "Informe del juego",
+    "Les réglages en place et les journaux des derniers lancements, prêts à joindre à une demande d'aide.": "Los ajustes actuales y los registros de los últimos inicios, listos para adjuntar a una petición de ayuda.",
+    "Le rapport n'a pas pu être écrit sur le Bureau.": "No se pudo escribir el informe en el Escritorio.",
+    "Rapport de {} copié : un Ctrl+V le joint sur Discord ou GitHub. Il est aussi sur votre Bureau.": "Informe de {} copiado: un Ctrl+V lo adjunta en Discord o GitHub. También está en tu Escritorio."
   }
 }

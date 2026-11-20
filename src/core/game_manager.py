@@ -16,7 +16,7 @@ from src.core import captures, compat, demarrage, incrustation_wine, manette
 from src.core.chemins import chemin_relatif_sur
 from src.core import game_language as langue
 from src.core import copies_sauvegardes, memoire_4go, reglages_correctif, reprise, resolution_jeu, stats
-from src.core import qualite_rendu, texte_ue1, une_vie
+from src.core import journaux_jeux, qualite_rendu, texte_ue1, une_vie
 from src.core.catalogue_blocs import GameLanguage, LangueFichiers, Trailer
 from src.core.config import Config, cache_pour
 from src.core.game_registry import Confirmer
@@ -341,6 +341,9 @@ class GameManager:
         # Et la couleur de la maison, que son xinput1_3.dll repose sur la manette.
         manette.preparer((self.config.install_path / game.executable).parent,
                          self.config.theme if self.config.couleur_manette else None)
+        # Tout est posé : les journaux de la partie précédente rangés avant que le jeu ne les réécrive,
+        # et les réglages de celle-ci notés (bouton « Rapport du jeu »).
+        journaux_jeux.au_lancement(game, self.config, taille)
 
         # Les sauvegardes telles qu'elles sont AVANT la partie
         # (`copies_sauvegardes`). Sur un fil : la toute première fois, HP3 en a

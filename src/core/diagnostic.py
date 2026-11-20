@@ -646,27 +646,12 @@ def lire_la_fin(chemin: Path, n: int = JOURNAL_MAX) -> str:
 
 def journaux_des_jeux(manager: GameManager) -> list[tuple[str, Path]]:
 
-    """Les `.log` des jeux installés : à côté de l'exe (correctif, manette,
-    dgVoodoo) et dans leur dossier de Documents (HP1-HP3 : `HP.log`…)."""
-    from src.core import sauvegardes
+    """Les `.log` des jeux installés (`journaux_jeux.fichiers_journaux`)."""
     from src.core.game_manager import GameState
-    trouves: list[tuple[str, Path]] = []
-    for g in manager.catalog.games:
-        if manager.get_state(g.id) == GameState.NOT_INSTALLED:
-            continue
-        dossiers = [(Path(manager.config.install_path) / g.executable).parent]
-        spec = g.sauvegardes
-        if spec is not None and spec.racine == "documents":
-            d = sauvegardes.dossier(spec)
-            if d is not None:
-                dossiers.append(d.parent)
-        for d in dossiers:
-            try:
-                fichiers = sorted(f for f in d.glob("*.log") if f.is_file())
-            except OSError:
-                continue
-            trouves += [(f"{g.id} · {f.name}", f) for f in fichiers]
-    return trouves
+    from src.core.journaux_jeux import fichiers_journaux
+    return [(f"{g.id} · {f.name}", f) for g in manager.catalog.games
+            if manager.get_state(g.id) != GameState.NOT_INSTALLED
+            for f in fichiers_journaux(g, Path(manager.config.install_path))]
 
 
 def rapport_complet(resume: str, journaux: list[tuple[str, str]]) -> str:

@@ -1607,6 +1607,10 @@
     "La sauvegarde n'a pas pu être écrite. Le journal du launcher en dit la raison.": "The save could not be written. The launcher log gives the reason.",
     "C'est écrit": "Done",
     "La partie {} vous attend dans le menu du jeu.": "Game {} is waiting for you in the game's menu.",
-    "Les dégâts changent à tout moment, partie en cours comprise ; la résistance des créatures, au prochain niveau.": "Damage changes at any time, even mid-game; creature resistance, at the next level."
+    "Les dégâts changent à tout moment, partie en cours comprise ; la résistance des créatures, au prochain niveau.": "Damage changes at any time, even mid-game; creature resistance, at the next level.",
+    "Rapport du jeu": "Game report",
+    "Les réglages en place et les journaux des derniers lancements, prêts à joindre à une demande d'aide.": "The current settings and the logs of the last launches, ready to attach to a request for help.",
+    "Le rapport n'a pas pu être écrit sur le Bureau.": "The report could not be written to the Desktop.",
+    "Rapport de {} copié : un Ctrl+V le joint sur Discord ou GitHub. Il est aussi sur votre Bureau.": "{} report copied: Ctrl+V attaches it on Discord or GitHub. It is also on your Desktop."
   }
 }

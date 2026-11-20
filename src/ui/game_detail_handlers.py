@@ -35,7 +35,7 @@ from src.ui.fichiers_manquants import (
     constat_complet, ouvrir_dossier_du_jeu as _ouvrir_dossier_du_jeu, signaler_fichiers_manquants)
 from src.ui.game_settings_dialog import GameSettingsDialog
 from src.ui.reglages_rubriques import ActionFichier
-from src.ui import filtres_globaux
+from src.ui import filtres_globaux, rapport_jeu
 from src.ui.versions_dialog import VersionsDialog
 
 if TYPE_CHECKING:
@@ -940,8 +940,8 @@ def _actions_fichiers(view: GameDetailView, game: GameData) -> list[ActionFichie
                                      tr("Vérifier")))
         actions.append(ActionFichier(tr("Ouvrir le dossier du jeu"), lambda: _ouvrir_dossier_du_jeu(view, game),
                                      tr("Là où le jeu est installé."), tr("Ouvrir")))
-    # Même désinstallé : les copies vivent hors du dossier du jeu (on revient
-    # peut-être pour elles) ; installé sans copie : on peut y importer une partie.
+        actions.append(rapport_jeu.action(view, game))
+    # Désinstallé : les copies vivent hors du jeu ; installé sans copie : on peut y importer une partie.
     if game.sauvegardes is not None and (copies_sauvegardes.versions(game.id) or installe):
         actions.append(ActionFichier(tr("Sauvegardes"), lambda: _ouvrir_copies(view, game),
                                      tr("Les copies de tes parties : revenir à une version, exporter, importer."),

@@ -77,9 +77,10 @@ body:
       description: |
         In the launcher: **Settings → About → Copy report**, then paste it here (Ctrl+V). The same button also puts the full report on your Desktop, `Accio Launcher - rapport.txt`: drag that file into this field, it holds the logs too. It contains the launcher and Windows versions, your graphics card, the installed games and the latest errors. Paths are anonymised: nothing personal is in it.
         If the launcher crashed, the crash window has the same **Copy report** button.
+        **A problem with one game?** Its gear → **Files** → **Game report** → **Copy**: its current settings and the logs of its last launches.
         If the launcher won't open at all, drag its log file into this field: `%USERPROFILE%\Games\AccioLauncher\_Launcher\logs\accio_launcher.log` (Linux: `~/Games/AccioLauncher/_Launcher/logs/accio_launcher.log`).
 
-        Dans le launcher : **Paramètres → À propos → Copier le rapport**, puis collez ici (Ctrl+V), ou glissez ici le fichier `Accio Launcher - rapport.txt` que le bouton pose sur votre Bureau. Après un plantage, la fenêtre de plantage a le même bouton. Si le launcher ne s'ouvre plus, glissez ici son journal (chemin ci-dessus).
+        Dans le launcher : **Paramètres → À propos → Copier le rapport**, puis collez ici (Ctrl+V), ou glissez ici le fichier `Accio Launcher - rapport.txt` que le bouton pose sur votre Bureau. Après un plantage, la fenêtre de plantage a le même bouton. **Un souci avec un jeu ?** Son engrenage → **Fichiers** → **Rapport du jeu** → **Copier** : ses réglages et les journaux de ses derniers lancements. Si le launcher ne s'ouvre plus, glissez ici son journal (chemin ci-dessus).
       render: text
       placeholder: "Paste the report copied from the launcher here. / Collez ici le rapport copié depuis le launcher."
     validations:
