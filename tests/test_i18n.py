@@ -31,6 +31,8 @@ IDENTIQUES_TOLEREES = {
     "Gris",
     # Les mots techniques des fiches de la page Image (refonte B) : des sigles.
     "FXAA", "MSAA",
+    # Le preset le plus dur (Ludo, 2026-11-20) : la formule du livre, la même dans toutes les éditions.
+    "Avada Kedavra",
     # Couleurs du ciel de HP6 qui s'écrivent pareil en anglais.
     "Orange", "Mauve", "Turquoise",
     # Difficulté du Quidditch de HP1/HP2 : « Expert » s'écrit pareil en anglais.

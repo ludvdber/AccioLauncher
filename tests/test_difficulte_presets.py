@@ -1,5 +1,5 @@
-"""Les presets de difficulté de la 1.4 (Normal, Détendu, Hardcore ; Réaliste et Impardonnable à une
-seule vie), tranchés par Ludo le 2026-10-30."""
+"""Les presets de difficulté de la 1.4 (Normal, Détendu, Hardcore ; Réaliste, Impardonnable et Avada
+Kedavra à une seule vie), tranchés par Ludo le 2026-10-30 et le 2026-11-20."""
 import itertools
 from pathlib import Path
 from types import SimpleNamespace
@@ -63,8 +63,9 @@ class TestValeurs:
             reglage = REGLAGES[ident]
             assert valeur == (reglage.choix[0] if reglage.choix else reglage.defaut), ident
 
-    def test_sept_presets_du_plus_doux_au_plus_dur(self):
-        assert [p.ident for p in dp.PRESETS] == ["recit", "detendu", "normal", "difficile", "hardcore", "realiste", "impardonnable"]
+    def test_huit_presets_du_plus_doux_au_plus_dur(self):
+        assert [p.ident for p in dp.PRESETS] == ["recit", "detendu", "normal", "difficile", "hardcore", "realiste",
+                                                 "impardonnable", "avada_kedavra"]
 
     def test_chaque_cran_est_plus_dur_que_le_precedent(self):
         """Ludo, 2026-10-30 : Difficile entre la difficulté d'origine et Hardcore, Hardcore bien au-delà."""
@@ -86,10 +87,18 @@ class TestValeurs:
         """Ludo, 2026-10-30 : un sort retiré peut bloquer la partie, c'est un réglage à part."""
         assert all("sorts_retires" not in p.valeurs for p in dp.PRESETS)
 
-    def test_une_seule_vie_reprend_normal_et_hardcore(self):
-        assert dp.PAR_IDENT["realiste"].valeurs == dp.PAR_IDENT["normal"].valeurs
+    def test_une_seule_vie_garde_le_joueur_puis_hardcore_puis_le_plus_dur(self):
+        """Ludo, 2026-11-20 : Réaliste garde la difficulté du joueur, Impardonnable est Hardcore à un coup
+        fatal, Avada Kedavra met chaque réglage à son choix le plus dur."""
+        assert dp.PAR_IDENT["realiste"].valeurs == {}
         assert dp.PAR_IDENT["impardonnable"].valeurs == dp.PAR_IDENT["hardcore"].valeurs
-        assert [p.ident for p in dp.PRESETS if p.une_vie] == ["realiste", "impardonnable"]
+        assert [p.ident for p in dp.PRESETS if p.une_vie] == ["realiste", "impardonnable", "avada_kedavra"]
+        assert [p.ident for p in dp.PRESETS if p.un_coup] == ["impardonnable", "avada_kedavra"]
+        avada = dp.PAR_IDENT["avada_kedavra"].valeurs
+        for ident, valeur in avada.items():
+            if ident in REGLAGES and REGLAGES[ident].choix:
+                pires = max(REGLAGES[ident].choix, key=lambda c, i=ident: dp._terme(i, c))
+                assert dp._terme(ident, valeur) == dp._terme(ident, pires), ident
 
 
 class TestParJeu:
@@ -103,7 +112,7 @@ class TestParJeu:
         idents = dp.idents_du_jeu(_jeu(fix_settings=list(HP6)), ini)
         assert idents == HP6_PRESETS
         assert [p.ident for p in dp.PRESETS if dp.disponible(p, "hp6", idents)] == \
-            ["recit", "detendu", "normal", "difficile", "hardcore", "realiste", "impardonnable"]
+            ["recit", "detendu", "normal", "difficile", "hardcore", "realiste", "impardonnable", "avada_kedavra"]
 
     def test_une_seule_vie_dans_les_six_jeux_vus(self):
         """Mort VUE finir la vie dans les six (atelier, IDEES_A_VOIR_EN_JEU.md) ; HP7 et HP8 de côté."""
@@ -112,10 +121,15 @@ class TestParJeu:
     def test_le_mode_se_reconnait_a_ses_cles_pas_aux_valeurs(self):
         normal = dp.valeurs_pour(dp.PAR_IDENT["normal"], HP6_PRESETS)
         dur = dp.valeurs_pour(dp.PAR_IDENT["hardcore"], HP6_PRESETS)
+        avada = dp.valeurs_pour(dp.PAR_IDENT["avada_kedavra"], HP6_PRESETS)
         assert dp.courant(normal, HP6_PRESETS) == "normal"
+        # Sans coup fatal, Réaliste garde les valeurs du joueur, quelles qu'elles soient.
         assert dp.courant(normal, HP6_PRESETS, une_vie=True) == "realiste"
-        assert dp.courant(dur, HP6_PRESETS, une_vie=True) == "impardonnable"
-        assert dp.courant({**normal, "degats_recus": 2}, HP6_PRESETS, une_vie=True) == dp.SUR_MESURE
+        assert dp.courant(dur, HP6_PRESETS, une_vie=True) == "realiste"
+        assert dp.courant({**normal, "degats_recus": 2}, HP6_PRESETS, une_vie=True) == "realiste"
+        assert dp.courant(dur, HP6_PRESETS, une_vie=True, un_coup=True) == "impardonnable"
+        assert dp.courant(avada, HP6_PRESETS, une_vie=True, un_coup=True) == "avada_kedavra"
+        assert dp.courant(normal, HP6_PRESETS, une_vie=True, un_coup=True) == dp.SUR_MESURE
 
     def test_un_jeu_sans_reglage_est_normal_et_realiste_avec_le_mode(self):
         """HP3 : aucun réglage déclaré ; avec le mode, Réaliste."""
@@ -123,13 +137,22 @@ class TestParJeu:
         assert dp.courant({}, frozenset(), une_vie=True) == "realiste"
 
     def test_une_seule_vie_s_ouvre_jeu_par_jeu(self, monkeypatch):
-        """Le jour où le mécanisme existe dans un jeu : Réaliste s'y offre même sans
-        autre réglage, Impardonnable seulement là où Hardcore change quelque chose."""
+        """Le jour où le mécanisme existe dans un jeu : Réaliste et Impardonnable s'y offrent même sans
+        autre réglage (le coup fatal change déjà tout), Avada Kedavra seulement là où il va plus loin."""
         monkeypatch.setattr(dp, "UNE_VIE_POSSIBLE", frozenset({"hp4", "hp6"}))
         assert dp.disponible(dp.PAR_IDENT["realiste"], "hp4", frozenset())
-        assert not dp.disponible(dp.PAR_IDENT["impardonnable"], "hp4", frozenset())
-        assert dp.disponible(dp.PAR_IDENT["impardonnable"], "hp6", HP6_PRESETS)
+        assert dp.disponible(dp.PAR_IDENT["impardonnable"], "hp4", frozenset())
+        assert not dp.disponible(dp.PAR_IDENT["avada_kedavra"], "hp4", frozenset())
+        assert dp.disponible(dp.PAR_IDENT["avada_kedavra"], "hp6", HP6_PRESETS)
         assert not dp.disponible(dp.PAR_IDENT["realiste"], "hp5", HP6_PRESETS)
+
+    def test_un_coup_fatal_se_dit_en_tete_sans_degats_ni_vie(self):
+        lignes = dp.changements(dp.PAR_IDENT["avada_kedavra"], HP6_PRESETS)
+        assert lignes[0] == ("Un coup reçu est fatal", "")
+        noms = {nom for nom, _ in lignes}
+        assert rc.textes(REGLAGES["degats_recus"])[0] not in noms
+        assert rc.textes(REGLAGES["vie_joueur"])[0] not in noms
+        assert dp.changements(dp.PAR_IDENT["realiste"], HP6_PRESETS) == ()
 
     def test_une_section_absente_de_l_ini_installe_retire_ses_reglages(self, tmp_path):
         """L'ancien correctif (sans [Accio.Hardcore]) : rien à écrire, rien à proposer."""

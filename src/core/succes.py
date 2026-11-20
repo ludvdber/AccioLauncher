@@ -183,9 +183,9 @@ _FINS: dict[str, Callable[[Any], bool]] = {
 # Les presets proposés dans chaque jeu, du plus doux au plus dur
 # (`difficulte_presets.proposes` ; `test_succes` les vérifie au catalogue).
 FINS_PAR_PRESET: dict[str, tuple[str, ...]] = {
-    "hp1": ("normal", "difficile", "hardcore", "realiste", "impardonnable"),
-    "hp2": ("normal", "difficile", "hardcore", "realiste", "impardonnable"),
-    "hp3": ("normal", "difficile", "hardcore", "realiste", "impardonnable"),
+    "hp1": ("normal", "difficile", "hardcore", "realiste", "impardonnable", "avada_kedavra"),
+    "hp2": ("normal", "difficile", "hardcore", "realiste", "impardonnable", "avada_kedavra"),
+    "hp3": ("normal", "difficile", "hardcore", "realiste", "impardonnable", "avada_kedavra"),
 }
 # Écrits en entier : ce sont des clés tr().
 _TEXTES_FIN = {
@@ -199,6 +199,9 @@ _TEXTES_FIN = {
                  "Le jeu fini en une seule vie, au préréglage Réaliste, tenu depuis le début de la partie."),
     "impardonnable": ("Terminé en Impardonnable",
                       "Le jeu fini en une seule vie, au préréglage Impardonnable, tenu depuis le début "
+                      "de la partie."),
+    "avada_kedavra": ("Terminé en Avada Kedavra",
+                      "Le jeu fini en une seule vie, au préréglage Avada Kedavra, tenu depuis le début "
                       "de la partie."),
 }
 

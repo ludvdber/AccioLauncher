@@ -153,6 +153,15 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "étirement.",
             choix=tuple(v for v, _ in MODES_FENETRE), zero="Plein écran sans bordure",
             etiquettes=MODES_FENETRE, onglet="affichage"),
+    # HP1 et HP2 (`winmm.ini`, `source/winmm/fill.h` du correctif, vu le 2026-10-07) : leur moteur ouvre une
+    # fenêtre à cadre ; à la taille de l'écran, la DLL retire le cadre, sans changer le mode de l'écran (celui
+    # qui plante HP1 sur Alt+Tab). Issue #39 : le choix plein écran / fenêtre.
+    Reglage("plein_ecran", "Accio.Window", "FillScreen",
+            "Plein écran sans bordure",
+            "Allumé : à la taille de l'écran, le jeu le couvre entièrement, sans cadre ni barre des "
+            "tâches, et Alt+Tab reste sans risque. Éteint : une fenêtre ordinaire, avec sa barre de "
+            "titre. Une résolution plus petite que l'écran reste une fenêtre dans les deux cas.",
+            onglet="affichage"),
     Reglage("format_image", "Accio.Game", "AspectRatio",
             "Format d'image",
             "Le format de l'image. « D'origine » garde celui que prévoit le jeu ; choisissez "
@@ -668,7 +677,7 @@ CURSEURS: dict[str, tuple[float, float, float]] = {
 # (filtrage, mode d'affichage : le jeu les choisit selon la carte), ou n'y a pas d'équivalent (l'heure et
 # la couleur du ciel n'existent qu'avec le correctif) : la fiche le dit.
 VALEURS_DU_JEU: dict[str, ValeurChoix | bool] = {
-    "format_image": "0", "champ_vision": 0, "premier_plan": False,
+    "format_image": "0", "champ_vision": 0, "premier_plan": False, "plein_ecran": False,
     "lissage": False, "nettete": 0, "anticrenelage": 0, "anticrenelage_transparence": False,
     "surechantillonnage": 1, "textures_lointaines": 0, "feuillage_lointain": False,
     "mipmaps_fins": False, "textures_hd": False, "occlusion": False, "ombres_nettes": 1,

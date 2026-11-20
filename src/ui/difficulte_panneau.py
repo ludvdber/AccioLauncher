@@ -2,8 +2,8 @@
 tout le détail en dessous (contenu : `src/core/difficulte_presets.py`).
 
 1.4, tranché par Ludo le 2026-10-30 : des presets aux noms clairs (Récit,
-Détendu, Normal, Difficile, Hardcore ; puis, à une seule vie, Réaliste et
-Impardonnable) et « Sur mesure ». Mise en page de la maquette de l'expert UI/UX,
+Détendu, Normal, Difficile, Hardcore ; puis, à une seule vie, Réaliste,
+Impardonnable et Avada Kedavra) et « Sur mesure ». Mise en page de la maquette de l'expert UI/UX,
 validée le 2026-10-31 (atelier, `artefact_difficulte/index.html`) : cadran de
 défi (`cadran_defi.py`), cartes cliquables EN ENTIER, l'active bordée d'or avec
 un sceau « ACTIF », valeurs en or alignées à droite.
@@ -17,7 +17,7 @@ fenêtre des réglages (`reglages_rubriques._page_difficulte`), et choisir un
 preset les remet sur ce que porte le fichier. Choisir écrit aussitôt ; rien
 n'est écrit au lancement.
 
-« Une seule vie » (Réaliste, Impardonnable) : deux cartes comme les autres,
+« Une seule vie » (Réaliste, Impardonnable, Avada Kedavra) : des cartes comme les autres,
 sous les réglages, avec ce que fait le jeu à la première mort et l'état de la
 vie (`core/une_vie`). Elles ne se montrent que là où le mode est proposé
 (`difficulte_presets.une_vie_proposee`).
@@ -315,7 +315,8 @@ class PanneauDifficulte(QWidget):
         return dp.lire(self.game, self.config, self.ini, self.idents)
 
     def courant(self) -> str:
-        return dp.courant(self.valeurs(), self.idents, dp.une_vie_active(self.game, self.config))
+        vie = dp.une_vie_active(self.game, self.config)
+        return dp.courant(self.valeurs(), self.idents, vie, vie and dp.un_coup_actif(self.game, self.config))
 
     # ── Construire ────────────────────────────────────────────────────────
     def _bloc_cadran(self) -> QWidget:
@@ -348,11 +349,12 @@ class PanneauDifficulte(QWidget):
         return bloc
 
     def bloc_une_seule_vie(self) -> QWidget | None:
-        """Réaliste, et Impardonnable là où Hardcore change quelque chose, à poser
-        par la fenêtre sous les réglages ; None là où le mode n'est pas proposé."""
+        """Les presets à une seule vie que ce jeu propose (`difficulte_presets.proposes` : un coup
+        fatal seulement si le correctif installé le sait), à poser par la fenêtre sous les réglages ;
+        None là où le mode n'est pas proposé."""
         if not dp.une_vie_proposee(self.game, self.config):
             return None
-        vies = [p for p in dp.PRESETS if p.une_vie and dp.disponible(p, self.game.id, self.idents)]
+        vies = [p for p in dp.proposes(self.game, self.config, self.idents) if p.une_vie]
         crans = {p.ident: c for p, c in self.crans}
         self.cartes_une_vie = [
             _CartePreset(p, dp.changements(p, self.idents), crans.get(dp.BASE_UNE_VIE[p.ident], 40),
@@ -368,8 +370,9 @@ class PanneauDifficulte(QWidget):
         v.setContentsMargins(0, 0, 0, 0)
         v.setSpacing(14)
         v.addWidget(titre_section(tr("Une seule vie")))
-        phrases = [tr("La première mort efface la partie : elle se joue dans un dossier à part, et vos "
-                      "sauvegardes ne sont ni lues ni écrites."), tr(mode.apres)]
+        phrases = [tr("La première mort efface la partie. Sauvegarder, quitter et revenir reste permis : "
+                      "elle se joue dans un dossier à part, et vos sauvegardes ne sont ni lues ni écrites."),
+                   tr(mode.apres)]
         if mode.note:
             phrases.append(tr(mode.note))
         explication = texte("\n\n".join(phrases), 14, _DOUX, retour=True)
@@ -402,7 +405,7 @@ class PanneauDifficulte(QWidget):
         """Marques, sceau et aiguille sur ce que portent les fichiers."""
         valeurs = self.valeurs()
         vie = dp.une_vie_active(self.game, self.config)
-        courant = dp.courant(valeurs, self.idents, vie)
+        courant = dp.courant(valeurs, self.idents, vie, vie and dp.un_coup_actif(self.game, self.config))
         for carte in (*self.cartes_presets, *self.cartes_une_vie):
             carte.marquer(carte.ident == courant)
         sur_mesure = courant == dp.SUR_MESURE
@@ -414,7 +417,7 @@ class PanneauDifficulte(QWidget):
             situe = dp.situer(niveau, self.crans)
             self.cadran.viser(niveau, tr("Sur mesure"), " · ".join(filter(None, (situe, sous))), anime=anime)
         else:
-            # Réaliste et Impardonnable allument le cran de Normal ou de Hardcore.
+            # Un preset à une seule vie allume le cran de ce que portent les valeurs.
             base = dp.courant(valeurs, self.idents)
             self.cadran.viser(niveau, tr(dp.PAR_IDENT[courant].nom), sous, actif=base, anime=anime)
         self._dire_etat()

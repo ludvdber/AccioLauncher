@@ -1,6 +1,6 @@
 """Les presets de difficulté de la 1.4 : Récit (accessibilité, Harry invincible),
-Détendu, Normal, Difficile, Hardcore, et deux presets à une seule vie, Réaliste
-et Impardonnable.
+Détendu, Normal, Difficile, Hardcore, et trois presets à une seule vie, Réaliste,
+Impardonnable et Avada Kedavra.
 
 Tranché par Ludo le 2026-10-30 (atelier, `notes/DIFFICULTE_1.4.md` § 4) : des
 presets aux noms clairs, et « Sur mesure » (les réglages un par un sous les presets). Un
@@ -16,13 +16,21 @@ AUCUN preset ne retire de sort (Ludo, 2026-10-30) : un sort retiré peut bloquer
 la partie (une leçon, un défi qui le demande). `sorts_retires` reste un réglage
 à part, dans « Sur mesure ».
 
-Une seule vie (Ludo, 2026-10-30) : Réaliste = le jeu de base, Impardonnable =
-Hardcore, et dans les deux la première mort termine la partie (`une_vie` : la
-partie se joue dans un dossier à part, ses sauvegardes sont effacées par la DLL
-à la première mort, C4). `UNE_VIE_POSSIBLE` ne nomme que les jeux où cette mort
-a été VUE en jeu ; le mode n'est proposé que si le correctif installé le connaît
-(`une_vie_proposee`). Il ne se lit pas aux valeurs : ce sont celles de Normal ou
-de Hardcore, plus les clés du mode (`courant(une_vie=…)`).
+Une seule vie (Ludo, 2026-10-30, refaite le 2026-11-20) : dans les trois, la
+première mort termine la partie (`une_vie` : la partie se joue dans un dossier à
+part, ses sauvegardes sont effacées par la DLL à la première mort, C4) ;
+sauvegarder et revenir reste permis.
+- Réaliste n'écrit AUCUNE valeur : la difficulté que le joueur a réglée, et la vie
+  de Harry telle quelle ; seule la vie unique s'ajoute.
+- Impardonnable = Hardcore, et le premier coup reçu par le héros joué est fatal
+  (`OneHit` du correctif : le ×10 des dégâts reçus ne tuait pas d'un coup, HP2
+  allant jusqu'à 600 de vie et buvant sa potion seul).
+- Avada Kedavra, « pour le fun et le délire du tryharder » : chaque réglage au plus
+  dur (réaction des ennemis au maximum là où elle existe), et un coup fatal.
+`UNE_VIE_POSSIBLE` ne nomme que les jeux où la mort a été VUE finir la vie ; le
+mode n'est proposé que si le correctif installé le connaît (`une_vie_proposee`),
+et un coup fatal seulement s'il porte `OneHit` (`un_coup_propose`). Le mode ne se
+lit pas aux valeurs mais aux clés posées (`courant(une_vie=…, un_coup=…)`).
 
 Ce que dit un preset pour un jeu se CALCULE depuis les réglages (libellé et
 choix affichés) : une phrase écrite à la main finirait par mentir.
@@ -69,6 +77,7 @@ class Preset:
     phrase: str         # clé tr() : ce que le preset veut dire, tous jeux confondus
     valeurs: Mapping[str, object]
     une_vie: bool = False   # la première mort termine la partie
+    un_coup: bool = False   # et le premier coup reçu par le héros joué est fatal (`OneHit`)
     # Le réglage sans lequel le preset n'a pas de sens (Récit sans invincibilité
     # ne serait qu'un Détendu mal nommé).
     exige: str = ""
@@ -93,6 +102,13 @@ _HARDCORE: dict[str, object] = {
     **_NORMAL, "degats_recus": 3, "degats_infliges": 0.5, "reaction_ennemis": 5,
     "regeneration": 0, "quidditch": 2, NATIVE: 2, "sorts_par_creature": 2, "jauge_creature": 0.5,
 }
+# Avada Kedavra (Ludo, 2026-11-20) : chaque réglage à son choix le plus dur (`REGLAGES`). Les dégâts
+# reçus et la vie de Harry n'y changent plus rien (un coup est fatal), ils restent au plus dur pour que
+# la carte dise la même chose que le cadran.
+_AVADA: dict[str, object] = {
+    **_HARDCORE, "degats_recus": 5, "degats_infliges": 0.25, "reaction_ennemis": 10, "vie_joueur": 0.25,
+    "sorts_par_creature": 3,
+}
 
 # Du plus doux au plus dur, de gauche à droite.
 PRESETS = (
@@ -109,9 +125,13 @@ PRESETS = (
     Preset("hardcore", "Hardcore",
            "Pour qui connaît le jeu par cœur : le plus dur qui reste jouable.", _HARDCORE),
     Preset("realiste", "Réaliste",
-           "Au niveau Normal.", _NORMAL, une_vie=True),
+           "Votre difficulté, et une seule vie : Harry garde toute sa santé, mais la partie s'arrête "
+           "quand elle tombe à zéro.", {}, une_vie=True),
     Preset("impardonnable", "Impardonnable",
-           "Au niveau Hardcore.", _HARDCORE, une_vie=True),
+           "Hardcore, et le premier coup reçu est fatal.", _HARDCORE, une_vie=True, un_coup=True),
+    Preset("avada_kedavra", "Avada Kedavra",
+           "Pour les acharnés : chaque réglage au plus dur, et le premier coup reçu est fatal.",
+           _AVADA, une_vie=True, un_coup=True),
 )
 PAR_IDENT = {p.ident: p for p in PRESETS}
 
@@ -145,32 +165,42 @@ def disponible(preset: Preset, game_id: str, idents: Iterable[str]) -> bool:
     alors que cela)."""
     if preset.ident == "normal":
         return True
-    if preset.une_vie and game_id not in UNE_VIE_POSSIBLE:
-        return False
     idents = frozenset(idents)
+    if preset.une_vie:
+        # Réaliste partout où le mode existe ; un preset à un coup, sauf s'il n'écrit ici que ce
+        # qu'écrit déjà un autre avant lui (Avada Kedavra là où rien ne va au-delà de Hardcore).
+        if game_id not in UNE_VIE_POSSIBLE:
+            return False
+        avant = PRESETS[:PRESETS.index(preset)]
+        return all(valeurs_pour(p, idents) != valeurs_pour(preset, idents)
+                   for p in avant if p.une_vie and p.un_coup == preset.un_coup)
     if preset.exige and preset.exige not in idents:
         return False
-    if preset.une_vie and preset.valeurs == PAR_IDENT["normal"].valeurs:
-        return True
     return valeurs_pour(preset, idents) != valeurs_pour(PAR_IDENT["normal"], idents)
 
 
-# Le preset dont chaque preset à une seule vie a les valeurs.
-BASE_UNE_VIE: Mapping[str, str] = {"realiste": "normal", "impardonnable": "hardcore"}
-_A_UNE_VIE = {base: vie for vie, base in BASE_UNE_VIE.items()}
+# Le preset dont le cran colore chaque carte à une seule vie (Réaliste n'a pas de valeurs à lui).
+BASE_UNE_VIE: Mapping[str, str] = {"realiste": "normal", "impardonnable": "hardcore", "avada_kedavra": "hardcore"}
 
 
-def courant(valeurs: Mapping[str, object], idents: Iterable[str], une_vie: bool = False) -> str:
+def courant(valeurs: Mapping[str, object], idents: Iterable[str], une_vie: bool = False,
+            un_coup: bool = False) -> str:
     """Le preset que portent `valeurs` (identifiant → valeur lue), ou SUR_MESURE.
 
-    Les presets à une seule vie ont les valeurs de Normal ou de Hardcore : ils se
-    reconnaissent à leur partie à part (`une_vie` : les clés du mode sont posées) ;
-    avec d'autres valeurs, le mode reste actif sous « Sur mesure ». Normal passe en
+    Les presets à une seule vie se reconnaissent à leur partie à part (`une_vie` :
+    les clés du mode sont posées). Sans coup fatal, c'est Réaliste quelles que soient
+    les valeurs (il garde celles du joueur) ; avec, Impardonnable ou Avada Kedavra à
+    leurs valeurs, « Sur mesure » sinon (le mode reste actif). Normal passe en
     premier : là où Détendu ne change rien (HP2), il a les mêmes valeurs que lui.
     Sans aucun réglage (HP3), le jeu est tel qu'il est sorti : Normal."""
     idents = frozenset(idents)
     if une_vie:
-        return _A_UNE_VIE.get(courant(valeurs, idents), SUR_MESURE)
+        if not un_coup:
+            return "realiste"
+        for preset in PRESETS:
+            if preset.un_coup and all(valeurs.get(k) == v for k, v in valeurs_pour(preset, idents).items()):
+                return preset.ident
+        return SUR_MESURE
     if not idents:
         return "normal"
     normal = PAR_IDENT["normal"]
@@ -183,14 +213,20 @@ def courant(valeurs: Mapping[str, object], idents: Iterable[str], une_vie: bool 
     return SUR_MESURE
 
 
+_SANS_EFFET_A_UN_COUP = frozenset({"degats_recus", "vie_joueur"})
+
+
 def changements(preset: Preset, idents: Iterable[str]) -> tuple[tuple[str, str], ...]:
     """Ce que `preset` change dans ce jeu par rapport à Normal : (réglage, choix),
     en mots affichables, dans l'ordre où la page montre les réglages (la
     difficulté propre du jeu d'abord) ; celui qu'il `exige` en tête (« Harry
-    invincible » pour Récit : c'est ce qui le définit)."""
+    invincible » pour Récit : c'est ce qui le définit). Un preset à un coup fatal le
+    dit en tête, et ne dit ni les dégâts reçus ni la vie de Harry : ils n'y comptent plus."""
     idents = frozenset(idents)
     normal = valeurs_pour(PAR_IDENT["normal"], idents)
-    lignes = []
+    lignes = [(tr("Un coup reçu est fatal"), "")] if preset.un_coup else []
+    if preset.un_coup:
+        normal = {**normal, **{k: v for k, v in valeurs_pour(preset, idents).items() if k in _SANS_EFFET_A_UN_COUP}}
     rangs = {ident: rang for rang, ident in enumerate(REGLAGES)}
     voulues = sorted(valeurs_pour(preset, idents).items(),
                      key=lambda kv: (kv[0] != preset.exige, kv[0] != NATIVE, rangs.get(kv[0], 0)))
@@ -356,20 +392,32 @@ def lire(game: GameData, config: Config, ini: Path | None, idents: Iterable[str]
 
 
 def une_vie_proposee(game: GameData, config: Config) -> bool:
-    """Réaliste et Impardonnable se proposent dans ce jeu : sa mort est VUE, et
+    """Les presets à une seule vie se proposent dans ce jeu : sa mort est VUE, et
     le correctif installé porte les clés du mode dans un dossier qu'il accepte."""
     return game.id in UNE_VIE_POSSIBLE and une_vie.possible(game, une_vie.ini(game, config.install_path))
+
+
+def un_coup_propose(game: GameData, config: Config) -> bool:
+    """Impardonnable et Avada Kedavra : le mode est proposé, et le correctif installé porte `OneHit`
+    (les archives d'avant le 2026-11-20 ne l'ont pas : un coup n'y tuerait pas)."""
+    return une_vie_proposee(game, config) and une_vie.un_coup_possible(une_vie.ini(game, config.install_path))
 
 
 def une_vie_active(game: GameData, config: Config) -> bool:
     return game.id in UNE_VIE_POSSIBLE and une_vie.actif(une_vie.ini(game, config.install_path))
 
 
+def un_coup_actif(game: GameData, config: Config) -> bool:
+    return game.id in UNE_VIE_POSSIBLE and une_vie.un_coup_actif(une_vie.ini(game, config.install_path))
+
+
 def proposes(game: GameData, config: Config, idents: Iterable[str]) -> tuple[Preset, ...]:
     """Les presets que ce jeu propose, dans l'ordre de `PRESETS`."""
     idents = frozenset(idents)
     vie = une_vie_proposee(game, config)
-    return tuple(p for p in PRESETS if disponible(p, game.id, idents) and (vie or not p.une_vie))
+    coup = vie and un_coup_propose(game, config)
+    return tuple(p for p in PRESETS if disponible(p, game.id, idents)
+                 and (vie or not p.une_vie) and (coup or not p.un_coup))
 
 
 def au_lancement(game: GameData, config: Config) -> str:
@@ -379,7 +427,8 @@ def au_lancement(game: GameData, config: Config) -> str:
     dossier_exe = Path(config.install_path) / Path(game.executable).parent
     ini = rc.ini_du_correctif(dossier_exe) if game.fix_settings else None
     idents = idents_du_jeu(game, ini)
-    ident = courant(lire(game, config, ini, idents), idents, une_vie_active(game, config))
+    ident = courant(lire(game, config, ini, idents), idents, une_vie_active(game, config),
+                    un_coup_actif(game, config))
     return "" if ident == SUR_MESURE else ident
 
 
@@ -392,7 +441,7 @@ def appliquer(preset: Preset, game: GameData, config: Config, ini: Path | None,
     vie = une_vie.ini(game, config.install_path) if game.id in UNE_VIE_POSSIBLE else None
     if vie is not None:
         if preset.une_vie:
-            if not une_vie.entrer(game, vie):
+            if not une_vie.entrer(game, vie, un_coup=preset.un_coup):
                 rates.append("une_vie")
         elif une_vie.actif(vie) and not une_vie.sortir(vie):
             rates.append("une_vie")

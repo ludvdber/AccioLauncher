@@ -1,5 +1,5 @@
 {
-  "catalog_version": "0.60",
+  "catalog_version": "0.61",
   "contributors": [
     {
       "name": "ASTeam",
@@ -587,6 +587,7 @@
       "controller": "yes",
       "fix_settings": [
         "son_arriere_plan",
+        "plein_ecran",
         "quidditch",
         "degats_recus",
         "degats_infliges",
@@ -1137,6 +1138,7 @@
       "controller_note": "Le jeu se joue à la manette, mais sa fenêtre de démarrage (avant la partie) se passe à la souris.",
       "fix_settings": [
         "son_arriere_plan",
+        "plein_ecran",
         "quidditch",
         "degats_recus",
         "degats_infliges",

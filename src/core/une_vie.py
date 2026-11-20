@@ -1,12 +1,14 @@
-r"""Une seule vie (Réaliste, Impardonnable) : ce que le launcher pose pour que le
+r"""Une seule vie (Réaliste, Impardonnable, Avada Kedavra) : ce que le launcher pose pour que le
 correctif joue la partie dans un dossier à part (atelier, `notes/DIFFICULTE_1.4.md`
 § 6, § 8 et § 9, points 1 et 1 bis ; décisions C4 et C5 de Ludo).
 
-**Le launcher ne pose que trois clés**, `[Accio.Game]` de l'ini du correctif
+**Le launcher ne pose que quatre clés**, `[Accio.Game]` de l'ini du correctif
 (`winmm.ini` de HP1/HP2, `dinput8.ini` de HP3, `d3d9.ini` de HP4 à HP6) :
 `OneLife` (1 = la fin rend le jeu à son menu, 2 = il se ferme), `DeathCounter=1`
-(une ligne par mort dans `accio_morts.tsv`, `compteur_morts`) et `OneLifeSaves`,
-le dossier de la partie. C'est la DLL qui le donne au moteur, en mémoire :
+(une ligne par mort dans `accio_morts.tsv`, `compteur_morts`), `OneLifeSaves`,
+le dossier de la partie, et `OneHit` (1 = le premier coup reçu par le héros joué
+est fatal : Impardonnable et Avada Kedavra ; la DLL ne le lit qu'avec `OneLife`,
+et seul un ini qui porte la clé le propose). C'est la DLL qui le donne au moteur, en mémoire :
 **aucun ini du JEU n'est touché** (VU le 2026-11-14 : `SavePath` changé dans
 `HP.ini` ne décidait rien). Les parties du joueur ne sont ni lues ni écrites.
 
@@ -61,6 +63,7 @@ SECTION = "Accio.Game"
 CLE_MODE = "OneLife"
 CLE_COMPTEUR = "DeathCounter"
 CLE_DOSSIER = "OneLifeSaves"
+CLE_UN_COUP = "OneHit"
 NOM = "Save_UneVie"
 MARQUE = "une_vie_finie"
 _LONGUEUR_MAX = 150     # HP4 à HP6 (`SHGetFolderPathA` détourné, chemin en octets)
@@ -194,6 +197,18 @@ def actif(chemin_ini: Path | None) -> bool:
     return mode not in (None, "", "0") and bool(rc.valeur_posee(chemin_ini, SECTION, CLE_DOSSIER))
 
 
+def un_coup_possible(chemin_ini: Path | None) -> bool:
+    """Le correctif installé sait rendre un coup fatal : son ini livre la clé."""
+    return chemin_ini is not None and rc.valeur_posee(chemin_ini, SECTION, CLE_UN_COUP) is not None
+
+
+def un_coup_actif(chemin_ini: Path | None) -> bool:
+    """La prochaine partie se joue en une seule vie ET un coup fatal."""
+    if chemin_ini is None or not actif(chemin_ini):
+        return False
+    return rc.valeur_posee(chemin_ini, SECTION, CLE_UN_COUP) not in (None, "", "0")
+
+
 @dataclass(frozen=True)
 class Etat:
     en_cours: bool = False   # une partie du mode est gardée dans son dossier
@@ -214,8 +229,8 @@ def etat(game: GameData) -> Etat:
 
 # ── Entrer, sortir ──
 
-def entrer(game: GameData, chemin_ini: Path) -> bool:
-    """Pose les trois clés ; `OneLife` en DERNIER : un échec en route laisse le
+def entrer(game: GameData, chemin_ini: Path, un_coup: bool = False) -> bool:
+    """Pose les clés du mode, `OneHit` selon `un_coup` ; `OneLife` en DERNIER : un échec en route laisse le
     mode coupé. Le dossier est créé ici pour que la page le lise aussitôt
     (la DLL sait aussi le créer).
 
@@ -225,13 +240,15 @@ def entrer(game: GameData, chemin_ini: Path) -> bool:
     `test_prereglages_par_jeu`, Impardonnable puis Normal sur un ini neuf)."""
     ou = dossier(game)
     texte = _pour(game, ou) if ou is not None else None
-    if ou is None or texte is None:
+    if ou is None or texte is None or (un_coup and not un_coup_possible(chemin_ini)):
         return False
     try:
         rc._garder_origine(chemin_ini)
         ou.mkdir(parents=True, exist_ok=True)
         rc.poser_valeur(chemin_ini, SECTION, CLE_DOSSIER, texte)
         rc.poser_valeur(chemin_ini, SECTION, CLE_COMPTEUR, "1")
+        if un_coup_possible(chemin_ini):
+            rc.poser_valeur(chemin_ini, SECTION, CLE_UN_COUP, "1" if un_coup else "0")
         rc.poser_valeur(chemin_ini, SECTION, CLE_MODE, str(MODES[game.id].valeur))
     except (OSError, ValueError):
         log.warning("Une seule vie : clés non posées dans %s", chemin_ini, exc_info=True)
@@ -244,7 +261,7 @@ def sortir(chemin_ini: Path) -> bool:
     PREMIER. Rien n'est effacé : la partie du mode reste dans son dossier."""
     origine = rc.chemin_origine(chemin_ini)
     try:
-        for cle, defaut in ((CLE_MODE, "0"), (CLE_COMPTEUR, "0"), (CLE_DOSSIER, "")):
+        for cle, defaut in ((CLE_MODE, "0"), (CLE_UN_COUP, "0"), (CLE_COMPTEUR, "0"), (CLE_DOSSIER, "")):
             if rc.valeur_posee(chemin_ini, SECTION, cle) is None:
                 continue
             livree = rc.valeur_posee(origine, SECTION, cle) if origine.is_file() else None

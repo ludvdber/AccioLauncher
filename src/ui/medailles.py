@@ -57,7 +57,8 @@ MEDAILLES: dict[str, dict[str, tuple[str, str]]] = {
 # Les lignes pleines de l'écran « Informations sur le jeu » de HP5 (`complet_<n>`).
 _PAR_PREFIXE = {("hp5", "complet_"): ("decouverte", ARGENT)}
 # « Terminé en … » (`succes.FINS_PAR_PRESET`) : le métal dit le préréglage.
-_FIN_DU_JEU = {"normal": BRONZE, "difficile": ARGENT, "hardcore": OR, "realiste": ARGENT, "impardonnable": OR}
+_FIN_DU_JEU = {"normal": BRONZE, "difficile": ARGENT, "hardcore": OR, "realiste": ARGENT, "impardonnable": OR,
+               "avada_kedavra": OR}
 
 _cache: dict[tuple[str, str, bool, int], QPixmap] = {}
 

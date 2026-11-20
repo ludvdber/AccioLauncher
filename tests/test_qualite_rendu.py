@@ -476,6 +476,22 @@ class TestFenetre:
         page = self._dialogue(qtbot, self._jeu(), config, monkeypatch, False)._page_img
         assert page is None or "carte_puissante" not in page._libres
 
+    def test_plein_ecran_sans_bordure_dans_ecran(self, qtbot, hp2, monkeypatch, tmp_path):
+        """Issue #39 : `FillScreen` du `winmm.ini` de HP1/HP2 a sa ligne dans « Écran », allumée comme le
+        correctif la livre ; l'éteindre écrit 0 (une fenêtre à barre de titre)."""
+        _game, config, _ini = hp2
+        winmm = tmp_path / "Jeux" / "HP2" / "system" / "winmm.ini"
+        winmm.parent.mkdir(parents=True)
+        winmm.write_bytes(b"[Accio.Window]\r\nFillScreen=1\r\nMuteInBackground=0\r\n")
+        jeu = GameData.from_dict(dict(JEU, display_locked=True, fix_settings=["plein_ecran"],
+                                      resolution={"file": FICHIER, "section": "WinDrv.WindowsClient",
+                                                  "width": "WindowedViewportX", "height": "WindowedViewportY"}))
+        page = self._dialogue(qtbot, jeu, config, monkeypatch, deux_cartes=False)._page_img
+        assert reglages_image.place(page.reglages["plein_ecran"]) == ("ecran", "Affichage")
+        assert page.valeur("plein_ecran") is True
+        page.regler("plein_ecran", False)
+        assert winmm.read_bytes() == b"[Accio.Window]\r\nFillScreen=0\r\nMuteInBackground=0\r\n"
+
     def test_la_mise_en_garde_du_menu_du_jeu_reste(self, qtbot, hp2, monkeypatch):
         """Celui qui cherche la résolution ne doit pas aller la changer dans le menu du jeu."""
         from PyQt6.QtWidgets import QLabel

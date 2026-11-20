@@ -36,6 +36,7 @@ CATEGORIES: tuple[tuple[str, str], ...] = (
 _PLACES: dict[str, tuple[str, str]] = {
     "resolution": ("ecran", "Affichage"),
     "mode_fenetre": ("ecran", "Affichage"),
+    "plein_ecran": ("ecran", "Affichage"),
     "format_image": ("ecran", "Affichage"),
     "champ_vision": ("ecran", "Affichage"),
     "ecran_principal": ("ecran", "Fenêtre"),

@@ -2,7 +2,7 @@
 `notes/DIFFICULTE_1.4.md` § 2 et § 8 bis ; demande de Ludo du 2026-11-19).
 
 Chaque jeu est installé pour de vrai dans un dossier de test, avec la section `[Accio.Hardcore]` et les clés
-de la une seule vie de son ini livré (correctif, `data/<jeu>/`), et le catalogue EMBARQUÉ : un réglage que le
+de la une seule vie de son ini livré (`OneHit` compris, correctif du 2026-11-20) (correctif, `data/<jeu>/`), et le catalogue EMBARQUÉ : un réglage que le
 catalogue oublierait de déclarer manquerait ici. Puis chaque préréglage est choisi comme le fait l'onglet
 Difficulté (`difficulte_presets.appliquer`), et l'ini relu clé par clé.
 """
@@ -34,7 +34,8 @@ _NOM_INI = {"hp1": "winmm.ini", "hp2": "winmm.ini", "hp3": "dinput8.ini"}
 _UE = {"detendu": {"DamageTaken": 0.5, "DamageDealt": 1.5},
        "normal": {"DamageTaken": 1, "DamageDealt": 1},
        "difficile": {"DamageTaken": 1.5, "DamageDealt": 0.75},
-       "hardcore": {"DamageTaken": 3, "DamageDealt": 0.5}}
+       "hardcore": {"DamageTaken": 3, "DamageDealt": 0.5},
+       "avada_kedavra": {"DamageTaken": 5, "DamageDealt": 0.25}}
 TABLE: dict[str, dict[str, dict[str, float]]] = {
     "hp1": _UE, "hp2": _UE, "hp3": _UE,
     "hp4": {
@@ -42,6 +43,7 @@ TABLE: dict[str, dict[str, dict[str, float]]] = {
         "normal": {"DamageTaken": 1, "DamageDealt": 1, "EnemyHits": 1, "EnemyRecovery": 1},
         "difficile": {"DamageTaken": 1.5, "DamageDealt": 0.75, "EnemyHits": 1.5, "EnemyRecovery": 0.7},
         "hardcore": {"DamageTaken": 3, "DamageDealt": 0.5, "EnemyHits": 2, "EnemyRecovery": 0.5},
+        "avada_kedavra": {"DamageTaken": 5, "DamageDealt": 0.25, "EnemyHits": 3, "EnemyRecovery": 0.5},
     },
     "hp5": {
         "recit": {"DamageTaken": 1, "DamageDealt": 1.5, "PlayerHealth": 1, "Invincible": 1},
@@ -49,21 +51,26 @@ TABLE: dict[str, dict[str, dict[str, float]]] = {
         "normal": {"DamageTaken": 1, "DamageDealt": 1, "PlayerHealth": 1, "Invincible": 0},
         "difficile": {"DamageTaken": 1.5, "DamageDealt": 0.75, "PlayerHealth": 1, "Invincible": 0},
         "hardcore": {"DamageTaken": 3, "DamageDealt": 0.5, "PlayerHealth": 1, "Invincible": 0},
+        "avada_kedavra": {"DamageTaken": 5, "DamageDealt": 0.25, "PlayerHealth": 0.25, "Invincible": 0},
     },
     "hp6": {
         "detendu": {"DamageTaken": 0.5, "DamageDealt": 1.5, "EnemyReaction": 1},
         "normal": {"DamageTaken": 1, "DamageDealt": 1, "EnemyReaction": 1},
         "difficile": {"DamageTaken": 1.5, "DamageDealt": 0.75, "EnemyReaction": 1.5},
         "hardcore": {"DamageTaken": 3, "DamageDealt": 0.5, "EnemyReaction": 5},
+        "avada_kedavra": {"DamageTaken": 5, "DamageDealt": 0.25, "EnemyReaction": 10},
     },
 }
 # Le Quidditch de HP1 et HP2 (`QuidditchDifficulty`, [Accio.Game]) et la difficulté propre de HP2 (User.ini).
-QUIDDITCH = {"recit": 0, "detendu": 0, "normal": 0, "difficile": 1, "hardcore": 2}
+QUIDDITCH = {"recit": 0, "detendu": 0, "normal": 0, "difficile": 1, "hardcore": 2, "avada_kedavra": 2}
 # Ludo 2026-11-19 : là où DamageTaken s'applique, la difficulté propre de HP2 reste Facile (les deux se multipliaient).
 NATIVE_HP2 = {"detendu": "DifficultyEasy", "normal": "DifficultyEasy", "difficile": "DifficultyEasy",
-              "hardcore": "DifficultyEasy"}
-# Une seule vie : Réaliste = Normal, Impardonnable = Hardcore, plus les trois clés du mode.
-UNE_VIE = {"realiste": "normal", "impardonnable": "hardcore"}
+              "hardcore": "DifficultyEasy", "avada_kedavra": "DifficultyEasy"}
+# Une seule vie (Ludo, 2026-11-20) : Réaliste n'écrit rien (sur un ini livré, le jeu tel qu'il est sorti),
+# Impardonnable = Hardcore, Avada Kedavra ses propres valeurs ; plus les clés du mode, `OneHit` pour les deux
+# derniers.
+UNE_VIE = {"realiste": "normal", "impardonnable": "hardcore", "avada_kedavra": "avada_kedavra"}
+UN_COUP = ("impardonnable", "avada_kedavra")
 ONE_LIFE = {"hp1": "1", "hp2": "1", "hp3": "1", "hp4": "1", "hp5": "2", "hp6": "1"}
 JEUX = tuple(TABLE)
 
@@ -71,7 +78,7 @@ JEUX = tuple(TABLE)
 def _ini_livre(jeu: str) -> str:
     """Ce que porte l'ini livré pour ce qui nous regarde, aux valeurs livrées (le jeu tel qu'il est sorti)."""
     lignes = ["; Accio Launcher - PC fix", "[Accio.Window]", "WindowStyle=1", "",
-              "[Accio.Game]", "OneLife=0", "DeathCounter=0", "OneLifeSaves="]
+              "[Accio.Game]", "OneLife=0", "DeathCounter=0", "OneLifeSaves=", "OneHit=0"]
     if jeu in ("hp1", "hp2"):
         lignes.append("QuidditchDifficulty=0")
     lignes += ["", "[Accio.Hardcore]"]
@@ -148,16 +155,18 @@ def test_chaque_prereglage_ecrit_la_table(installe, tmp_path, jeu, ident):
         assert une_vie.NOM in jeu_["OneLifeSaves"]
     else:
         assert (jeu_["OneLife"], jeu_["DeathCounter"], jeu_["OneLifeSaves"]) == ("0", "0", "")
+    assert jeu_["OneHit"] == ("1" if ident in UN_COUP else "0")
     # Et la page le relit comme le préréglage choisi.
-    assert dp.courant(dp.lire(game, config, ini, idents), idents, dp.une_vie_active(game, config)) == ident
+    assert dp.courant(dp.lire(game, config, ini, idents), idents, dp.une_vie_active(game, config),
+                      dp.un_coup_actif(game, config)) == ident
 
 
 @pytest.mark.parametrize("jeu", JEUX)
 def test_les_six_prereglages_ou_cinq_sans_recit(installe, jeu):
-    """Récit là où Harry peut être invincible (HP5) ; ailleurs les cinq autres et Normal."""
+    """Récit là où Harry peut être invincible (HP5) ; ailleurs les autres et Normal."""
     game, config, ini = installe(jeu)
     proposes = [p.ident for p in dp.proposes(game, config, dp.idents_du_jeu(game, ini))]
-    autres = ["detendu", "normal", "difficile", "hardcore", "realiste", "impardonnable"]
+    autres = ["detendu", "normal", "difficile", "hardcore", "realiste", "impardonnable", "avada_kedavra"]
     assert proposes == (["recit", *autres] if jeu == "hp5" else autres)
 
 
@@ -169,6 +178,33 @@ def test_revenir_a_normal_rend_tout(installe, jeu):
     assert dp.appliquer(dp.PAR_IDENT["impardonnable"], game, config, ini, idents) == []
     assert dp.appliquer(dp.PAR_IDENT["normal"], game, config, ini, idents) == []
     assert ini.read_bytes() == livre, "Normal rend l'ini livré à l'octet"
+
+
+@pytest.mark.parametrize("jeu", JEUX)
+def test_realiste_garde_la_difficulte_du_joueur(installe, jeu):
+    """Ludo, 2026-11-20 : Réaliste = les réglages choisis par le joueur, plus la seule vie ; depuis
+    Impardonnable, il n'ôte que le coup fatal."""
+    game, config, ini = installe(jeu)
+    idents = dp.idents_du_jeu(game, ini)
+    assert dp.appliquer(dp.PAR_IDENT["impardonnable"], game, config, ini, idents) == []
+    dur = _section(ini, "Accio.Hardcore")
+    assert dp.appliquer(dp.PAR_IDENT["realiste"], game, config, ini, idents) == []
+    assert _section(ini, "Accio.Hardcore") == dur
+    assert _section(ini, "Accio.Game")["OneHit"] == "0"
+    assert dp.courant(dp.lire(game, config, ini, idents), idents, dp.une_vie_active(game, config),
+                      dp.un_coup_actif(game, config)) == "realiste"
+
+
+@pytest.mark.parametrize("jeu", JEUX)
+def test_sans_onehit_dans_l_ini_pas_de_coup_fatal(installe, jeu):
+    """Les archives d'avant le correctif du 2026-11-20 : la seule vie reste (Réaliste), un coup ne tuerait
+    pas, donc ni Impardonnable ni Avada Kedavra."""
+    game, config, ini = installe(jeu)
+    ini.write_bytes(ini.read_bytes().replace(b"OneHit=0\r\n", b""))
+    proposes = [p.ident for p in dp.proposes(game, config, dp.idents_du_jeu(game, ini))]
+    assert "realiste" in proposes
+    assert not {"impardonnable", "avada_kedavra"} & set(proposes)
+    assert not une_vie.entrer(game, ini, un_coup=True)
 
 
 def test_la_table_suit_les_valeurs_du_preset_py():

@@ -20,7 +20,7 @@ _CATALOGUE = {g.id: g for g in load_catalog().games}
 INI = "\r\n".join([
     "; Accio Launcher - PC fix", "[Accio.Window]", "WindowStyle=0", "",
     "[Accio.Hardcore]", "DamageTaken=1", "DamageDealt=1", "EnemyReaction=1", "",
-    "[Accio.Game]", "QuidditchDifficulty=0", "OneLife=0", "DeathCounter=0", "OneLifeSaves=", "",
+    "[Accio.Game]", "QuidditchDifficulty=0", "OneLife=0", "DeathCounter=0", "OneLifeSaves=", "OneHit=0", "",
 ]) + "\r\n"
 
 
@@ -208,10 +208,17 @@ class TestLancement:
         une_vie.entrer(game, ini)
         assert dp.au_lancement(game, config) == "realiste"
         rc.poser_valeur(ini, "Accio.Game", "QuidditchDifficulty", "2")
-        assert dp.au_lancement(game, config) == "", "le Quidditch seul ne fait plus Hardcore : sur mesure"
+        assert dp.au_lancement(game, config) == "realiste", "Réaliste garde la difficulté du joueur"
+        une_vie.entrer(game, ini, un_coup=True)
+        assert dp.au_lancement(game, config) == "", "un coup fatal sans les valeurs de Hardcore : sur mesure"
         rc.poser_valeur(ini, "Accio.Hardcore", "DamageTaken", "3")
         rc.poser_valeur(ini, "Accio.Hardcore", "DamageDealt", "0.5")
         assert dp.au_lancement(game, config) == "impardonnable"
+        rc.poser_valeur(ini, "Accio.Hardcore", "DamageTaken", "5")
+        rc.poser_valeur(ini, "Accio.Hardcore", "DamageDealt", "0.25")
+        assert dp.au_lancement(game, config) == "avada_kedavra"
+        assert une_vie.sortir(ini)
+        assert rc.valeur_posee(ini, "Accio.Game", "OneHit") == "0"
 
 
 class TestTextes:
@@ -380,7 +387,9 @@ class TestFenetre:
         assert isinstance(page, GameSettingsDialog) and page._onglets["difficulte"].isChecked()
         panneau = page._panneau
         assert [c.ident for c in panneau.cartes_presets] == ["normal"]
-        assert [c.ident for c in panneau.cartes_une_vie] == ["realiste"], "Impardonnable : Hardcore ne change rien"
+        # Sans réglage de difficulté, Impardonnable n'est plus que le coup fatal, et Avada Kedavra lui serait
+        # identique : seul le premier des deux s'offre.
+        assert [c.ident for c in panneau.cartes_une_vie] == ["realiste", "impardonnable"]
         explication = page.findChild(type(panneau.etat_une_vie), "explicationUneVie")   # posé par la fenêtre
         assert "héros que vous jouez" in explication.text()
         assert panneau.etat_une_vie.isHidden(), "mode coupé : rien à dire"
