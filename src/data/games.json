@@ -108,6 +108,7 @@
         "HP1/System/WinDrv.dll",
         "HP1/System/winmm.dll"
       ],
+      "dpi_aware": true,
       "requires": [
         "d3dx11_43",
         "d3dcompiler_43",
@@ -621,6 +622,7 @@
         "HP2/system/WinKeyHook.dll",
         "HP2/system/winmm.dll"
       ],
+      "dpi_aware": true,
       "requires": [
         "d3dx11_43",
         "d3dcompiler_43",
