@@ -118,9 +118,30 @@
         "winmm"
       ],
       "cover_image": "hp1_cover.jpg",
-      "latest_version": "1.8",
-      "recommended_version": "1.8",
+      "latest_version": "1.9",
+      "recommended_version": "1.9",
       "versions": [
+        {
+          "version": "1.9",
+          "date": "2026-11-20",
+          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp1-v1.9/hp1.7z",
+          "size_mb": 466,
+          "changes": [
+            "Impardonnable et Avada Kedavra (launcher 1.4.1) : une seule vie, et le premier coup reçu est fatal"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "Unforgivable and Avada Kedavra (launcher 1.4.1): one life, and the first hit you take is fatal"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Imperdonable y Avada Kedavra (launcher 1.4.1): una sola vida, y el primer golpe recibido es mortal"
+              ]
+            }
+          }
+        },
         {
           "version": "1.8",
           "date": "2026-11-19",
@@ -632,9 +653,30 @@
         "winmm"
       ],
       "cover_image": "hp2_cover.jpg",
-      "latest_version": "1.7",
-      "recommended_version": "1.7",
+      "latest_version": "1.8",
+      "recommended_version": "1.8",
       "versions": [
+        {
+          "version": "1.8",
+          "date": "2026-11-20",
+          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp2-v1.8/hp2.7z",
+          "size_mb": 664,
+          "changes": [
+            "Impardonnable et Avada Kedavra (launcher 1.4.1) : une seule vie, et le premier coup reçu est fatal, aucune potion ne vous sauve"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "Unforgivable and Avada Kedavra (launcher 1.4.1): one life, and the first hit you take is fatal, no potion saves you"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Imperdonable y Avada Kedavra (launcher 1.4.1): una sola vida, y el primer golpe recibido es mortal, ninguna poción te salva"
+              ]
+            }
+          }
+        },
         {
           "version": "1.7",
           "date": "2026-11-19",
@@ -1195,9 +1237,30 @@
         "msvcr70"
       ],
       "cover_image": "hp3_cover.jpg",
-      "latest_version": "1.8",
-      "recommended_version": "1.8",
+      "latest_version": "1.9",
+      "recommended_version": "1.9",
       "versions": [
+        {
+          "version": "1.9",
+          "date": "2026-11-20",
+          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp3-v1.9/hp3.7z",
+          "size_mb": 1792,
+          "changes": [
+            "Impardonnable et Avada Kedavra (launcher 1.4.1) : une seule vie, et le premier coup reçu par le héros joué est fatal"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "Unforgivable and Avada Kedavra (launcher 1.4.1): one life, and the first hit taken by the hero you play is fatal"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Imperdonable y Avada Kedavra (launcher 1.4.1): una sola vida, y el primer golpe que recibe el héroe que juegas es mortal"
+              ]
+            }
+          }
+        },
         {
           "version": "1.8",
           "date": "2026-11-19",
@@ -1984,9 +2047,33 @@
         "slots": "hp4"
       },
       "cover_image": "hp4_cover.jpg",
-      "latest_version": "1.7",
-      "recommended_version": "1.7",
+      "latest_version": "1.8",
+      "recommended_version": "1.8",
       "versions": [
+        {
+          "version": "1.8",
+          "date": "2026-11-20",
+          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp4-v1.8/hp4.7z",
+          "size_mb": 2598,
+          "changes": [
+            "Écran à 150 % ou plus dans Windows : le jeu n'est plus dessiné en basse résolution",
+            "Impardonnable et Avada Kedavra (launcher 1.4.1) : une seule vie, et le premier coup reçu par le personnage choisi est fatal"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "Screen at 150% or more in Windows: the game is no longer drawn at a low resolution",
+                "Unforgivable and Avada Kedavra (launcher 1.4.1): one life, and the first hit taken by the character you chose is fatal"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Pantalla al 150 % o más en Windows: el juego ya no se dibuja a baja resolución",
+                "Imperdonable y Avada Kedavra (launcher 1.4.1): una sola vida, y el primer golpe que recibe el personaje elegido es mortal"
+              ]
+            }
+          }
+        },
         {
           "version": "1.7",
           "date": "2026-11-19",
@@ -2315,9 +2402,34 @@
         "xinput1_3"
       ],
       "cover_image": "hp5_cover.jpg",
-      "latest_version": "1.8",
-      "recommended_version": "1.8",
+      "latest_version": "1.9",
+      "recommended_version": "1.9",
       "versions": [
+        {
+          "version": "1.9",
+          "date": "2026-11-20",
+          "download_url": null,
+          "download_parts": [
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp5-v1.9/hp5.7z.001",
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp5-v1.9/hp5.7z.002"
+          ],
+          "size_mb": 5909,
+          "changes": [
+            "Caméra fluide : les gestes des sorts et le bras de Harry gardent leur rythme d'origine"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "Smooth camera: spell gestures and Harry's arm keep their original pace"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Cámara fluida: los gestos de los hechizos y el brazo de Harry conservan su ritmo original"
+              ]
+            }
+          }
+        },
         {
           "version": "1.8",
           "date": "2026-11-19",
@@ -2741,9 +2853,34 @@
         "xinput1_3"
       ],
       "cover_image": "hp6_cover.jpg",
-      "latest_version": "1.5",
-      "recommended_version": "1.5",
+      "latest_version": "1.6",
+      "recommended_version": "1.6",
       "versions": [
+        {
+          "version": "1.6",
+          "date": "2026-11-20",
+          "download_url": null,
+          "download_parts": [
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp6-v1.6/hp6.7z.001",
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp6-v1.6/hp6.7z.002"
+          ],
+          "size_mb": 4417,
+          "changes": [
+            "Impardonnable et Avada Kedavra (launcher 1.4.1) : une seule vie, et le premier coup reçu est fatal"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "Unforgivable and Avada Kedavra (launcher 1.4.1): one life, and the first hit you take is fatal"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Imperdonable y Avada Kedavra (launcher 1.4.1): una sola vida, y el primer golpe recibido es mortal"
+              ]
+            }
+          }
+        },
         {
           "version": "1.5",
           "date": "2026-11-19",
