@@ -126,6 +126,9 @@ class Reglage:
     # Encore en essai (Ludo, 2026-10-25 : « proposer avec un BETA ») : une
     # étiquette « Bêta » à côté du nom, et la fiche du « ? » le dit.
     beta: bool = False
+    # En essai dans CES jeux seulement (Ludo, 2026-11-20 : ombres douces et braises de HP6, pas vues en jeu ;
+    # les mêmes réglages sont vus dans HP5 et HP4) : `reglages_correctif.reglages_du_jeu` les y rend en bêta.
+    beta_pour: tuple[str, ...] = ()
     # Le mot technique (clé tr()), dans la fiche seulement : la ligne porte un nom simple, et
     # le connaisseur retrouve « FXAA » ou « suréchantillonnage » (refonte B, Ludo 2026-11-13).
     technique: str = ""
@@ -426,7 +429,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Ombres douces",
             "Adoucit le bord des ombres portées, découpé en escalier dans le jeu livré, comme "
             "une vraie ombre au soleil. Leur forme ne change pas.",
-            defaut=False, onglet="image", cout=(("GPU", 1),), se_voit=True),
+            defaut=False, onglet="image", cout=(("GPU", 1),), se_voit=True, beta_pour=("hp6",)),
     # HP5 et HP6, [Accio.Graphics] ShadowTextureSize du correctif (game.cpp, `SizeShadowTextures` : 128 livré).
     # VU à 512 : HP5 le 2026-10-21 soir (livré depuis), HP6 le 2026-10-21 aux pierres dressées (silhouette de
     # l'ombre plus nette, tête et épaules). Toute autre valeur que 128 à 2048 en puissance de deux : livré.
@@ -460,7 +463,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "autour des feux et des sorts.",
             choix=(0, 60, 100), zero="D'origine",
             etiquettes=((60, "Trois fois plus loin"), (100, "Cinq fois plus loin")),
-            onglet="image", cout=(("GPU", 1),)),
+            onglet="image", cout=(("GPU", 1),), beta_pour=("hp6",)),
     # HP6, [Accio.Graphics] ZoneCulling du correctif (2026-11-12, lu dans hp6.exe ; VU à l'image le 2026-11-13 :
     # à 1, des pans du parc manquent, terrain de Quidditch et volière ; à 0 et 2 tout est là, sans perte
     # d'images jusqu'à 180 par seconde) : 1 = le

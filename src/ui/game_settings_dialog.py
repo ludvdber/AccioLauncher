@@ -133,7 +133,7 @@ class GameSettingsDialog(RubriquesDuJeu, QDialog):
         self._boutons: dict[str, QRadioButton] = {}
         # Réglages du correctif que le catalogue déclare confirmés pour ce jeu,
         # et son ini (à côté de l'exécutable, là où le correctif le lit).
-        declares = reglages_correctif.reglages_du_jeu(game.fix_settings)
+        declares = reglages_correctif.reglages_du_jeu(game.fix_settings, game.id)
         self._ini: Path | None = (reglages_correctif.ini_du_correctif(
             manager.config.install_path / Path(game.executable).parent) if declares else None)
         self._reglages = reglages_correctif.portes_par(self._ini, declares)

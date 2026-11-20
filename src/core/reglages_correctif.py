@@ -23,7 +23,7 @@ import re
 import shutil
 import sys
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -254,10 +254,14 @@ def textes(reglage: Reglage) -> tuple[str, str]:
     return (tr(reglage.libelle).format(deplacement),
             tr(reglage.aide).format(deplacement, t["Accio"], t["Extremos"], t["MoveDown"]))
 
-def reglages_du_jeu(idents: Iterable[str] | None) -> tuple[Reglage, ...]:
-    """Les réglages déclarés par le catalogue, connus de CE lanceur, dans l'ordre d'affichage."""
+def reglages_du_jeu(idents: Iterable[str] | None, jeu: str = "") -> tuple[Reglage, ...]:
+    """Les réglages déclarés par le catalogue, connus de CE lanceur, dans l'ordre d'affichage.
+
+    `jeu` (identifiant du catalogue) : un réglage dont `beta_pour` le nomme revient en bêta pour lui seul.
+    """
     voulus = set(idents or ())
-    return tuple(r for r in REGLAGES.values() if r.ident in voulus)
+    return tuple(replace(r, beta=True) if jeu and jeu in r.beta_pour else r
+                 for r in REGLAGES.values() if r.ident in voulus)
 
 
 def prereglages_du_jeu(reglages: Iterable[Reglage]) -> tuple[Prereglage, ...]:

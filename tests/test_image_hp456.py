@@ -80,6 +80,16 @@ class TestCatalogue:
         assert {"petits_objets_lointains", "horizon"} <= hp4
         assert not {"petits_objets_lointains", "horizon", "fov_course"} & (hp5 | (hp6 - {"fov_course"}))
 
+    def test_les_essais_de_hp6_en_beta_pour_lui_seul(self):
+        """Ludo, 2026-11-20 : ombres douces et braises pas vues dans HP6 (vues dans HP5 et HP4)."""
+        def betas(jeu):
+            g = next(g for g in load_catalog().games if g.id == jeu)
+            return {r.ident for r in rc.reglages_du_jeu(g.fix_settings, g.id) if r.beta}
+        assert {"ombres_douces", "particules_lointaines"} <= betas("hp6")
+        assert "ombres_douces" not in betas("hp5")
+        assert "particules_lointaines" not in betas("hp4")
+        assert not REGLAGES["ombres_douces"].beta, "la table reste neutre : la bêta est par jeu"
+
     def test_un_dosage_declare_a_son_effet_declare(self):
         """Un dosage dont l'interrupteur manque au catalogue serait une ligne sans parent qui ne grise jamais."""
         for g in load_catalog().games:
