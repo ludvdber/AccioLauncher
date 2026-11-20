@@ -1,6 +1,93 @@
 {
   "versions": [
     {
+      "version": "1.4.1",
+      "nom": "Avada Kedavra",
+      "depuis": "1.4.0",
+      "points_forts": [
+        {
+          "icone": "epee",
+          "jeux": [
+            "hp1",
+            "hp2",
+            "hp3",
+            "hp4",
+            "hp6"
+          ],
+          "titre": {
+            "fr": "Un seul coup",
+            "en": "One hit",
+            "es": "Un solo golpe"
+          },
+          "texte": {
+            "fr": "Deux nouvelles façons de jouer avec une seule vie : Impardonnable (Hardcore, et le premier coup reçu est fatal) et Avada Kedavra (chaque réglage au plus dur, et le premier coup reçu est fatal). Réaliste garde votre difficulté et une seule vie. Vos parties habituelles ne sont jamais touchées.",
+            "en": "Two new ways to play with one life: Unforgivable (Hardcore, and the first hit you take is fatal) and Avada Kedavra (every setting at its hardest, and the first hit you take is fatal). Realistic keeps your difficulty and one life. Your usual saves are never touched.",
+            "es": "Dos nuevas formas de jugar con una sola vida: Imperdonable (Hardcore, y el primer golpe recibido es mortal) y Avada Kedavra (cada ajuste al máximo, y el primer golpe recibido es mortal). Realista mantiene tu dificultad y una sola vida. Tus partidas habituales nunca se tocan."
+          }
+        },
+        {
+          "icone": "ecran",
+          "jeux": [
+            "hp4",
+            "hp5",
+            "hp6"
+          ],
+          "titre": {
+            "fr": "Toute l'image de HP4, HP5 et HP6",
+            "en": "All of HP4, HP5 and HP6 graphics",
+            "es": "Todos los gráficos de HP4, HP5 y HP6"
+          },
+          "texte": {
+            "fr": "L'onglet Image règle maintenant la force de chaque effet (ombres de contact, halo, rayons), la luminosité et la température des couleurs ; les dosages plus fins sont rangés dans « Réglages fins », replié. HP5 et HP6 gagnent la précision des ombres et la finesse de la lueur.",
+            "en": "The Graphics tab now sets the strength of each effect (contact shadows, glow, light rays), the brightness and the colour temperature; the finer adjustments sit in “Fine settings”, folded away. HP5 and HP6 gain shadow detail and glow sharpness.",
+            "es": "La pestaña Gráficos ajusta ahora la intensidad de cada efecto (sombras de contacto, resplandor, rayos), el brillo y la temperatura del color; los ajustes más finos están en «Ajustes finos», plegados. HP5 y HP6 ganan precisión de sombras y nitidez del resplandor."
+          }
+        }
+      ],
+      "changements": [
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "HP4 : sur un écran réglé à 150 % ou plus dans Windows, le jeu n'est plus dessiné en basse résolution.",
+            "en": "HP4: on a screen set to 150% or more in Windows, the game is no longer drawn at a low resolution.",
+            "es": "HP4: en una pantalla al 150 % o más en Windows, el juego ya no se dibuja a baja resolución."
+          }
+        },
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "HP1 et HP2 : sur un écran réglé à 150 % ou plus dans Windows, la fenêtre n'est plus trop grande ni coupée.",
+            "en": "HP1 and HP2: on a screen set to 150% or more in Windows, the window is no longer too big or cut off.",
+            "es": "HP1 y HP2: en una pantalla al 150 % o más en Windows, la ventana ya no es demasiado grande ni sale cortada."
+          }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "HP1 et HP2 : plein écran sans bordure, dans les réglages, onglet Affichage.",
+            "en": "HP1 and HP2: borderless full screen, in the settings, Display tab.",
+            "es": "HP1 y HP2: pantalla completa sin bordes, en los ajustes, pestaña Pantalla."
+          }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "HP6 : vue resserrée en courant, ombres douces et braises plus loin (ces deux dernières encore en test).",
+            "en": "HP6: narrower view while running, soft shadows and embers further away (the last two still being tested).",
+            "es": "HP6: vista más cerrada al correr, sombras suaves y brasas más lejos (estas dos últimas aún en pruebas)."
+          }
+        },
+        {
+          "genre": "nouveau",
+          "texte": {
+            "fr": "HP4 : petits objets et horizon plus loin (encore en test).",
+            "en": "HP4: small objects and horizon further away (still being tested).",
+            "es": "HP4: objetos pequeños y horizonte más lejos (aún en pruebas)."
+          }
+        }
+      ]
+    },
+    {
       "version": "1.4.0",
       "nom": "Protego Maxima",
       "depuis": "1.3.5",
