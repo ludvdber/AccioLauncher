@@ -1899,6 +1899,50 @@ class TestLePlafondEstAligneAuLancement:
         assert "FrameRateCap=60" in ini.read_text(encoding="ascii")
 
 
+class TestLePlafondDuSurechantillonnageEstLeve:
+    """Ticket #41 (2026-11-21) : 2880 lignes ramenaient ×2 à ×1,33 sur un écran 4K. Ludo : pas de
+    plafond, au risque du joueur ; le lancement lève la valeur livrée, jamais une valeur posée à la main."""
+
+    def _ini(self, tmp_path, hauteur):
+        ini = tmp_path / "d3d9.ini"
+        ini.write_bytes(f"[Accio.Graphics]\r\nSSAAFactor=2\r\nSSAAMaxHeight={hauteur}\r\n".encode("ascii"))
+        return ini
+
+    def test_la_valeur_livree_passe_a_0(self, tmp_path):
+        ini = self._ini(tmp_path, 2880)
+        assert rc.lever_plafond_ssaa(ini) is True
+        assert ini.read_bytes() == b"[Accio.Graphics]\r\nSSAAFactor=2\r\nSSAAMaxHeight=0\r\n"
+
+    def test_une_hauteur_choisie_ou_deja_0_reste(self, tmp_path):
+        for hauteur in (0, 2160, 4320):
+            ini = self._ini(tmp_path, hauteur)
+            avant = ini.read_bytes()
+            assert rc.lever_plafond_ssaa(ini) is False
+            assert ini.read_bytes() == avant
+
+    def test_sans_la_cle_rien(self, tmp_path):
+        ini = tmp_path / "d3d9.ini"
+        ini.write_bytes(b"[Accio.Graphics]\r\nSSAAFactor=2\r\n")
+        assert rc.lever_plafond_ssaa(ini) is False
+
+    def test_le_lancement_leve_le_plafond(self, tmp_path, monkeypatch):
+        """Câblage par le VRAI `launch_game`, comme l'alignement du plafond d'images."""
+        from tests.test_game_manager import GAME_DICT, _make_manager
+        m = _make_manager(tmp_path)
+        exe = tmp_path / "HPTest" / "System" / "Game.exe"
+        exe.parent.mkdir(parents=True, exist_ok=True)
+        exe.write_bytes(b"")
+        ini = exe.parent / "d3d9.ini"
+        ini.write_bytes(b"[Accio.Window]\r\nFPSLimit=60\r\n\r\n[Accio.Graphics]\r\nSSAAMaxHeight=2880\r\n")
+        monkeypatch.setattr("src.core.game_manager.prerequis_manquants", lambda _r: [])
+        for nom in ("unblock_game_dlls", "delete_pre_launch_files",
+                    "create_pre_launch_files", "apply_ini_patches"):
+            monkeypatch.setattr("src.core.game_manager." + nom, lambda *a: None)
+        monkeypatch.setattr("src.core.game_manager.subprocess.Popen", lambda *a, **k: object())
+        assert m.launch_game(GAME_DICT["id"]) is not None
+        assert "SSAAMaxHeight=0" in ini.read_text(encoding="ascii")
+
+
 class TestHp7NeDepassePas60:
     """« Hp7 il faut pas autoriser plus de 60fps car les cinématiques vont
     ultra vite » (Ludo, 2026-10-01)."""

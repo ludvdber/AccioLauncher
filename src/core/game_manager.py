@@ -335,9 +335,10 @@ class GameManager:
                 avertir()
         # Le correctif PC écrit ses captures directement hors du dossier du jeu.
         captures.preparer(game, self.config.install_path)
-        # Le plafond du jeu égal à la limite d'images (#28, #29 : 60 avec 144 saccade),
-        # pour les ini écrits quand le plafond ne suivait la limite que vers le haut.
-        self._aligner_plafond(game)
+        # Le plafond du jeu égal à la limite d'images (#28, #29 : 60 avec 144 saccade), pour les ini écrits
+        # quand le plafond ne suivait la limite que vers le haut ; et le plafond livré du suréchantillonnage
+        # levé (#41 : ×2 restait ×1,33 sur un écran 4K).
+        self._plafonds_du_correctif(game)
         # Et la couleur de la maison, que son xinput1_3.dll repose sur la manette.
         manette.preparer((self.config.install_path / game.executable).parent,
                          self.config.theme if self.config.couleur_manette else None)
@@ -441,7 +442,7 @@ class GameManager:
         """Tout ce qui doit être posé dans la clé du jeu, langue comprise."""
         return langue.valeurs_registre(game, self.config, code)
 
-    def _aligner_plafond(self, game: GameData) -> None:
+    def _plafonds_du_correctif(self, game: GameData) -> None:
         ini = reglages_correctif.ini_du_correctif(self.config.install_path / Path(game.executable).parent)
         try:
             if (ini.is_file() and reglages_correctif.est_nouveau_correctif(ini)
@@ -450,6 +451,13 @@ class GameManager:
         except (OSError, ValueError):
             # Le jeu démarre quand même, avec ses saccades d'avant.
             log.warning("Correctif : plafond d'images non aligné (%s)", ini, exc_info=True)
+        # Ticket #41 : le suréchantillonnage n'a plus de plafond livré (×2 restait ×1,33 sur un écran 4K).
+        try:
+            if (ini.is_file() and reglages_correctif.est_nouveau_correctif(ini)
+                    and reglages_correctif.lever_plafond_ssaa(ini)):
+                log.info("Correctif : plafond du suréchantillonnage levé dans %s", ini)
+        except (OSError, ValueError):
+            log.warning("Correctif : plafond du suréchantillonnage non levé (%s)", ini, exc_info=True)
 
     def apply_game_language(self, game: GameData, code: str | None = None,
                             confirmer: Confirmer | None = None) -> bool:

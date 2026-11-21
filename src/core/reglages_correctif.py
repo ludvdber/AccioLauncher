@@ -628,6 +628,24 @@ def _aligner_plafond(lignes: list[str], limite: Valeur | None, origine: Path) ->
         _poser(lignes, *_PLAFOND, str(cible))
 
 
+# Le plafond du suréchantillonnage livré jusqu'aux archives de la 1.4.1 : 2880 lignes ramenaient ×2 à ×1,33
+# sur un écran 4K (ticket #41). Ludo, 2026-11-21 : pas de plafond, au risque du joueur, que l'aide prévient.
+# Seule la valeur livrée est levée : une hauteur posée à la main reste.
+_PLAFOND_SSAA = ("Accio.Graphics", "SSAAMaxHeight")
+_PLAFOND_SSAA_LIVRE = "2880"
+
+
+def lever_plafond_ssaa(ini: Path) -> bool:
+    """Au lancement : passe le plafond livré du suréchantillonnage à 0 (seule la carte limite).
+
+    Rend True s'il a écrit. Lève OSError si le fichier ne peut pas être lu ou écrit.
+    """
+    lignes, _ = _lire(ini)
+    if _valeur(lignes, *_PLAFOND_SSAA) != _PLAFOND_SSAA_LIVRE:
+        return False
+    return poser_valeur(ini, *_PLAFOND_SSAA, "0")
+
+
 def aligner_plafond(ini: Path) -> bool:
     """Au lancement : remet le plafond du jeu à la limite d'images s'ils diffèrent.
 

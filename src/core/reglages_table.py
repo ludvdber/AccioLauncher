@@ -349,7 +349,8 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Résolution de rendu",
             "Calcule l'image en plus grand puis la réduit : contours, cheveux, feuillages et "
             "détails lointains nettement plus fins. Le réglage qui se voit le plus, et le "
-            "plus exigeant : ×2 est pour les PC puissants.",
+            "plus exigeant : ×2 est pour les PC puissants. Aucune limite : sur un écran 4K, ×2 "
+            "calcule une image de 7680×4320 ; si le jeu rame ou se ferme, baissez-le.",
             choix=(1, 1.5, 2), zero="Éteint", format_choix="×{}",
             technique="suréchantillonnage", onglet="image", cout=(("GPU", 3),), se_voit=True),
     # Les effets du correctif (HP4-HP6), tous allumés dans les ini livrés et
