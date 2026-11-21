@@ -1,5 +1,5 @@
 {
-  "catalog_version": "0.61",
+  "catalog_version": "0.62",
   "contributors": [
     {
       "name": "ASTeam",
@@ -1991,6 +1991,7 @@
         "panneau_perfs",
         "surechantillonnage",
         "lissage",
+        "smaa",
         "anticrenelage",
         "anticrenelage_transparence",
         "filtrage",
@@ -2047,9 +2048,33 @@
         "slots": "hp4"
       },
       "cover_image": "hp4_cover.jpg",
-      "latest_version": "1.8",
-      "recommended_version": "1.8",
+      "latest_version": "1.9",
+      "recommended_version": "1.9",
       "versions": [
+        {
+          "version": "1.9",
+          "date": "2026-11-21",
+          "download_url": "https://github.com/ludvdber/accio-launcher-games/releases/download/hp4-v1.9/hp4.7z",
+          "size_mb": 2598,
+          "changes": [
+            "Nouveau lissage SMAA : des bords plus nets sur les lignes fines (onglet Image, préréglage Maximale)",
+            "Résolution de rendu sans limite en 4K"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "New SMAA smoothing: cleaner edges on thin lines (Graphics tab, Maximum preset)",
+                "Render resolution no longer capped at 4K"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Nuevo suavizado SMAA: bordes más limpios en las líneas finas (pestaña Imagen, preajuste Máxima)",
+                "Resolución de renderizado sin límite en 4K"
+              ]
+            }
+          }
+        },
         {
           "version": "1.8",
           "date": "2026-11-20",
@@ -2351,6 +2376,7 @@
         "compteur_fps",
         "panneau_perfs",
         "lissage",
+        "smaa",
         "filtrage",
         "occlusion",
         "halo",
@@ -2402,9 +2428,40 @@
         "xinput1_3"
       ],
       "cover_image": "hp5_cover.jpg",
-      "latest_version": "1.9",
-      "recommended_version": "1.9",
+      "latest_version": "1.10",
+      "recommended_version": "1.10",
       "versions": [
+        {
+          "version": "1.10",
+          "date": "2026-11-21",
+          "download_url": null,
+          "download_parts": [
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp5-v1.10/hp5.7z.001",
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp5-v1.10/hp5.7z.002"
+          ],
+          "size_mb": 5909,
+          "changes": [
+            "Nouveau lissage SMAA : des bords plus nets sur les lignes fines (onglet Image, préréglage Maximale)",
+            "Résolution de rendu sans limite en 4K",
+            "Caméra fluide : Nick Quasi-Sans-Tête ne devrait plus bloquer le jeu quand il vient parler à Harry"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "New SMAA smoothing: cleaner edges on thin lines (Graphics tab, Maximum preset)",
+                "Render resolution no longer capped at 4K",
+                "Smooth camera: Nearly Headless Nick should no longer freeze the game when he comes to talk to Harry"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Nuevo suavizado SMAA: bordes más limpios en las líneas finas (pestaña Imagen, preajuste Máxima)",
+                "Resolución de renderizado sin límite en 4K",
+                "Cámara fluida: Nick Casi Decapitado ya no debería bloquear el juego cuando viene a hablar con Harry"
+              ]
+            }
+          }
+        },
         {
           "version": "1.9",
           "date": "2026-11-20",
@@ -2792,6 +2849,7 @@
         "panneau_perfs",
         "surechantillonnage",
         "lissage",
+        "smaa",
         "anticrenelage",
         "anticrenelage_transparence",
         "filtrage",
@@ -2853,9 +2911,37 @@
         "xinput1_3"
       ],
       "cover_image": "hp6_cover.jpg",
-      "latest_version": "1.6",
-      "recommended_version": "1.6",
+      "latest_version": "1.7",
+      "recommended_version": "1.7",
       "versions": [
+        {
+          "version": "1.7",
+          "date": "2026-11-21",
+          "download_url": null,
+          "download_parts": [
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp6-v1.7/hp6.7z.001",
+            "https://github.com/ludvdber/accio-launcher-games/releases/download/hp6-v1.7/hp6.7z.002"
+          ],
+          "size_mb": 4417,
+          "changes": [
+            "Nouveau lissage SMAA : des bords plus nets sur les lignes fines (onglet Image, préréglage Maximale)",
+            "Résolution de rendu sans limite en 4K"
+          ],
+          "i18n": {
+            "en": {
+              "changes": [
+                "New SMAA smoothing: cleaner edges on thin lines (Graphics tab, Maximum preset)",
+                "Render resolution no longer capped at 4K"
+              ]
+            },
+            "es": {
+              "changes": [
+                "Nuevo suavizado SMAA: bordes más limpios en las líneas finas (pestaña Imagen, preajuste Máxima)",
+                "Resolución de renderizado sin límite en 4K"
+              ]
+            }
+          }
+        },
         {
           "version": "1.6",
           "date": "2026-11-20",
