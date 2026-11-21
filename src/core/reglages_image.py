@@ -53,6 +53,7 @@ _PLACES: dict[str, tuple[str, str]] = {
     "anticrenelage_transparence": ("qualite", "Contours"),
     "lissage": ("qualite", "Contours"),
     "nettete": ("qualite", "Contours"),
+    "smaa": ("qualite", "Contours"),
     "filtrage": ("qualite", "Textures"),
     "textures_lointaines": ("qualite", "Textures"),
     "textures_hd": ("qualite", "Textures"),

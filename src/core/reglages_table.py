@@ -312,6 +312,17 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "plus nets. Trop fort, un liseré clair apparaît autour des contours.",
             choix=tuple(v for v, _ in NETTETES), zero="Aucune", etiquettes=NETTETES, chiffre=True,
             onglet="image", cout=(("GPU", 1),), depend_de="lissage"),
+    # Ticket #41, VU par Ludo sur HP5 le 2026-11-21 (grand escalier, paires F12 FXAA / SMAA) : « corrige déjà pas
+    # mal d'escaliers ». Clé SMAA du correctif (06e9287) : les archives d'avant l'ignorent, donc à déclarer au
+    # catalogue avec celles qui portent cette DLL. Allumé par le seul préréglage Maximale (décision de Ludo).
+    Reglage("smaa", "Accio.Graphics", "SMAA",
+            "Lissage SMAA",
+            "Avec « Adoucir les contours », lisse les escaliers des contours par le SMAA au lieu du "
+            "FXAA : bords plus nets et plus réguliers, surtout sans résolution de rendu agrandie. "
+            "Les lignes plus fines qu'un pixel (moulures des cadres) restent. Un peu plus "
+            "exigeant ; éteint, le FXAA reprend, pour les cartes modestes.",
+            defaut=False, technique="SMAA", onglet="image", cout=(("GPU", 1),), se_voit=True,
+            depend_de="lissage"),
     # HP4 et HP6, vu en jeu le 2026-09-25 (contours lissés, 99 FPS tenus sur
     # HP4) avec le correctif qui multi-échantillonne la cible de scène du jeu
     # et garde l'anticrénelage que le jeu éteint. Pas HP5 : avec son SSAO, le
@@ -835,7 +846,7 @@ CURSEURS: dict[str, tuple[float, float, float]] = {
 # la couleur du ciel n'existent qu'avec le correctif) : la fiche le dit.
 VALEURS_DU_JEU: dict[str, ValeurChoix | bool] = {
     "format_image": "0", "champ_vision": 0, "premier_plan": False, "plein_ecran": False,
-    "lissage": False, "nettete": 0, "anticrenelage": 0, "anticrenelage_transparence": False,
+    "lissage": False, "nettete": 0, "smaa": False, "anticrenelage": 0, "anticrenelage_transparence": False,
     "surechantillonnage": 1, "textures_lointaines": 0, "feuillage_lointain": False,
     "mipmaps_fins": False, "textures_hd": False, "occlusion": False, "ombres_nettes": 1,
     "ombres_douces": False, "ombres_floutees": 0, "particules_lointaines": 0, "decor_entier": 1, "halo": False,
@@ -856,17 +867,17 @@ VALEURS_DU_JEU: dict[str, ValeurChoix | bool] = {
 PREREGLAGES = (
     ("legere", "Légère",
      "Pour un PC modeste ou un portable : effets de lumière éteints, contours lissés.",
-     {"lissage": True, "anticrenelage": 0, "anticrenelage_transparence": False,
+     {"lissage": True, "smaa": False, "anticrenelage": 0, "anticrenelage_transparence": False,
       "surechantillonnage": 1, "filtrage": 4, "occlusion": False, "halo": False,
       "rayons": False, "feuillage_lointain": False, "decor_entier": 1}),
     ("equilibree", "Équilibrée",
      "Tous les effets de lumière, image à la taille de l'écran.",
-     {"lissage": True, "anticrenelage": 0, "anticrenelage_transparence": False,
+     {"lissage": True, "smaa": False, "anticrenelage": 0, "anticrenelage_transparence": False,
       "surechantillonnage": 1, "filtrage": 16, "occlusion": True, "halo": True,
       "rayons": True, "feuillage_lointain": False, "decor_entier": 2}),
     ("maximale", "Maximale",
      "Tous les effets et l'image la plus fine, pour une carte graphique récente.",
-     {"lissage": True, "anticrenelage": 0, "anticrenelage_transparence": False,
+     {"lissage": True, "smaa": True, "anticrenelage": 0, "anticrenelage_transparence": False,
       "surechantillonnage": 1.5, "filtrage": 16, "occlusion": True, "halo": True,
       "rayons": True, "feuillage_lointain": True, "decor_entier": 0}),
 )

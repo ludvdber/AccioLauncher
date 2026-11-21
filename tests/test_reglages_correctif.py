@@ -1899,6 +1899,19 @@ class TestLePlafondEstAligneAuLancement:
         assert "FrameRateCap=60" in ini.read_text(encoding="ascii")
 
 
+class TestSmaa:
+    """Ticket #41 (Ludo, 2026-11-21) : le SMAA lisse plus d'escaliers que le FXAA, il est le réglage du seul
+    préréglage Maximale ; le FXAA reste pour les cartes modestes."""
+
+    def test_le_smaa_depend_du_lissage_et_s_eteint_par_defaut(self):
+        r = rc.REGLAGES["smaa"]
+        assert (r.section, r.cle, r.defaut, r.depend_de) == ("Accio.Graphics", "SMAA", False, "lissage")
+
+    def test_seule_maximale_l_allume(self):
+        valeurs = {ident: v["smaa"] for ident, _nom, _texte, v in rc.PREREGLAGES}
+        assert valeurs == {"legere": False, "equilibree": False, "maximale": True}
+
+
 class TestLePlafondDuSurechantillonnageEstLeve:
     """Ticket #41 (2026-11-21) : 2880 lignes ramenaient ×2 à ×1,33 sur un écran 4K. Ludo : pas de
     plafond, au risque du joueur ; le lancement lève la valeur livrée, jamais une valeur posée à la main."""

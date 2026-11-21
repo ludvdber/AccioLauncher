@@ -670,6 +670,8 @@
     "Maximale": "Maximum",
     "Mode d'affichage": "Display mode",
     "Allumé : à la taille de l'écran, le jeu le couvre entièrement, sans cadre ni barre des tâches, et Alt+Tab reste sans risque. Éteint : une fenêtre ordinaire, avec sa barre de titre. Une résolution plus petite que l'écran reste une fenêtre dans les deux cas.": "On: at the size of the screen, the game covers it entirely, with no frame or taskbar, and Alt+Tab stays safe. Off: an ordinary window, with its title bar. A resolution smaller than the screen stays a window either way.",
+    "Lissage SMAA": "SMAA smoothing",
+    "Avec « Adoucir les contours », lisse les escaliers des contours par le SMAA au lieu du FXAA : bords plus nets et plus réguliers, surtout sans résolution de rendu agrandie. Les lignes plus fines qu'un pixel (moulures des cadres) restent. Un peu plus exigeant ; éteint, le FXAA reprend, pour les cartes modestes.": "With \"Soften edges\", smooths jagged edges with SMAA instead of FXAA: cleaner, more even edges, most visible without a larger render resolution. Lines thinner than a pixel (picture-frame mouldings) remain. A little more demanding; off, FXAA takes over, for modest graphics cards.",
     "Netteté du lissage": "Smoothing sharpness",
     "Définition des ombres": "Shadow detail",
     "Plein écran sans bordure": "Borderless full screen",
