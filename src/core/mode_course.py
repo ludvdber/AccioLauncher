@@ -229,9 +229,10 @@ class CourseRefusee(Exception):
 
 
 def entrer(game: GameData, chemin_ini: Path, categorie: str, empreinte: course.Empreinte, difficulte: str,
-           jour: date | None = None) -> EnCours:
+           jour: date | None = None, fantome: str | None = None) -> EnCours:
     """Tire le code, crée le dossier NEUF de la course, retient puis pose les clés tenues et celles de la
-    course, et retire le journal d'une course passée. `RaceLog` est posée en DERNIER : un échec en route
+    course, retire le journal d'une course passée et pose le fantôme (`course.fantome` ; None : aucun, et
+    celui d'une course passée est retiré). `RaceLog` est posée en DERNIER : un échec en route
     laisse le correctif sans course, et ce qui a été posé est rendu aussitôt."""
     jour = jour or date.today()
     code = course.tirer_code()
@@ -263,13 +264,15 @@ def entrer(game: GameData, chemin_ini: Path, categorie: str, empreinte: course.E
     if not course.retirer(chemin_ini.parent):
         sortir(etat)
         raise CourseRefusee("journal_tenu")
+    course.poser_fantome(chemin_ini.parent, fantome)
     return etat
 
 
 def sortir(etat: EnCours) -> bool:
     """Rend chaque clé retenue (`RaceLog` d'abord : la partie suivante n'est plus une course), retire celles
-    que l'ini ne portait pas, puis renomme `avant.json` en `avant.rendu.json`. False si l'ini n'a pas pu
-    être rendu (le fichier reste « à rendre » : le prochain démarrage réessaie)."""
+    que l'ini ne portait pas, retire le fantôme, puis renomme `avant.json` en `avant.rendu.json`. False si
+    l'ini n'a pas pu être rendu (le fichier reste « à rendre » : le prochain démarrage réessaie)."""
+    course.poser_fantome(etat.ini.parent, None)
     ordre = sorted(etat.retenues, key=lambda r: (r[0], r[1]) != CLE_JOURNAL)
     try:
         for section, cle, avant in ordre:

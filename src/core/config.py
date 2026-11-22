@@ -242,6 +242,9 @@ class Config:
     # bandes-annonces, coupé d'un clic. Distinct de `mute_videos`, qui ne règle
     # que les bandes-annonces et revient tel quel quand on rallume.
     son_coupe: bool = False
+    # Le fantôme du Mode course (1.5, Ludo 2026-11-22) : l'écart à son record de la catégorie, montré sur la
+    # ligne ACCIO à chaque carte quittée (`course.fantome`). Une préférence, choisie dans la boîte de départ.
+    course_fantome: bool = True
     # Version du launcher lancée la dernière fois : c'est en la voyant monter
     # qu'on sait qu'une mise à jour vient d'être installée. Une config neuve
     # porte la version courante ; une config d'avant la 1.1.6 se charge VIDE.
@@ -328,6 +331,7 @@ class Config:
                     musique_fond=_as_str(data.get("musique_fond"), ""),
                     volume_musique=_as_volume(data.get("volume_musique")),
                     son_coupe=_as_bool(data.get("son_coupe"), False),
+                    course_fantome=_as_bool(data.get("course_fantome"), True),
                     version_lancee=_as_str(data.get("version_lancee"), ""),
                     etapes_assistant=_as_liste(data.get("etapes_assistant")),
                     installed_versions=_as_map(data.get("installed_versions"), str),
@@ -395,6 +399,7 @@ class Config:
                 "musique_fond": self.musique_fond,
                 "volume_musique": self.volume_musique,
                 "son_coupe": self.son_coupe,
+                "course_fantome": self.course_fantome,
                 "version_lancee": self.version_lancee,
                 "etapes_assistant": self.etapes_assistant,
                 "installed_versions": self.installed_versions,

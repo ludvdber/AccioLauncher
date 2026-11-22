@@ -1765,6 +1765,16 @@
     "Supprimer la course": "Delete the run",
     "Temps valable": "Valid time",
     "{} course gardée": "{} run kept",
-    "{} courses gardées": "{} runs kept"
+    "{} courses gardées": "{} runs kept",
+    "Fantôme": "Ghost",
+    "Seuls le chrono et les images par seconde sont montrés.": "Only the timer and the frames per second are shown.",
+    "Pas encore de record valable en {} : l'écart viendra avec le premier.": "No valid record in {} yet: the gap will come with the first one.",
+    "L'écart à votre record en {} ({}) suit le chrono à chaque carte quittée.": "The gap to your {} record ({}) follows the timer each time you leave a map.",
+    "Aucune course gardée en {}.": "No run kept in {}.",
+    "Classement Accio": "Accio leaderboard",
+    "Personne n'y est encore classé.": "Nobody is ranked here yet.",
+    "Votre record ({}) y prendrait la place {}.": "Your record ({}) would take place {} here.",
+    "Pour y entrer, publiez la vidéo de la course et son course.json sur le Discord : une fois validée, elle apparaît ici.": "To get in, post the run's video and its course.json on the Discord: once approved, it shows up here.",
+    "Vidéo": "Video"
   }
 }

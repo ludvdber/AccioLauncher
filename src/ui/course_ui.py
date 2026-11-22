@@ -40,6 +40,7 @@ from src.ui.entree_focus import entree_suit_le_focus
 from src.ui.fenetre_message import message
 from src.ui.fonts import body_font, cinzel
 from src.ui.theme import themed
+from src.ui.toggle_switch import ToggleSwitch
 from src.ui.utils import BARRE_DEFILEMENT, open_local_path
 
 if TYPE_CHECKING:
@@ -154,16 +155,18 @@ def dossiers(game: GameData, install_path: Path) -> tuple[Path, Path]:
 
 
 class CourseDialog(QDialog):
-    """Catégorie, règles, ce qui bloque, ce qui sera remis ; « Partir » calcule l'empreinte puis rend la main
-    (`empreinte` posée, dialogue accepté). Le départ lui-même est l'affaire de `partir`."""
+    """Catégorie, règles, fantôme, ce qui bloque, ce qui sera remis ; « Partir » calcule l'empreinte puis
+    rend la main (`empreinte` posée, dialogue accepté). Le départ lui-même est l'affaire de `partir`."""
 
     def __init__(self, game: GameData, install_path: Path, bloquants: list[str],
-                 ecarts: list[mode_course.Ecart], parent: QWidget | None = None) -> None:
+                 ecarts: list[mode_course.Ecart], parent: QWidget | None = None, *, fantome: bool = True) -> None:
         super().__init__(parent)
         entree_suit_le_focus(self)
         self.game = game
         self.empreinte: course.Empreinte | None = None
         self.categorie = course.ANY
+        self.fantome = fantome
+        self._courses = course.passees(game.id)
         self._install_path = Path(install_path)
         self._fil: EmpreinteThread | None = None
         self.setWindowTitle(tr("Course : {}").format(game.name))
@@ -187,6 +190,7 @@ class CourseDialog(QDialog):
                    " et les images par seconde : elle doit se lire sur votre vidéo, entière. C'est la vidéo,"
                    " jugée par une personne, qui prouve la course.")):
             layout.addWidget(_libelle("• " + regle))
+        layout.addLayout(self._choix_fantome())
         if self.game.id == "hp1":
             layout.addWidget(_libelle(tr(
                 "HP1 : une course Accio ne compte pas sur le classement speedrun.com du jeu tant que ses "
@@ -243,12 +247,45 @@ class CourseDialog(QDialog):
         rangee.addStretch()
         return rangee
 
+    def _choix_fantome(self) -> QHBoxLayout:
+        """« Fantôme » : voir ou non l'écart à son record de la catégorie ; la phrase dit ce record."""
+        rangee = QHBoxLayout()
+        rangee.setSpacing(12)
+        colonne = QVBoxLayout()
+        colonne.setSpacing(2)
+        colonne.addWidget(_libelle(tr("Fantôme"), _TEXTE, 12))
+        self._note_fantome = _libelle("", _GRIS, 11)
+        colonne.addWidget(self._note_fantome)
+        rangee.addLayout(colonne, 1)
+        self.bascule_fantome = ToggleSwitch(self.fantome)
+        self.bascule_fantome.setAccessibleName(tr("Fantôme"))
+        self.bascule_fantome.toggled.connect(self._basculer_fantome)
+        rangee.addWidget(self.bascule_fantome, alignment=Qt.AlignmentFlag.AlignVCenter)
+        self._decrire_fantome()
+        return rangee
+
+    def _basculer_fantome(self, coche: bool) -> None:
+        self.fantome = coche
+        self._decrire_fantome()
+
+    def _decrire_fantome(self) -> None:
+        record = course.meilleure(self._courses, self.categorie)
+        if not self.fantome:
+            texte = tr("Seuls le chrono et les images par seconde sont montrés.")
+        elif record is None:
+            texte = tr("Pas encore de record valable en {} : l'écart viendra avec le premier.").format(self.categorie)
+        else:
+            texte = tr("L'écart à votre record en {} ({}) suit le chrono à chaque carte quittée.").format(
+                self.categorie, course.format_temps(record.net_us))
+        self._note_fantome.setText(texte)
+
     def _choisir(self, categorie: str) -> None:
         self.categorie = categorie
         self._regle.setText(regle_categorie(categorie))
+        self._decrire_fantome()
 
     def _calculer(self) -> None:
-        for b in self.pastilles.values():
+        for b in (*self.pastilles.values(), self.bascule_fantome):
             b.setEnabled(False)
         self._partir.setEnabled(False)
         self._barre.show()
@@ -292,7 +329,7 @@ class CourseDialog(QDialog):
         self._barre.hide()
         self._etat.setText(tr("L'empreinte n'a pas pu être calculée : {}").format(texte))
         self._partir.setEnabled(True)
-        for b in self.pastilles.values():
+        for b in (*self.pastilles.values(), self.bascule_fantome):
             b.setEnabled(True)
 
     def done(self, code: int) -> None:
@@ -323,16 +360,20 @@ def partir(view: GameDetailView) -> None:
     if ini is None:
         return
     dlg = CourseDialog(game, config.install_path, bloquants(game, config),
-                       mode_course.ecarts(game.id, ini), view)
+                       mode_course.ecarts(game.id, ini), view, fantome=config.course_fantome)
     if dlg.exec() != QDialog.DialogCode.Accepted or dlg.empreinte is None:
         return
+    if dlg.fantome != config.course_fantome:
+        config.course_fantome = dlg.fantome
+        config.save()
+    fantome = course.fantome(course.passees(game.id), dlg.categorie) if dlg.fantome else None
     native = ""
     if game.difficulte is not None:
         from src.core import difficulte_jeu
         rang = difficulte_jeu.lire(game, config)
         native = f";native={rang}" if rang is not None else ""
     try:
-        etat = mode_course.entrer(game, ini, dlg.categorie, dlg.empreinte, "normal" + native)
+        etat = mode_course.entrer(game, ini, dlg.categorie, dlg.empreinte, "normal" + native, fantome=fantome)
     except (mode_course.CourseRefusee, OSError, ValueError) as exc:
         code = str(exc.args[0]) if isinstance(exc, mode_course.CourseRefusee) and exc.args else "ini"
         message(view, QMessageBox.Icon.Warning, tr("Course"), raison(code))

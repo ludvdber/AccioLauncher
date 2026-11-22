@@ -385,3 +385,35 @@ class TestLiveSplit:
         assert segs[1].findtext("SplitTimes/SplitTime/GameTime") == "01:02:03.4567890"
         assert course.livesplit("HP2", "Any%", [long]) is None, "aucun temps valable dans la catégorie"
         assert course.livesplit("HP2", "Any%", [_gardee("AAAA-AAAA", 5)]) is None, "un record sans segment"
+
+
+class TestFantome:
+    """Le fichier du fantôme que lit `race::ReadGhost` : le record carte par carte, cumulé, sa dernière ligne
+    portant son temps."""
+
+    def test_record_carte_par_carte(self):
+        record = _gardee("AAAA-AAAA", 31, ("PrivetDr", 10, False), ("Burrow", 5, False), ("Burrow", 6, True),
+                         ("Hub", 9, False), ecrite=1)
+        plus_lent = _gardee("BBBB-BBBB", 40, ("PrivetDr", 1, False), ("Hub", 39, False), ecrite=2)
+        autre = _gardee("CCCC-CCCC", 5, ("PrivetDr", 5, False), categorie="Glitchless")
+        assert course.fantome([record, plus_lent, autre], "Any%") == "PrivetDr\t10\nBurrow\t21\nHub\t31\n", (
+            "la carte rechargée compte une fois, à sa seconde sortie ; le temps du record en dernier")
+        assert course.fantome([record], "Glitchless") is None, "pas de record dans la catégorie"
+        assert course.fantome([_gardee("AAAA-AAAA", 5)], "Any%") is None, "un record sans segment"
+
+    def test_noms_qui_casseraient_la_ligne_et_temps_final(self):
+        record = _gardee("AAAA-AAAA", 50, ("", 10, False), ("A\tB", 10, False), ("Fin", 10, False))
+        assert course.fantome([record], "Any%") == "?\t20\nFin\t50\n", (
+            "un nom vide ou à tabulation devient « ? » ; la dernière ligne porte le temps officiel s'il est plus long")
+
+    def test_trop_de_cartes(self):
+        trop = _gardee("AAAA-AAAA", 600, *((f"M{i}", 1, False) for i in range(513)))
+        assert course.fantome([trop], "Any%") is None, "le correctif refuserait le fichier entier"
+
+    def test_poser_puis_retirer(self, tmp_path):
+        course.poser_fantome(tmp_path, "PrivetDr\t10\n")
+        assert (tmp_path / course.FANTOME).read_text(encoding="utf-8") == "PrivetDr\t10\n"
+        course.poser_fantome(tmp_path, None)
+        assert not (tmp_path / course.FANTOME).exists()
+        course.poser_fantome(tmp_path, None)                       # rien à retirer : rien ne casse
+        course.poser_fantome(tmp_path / "absent", "x\t1\n")       # dossier absent : noté, la course part

@@ -176,3 +176,16 @@ def test_supprimer_une_course_gardee(tmp_path):
     assert mode_course.supprimer(etat.code) and not course.dossier(etat.code).exists()
     with pytest.raises(ValueError):
         mode_course.supprimer("../../x")
+
+
+def test_fantome_pose_au_depart_retire_a_la_sortie(tmp_path):
+    jeu, ini = _installer(tmp_path, "hp2", "HP2/system/Game.exe", "winmm.ini", INI_HP2)
+    avant = ini.read_bytes()
+    etat = mode_course.entrer(jeu, ini, "Any%", EMPREINTE, "normal", fantome="PrivetDr\t10\n")
+    assert (ini.parent / course.FANTOME).read_text(encoding="utf-8") == "PrivetDr\t10\n"
+    assert mode_course.sortir(etat) and ini.read_bytes() == avant
+    assert not (ini.parent / course.FANTOME).exists(), "le fantôme ne survit pas à la course"
+    (ini.parent / course.FANTOME).write_text("vieux\t1\n", encoding="utf-8")
+    etat = mode_course.entrer(jeu, ini, "Any%", EMPREINTE, "normal")
+    assert not (ini.parent / course.FANTOME).exists(), "sans fantôme voulu, celui d'une course passée est retiré"
+    mode_course.sortir(etat)

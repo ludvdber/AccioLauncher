@@ -87,6 +87,41 @@ class TestFiche:
         (etat,) = mode_course.en_cours("hp2")
         assert mode_course.actif(ini) and "cdcdcdcd HP2 Any%" in etat.ligne_id
 
+    def test_partir_pose_le_fantome_et_retient_la_preference(self, make_window, monkeypatch, tmp_path):
+        from src.ui import course_ui
+        from src.ui import game_detail_handlers as handlers
+        self._installe(monkeypatch)
+        win = make_window()
+        game = _CATALOGUE["hp2"]
+        _conclusion(tmp_path / "ailleurs")                            # le record Any% de HP2
+        ini = _poser_ini(win.manager.config.install_path)
+        win._detail.set_game(game)
+        voulu = {"fantome": True}
+
+        class Accepte(course_ui.CourseDialog):
+            def exec(self):
+                self.empreinte = course.Empreinte("cd" * 32, "cdcdcdcd", ())
+                self.fantome = voulu["fantome"]
+                return course_ui.QDialog.DialogCode.Accepted
+
+        monkeypatch.setattr(course_ui, "CourseDialog", Accepte)
+        lancees = []
+        monkeypatch.setattr(handlers, "on_play", lambda view: lancees.append(1))
+        win._detail.partie_en_cours = lambda: "HP2" if lancees else ""
+        course_ui.partir(win._detail)
+        lignes = (ini.parent / course.FANTOME).read_text(encoding="utf-8").splitlines()
+        assert [ligne.split("\t")[0] for ligne in lignes] == ["PrivetDr", "Adv1Willow"]
+        (etat,) = mode_course.en_cours("hp2")
+        mode_course.sortir(etat)
+        sauvees = []
+        from src.core.config import Config                          # une dataclass, pas un objet Qt (règle 12)
+        monkeypatch.setattr(Config, "save", lambda cfg: sauvees.append(cfg.course_fantome))
+        voulu["fantome"] = False
+        lancees.clear()
+        course_ui.partir(win._detail)
+        assert not (ini.parent / course.FANTOME).exists() and win.manager.config.course_fantome is False
+        assert sauvees == [False], "la préférence changée s'enregistre, une fois"
+
     def test_jeu_qui_ne_part_pas_rend_les_reglages(self, make_window, monkeypatch):
         from src.ui import course_ui
         from src.ui import game_detail_handlers as handlers
@@ -149,6 +184,24 @@ class TestDialogue:
             dlg._partir.click()
             assert not dlg.pastilles["100%"].isEnabled(), "la catégorie ne change plus pendant l'empreinte"
         assert dlg.categorie == "Glitchless"
+
+    def test_fantome_dit_le_record_de_la_categorie(self, qtbot, tmp_path):
+        from src.ui.course_ui import CourseDialog
+        record = _conclusion(tmp_path / "jeux")
+        _poser_ini(tmp_path)
+        dlg = CourseDialog(_CATALOGUE["hp2"], tmp_path, [], [])
+        qtbot.addWidget(dlg)
+        assert dlg.fantome and dlg.bascule_fantome.isChecked()
+        assert course.format_temps(record.resultat.net_us) in dlg._note_fantome.text()
+        dlg.pastilles["100%"].click()
+        assert "100%" in dlg._note_fantome.text() and course.format_temps(record.resultat.net_us) \
+            not in dlg._note_fantome.text(), "pas de record en 100 %"
+        from PyQt6.QtCore import Qt
+        qtbot.mouseClick(dlg.bascule_fantome, Qt.MouseButton.LeftButton)
+        assert not dlg.fantome and "100%" not in dlg._note_fantome.text()
+        coupe = CourseDialog(_CATALOGUE["hp2"], tmp_path, [], [], fantome=False)
+        qtbot.addWidget(coupe)
+        assert not coupe.bascule_fantome.isChecked(), "la préférence enregistrée"
 
     def test_fermer_pendant_le_calcul(self, qtbot, tmp_path):
         from src.ui.course_ui import CourseDialog
@@ -276,6 +329,51 @@ class TestCarnet:
         carnet = CarnetPage(win.manager, win, jeu="hp2")
         qtbot.addWidget(carnet)
         return win, carnet
+
+    @staticmethod
+    def _classer(*entrees: dict) -> None:
+        import json
+
+        from src.core import classement
+        assert classement.garder(json.dumps({"format": 1, "jeux": {"hp2": {"Any%": list(entrees)}}}).encode())
+
+    def test_classement_sans_course_gardee(self, make_window, monkeypatch, qtbot):
+        from PyQt6.QtWidgets import QLabel, QPushButton
+
+        from src.ui import courses_page
+        from src.ui.carnet_page import COURSES
+        self._classer({"joueur": "Ronald <b>W</b>", "temps": "40:00.000", "date": "2026-12-02",
+                       "video": "https://exemple.com/piege"},
+                      {"joueur": "Ludo", "temps": "31:04.512", "date": "2026-12-01", "code": "7KQ2-M4XP",
+                       "video": "https://youtu.be/abc"})
+        _, carnet = self._carnet(make_window, monkeypatch, qtbot)
+        assert COURSES in carnet._rubriques, "le classement suffit à montrer la rubrique"
+        debut = time.perf_counter()
+        carnet.rubrique(COURSES)
+        assert time.perf_counter() - debut < _DEMI_SECONDE
+        page = carnet._courses
+        assert page is not None and [e.joueur for e in page.places] == ["Ludo", "Ronald <b>W</b>"]
+        textes = [lbl.text() for lbl in page.findChildren(QLabel)]
+        assert "Ronald <b>W</b>" in textes and "31:04.512" in textes and "2026-12-01 · 7KQ2-M4XP" in textes
+        nom = next(lbl for lbl in page.findChildren(QLabel) if lbl.text() == "Ronald <b>W</b>")
+        assert nom.textFormat() == courses_page.Qt.TextFormat.PlainText, "un nom venu du réseau, en texte brut"
+        videos = [b for b in page.findChildren(QPushButton) if b.toolTip().startswith("https://")]
+        assert [b.toolTip() for b in videos] == ["https://youtu.be/abc"], "la vidéo d'un hôte inconnu n'a pas de lien"
+        ouvertes = []
+        monkeypatch.setattr(courses_page, "open_url", ouvertes.append)
+        videos[0].click()
+        assert ouvertes == ["https://youtu.be/abc"] and page.note_place is None
+
+    def test_place_que_prendrait_le_record(self, make_window, monkeypatch, qtbot, tmp_path):
+        from src.ui.carnet_page import COURSES
+        fin = _conclusion(tmp_path / "jeux")
+        self._classer({"joueur": "Rapide", "temps": "0:00.001", "date": "2026-12-01"},
+                      {"joueur": "Lent", "temps": "9:59:59.000", "date": "2026-12-01"})
+        _, carnet = self._carnet(make_window, monkeypatch, qtbot)
+        carnet.rubrique(COURSES)
+        page = carnet._courses
+        assert page is not None and page.note_place is not None
+        assert course.format_temps(fin.resultat.net_us) in page.note_place.text() and " 2." in page.note_place.text()
 
     def test_pas_de_rubrique_sans_course(self, make_window, monkeypatch, qtbot):
         from src.ui.carnet_page import COURSES

@@ -10,6 +10,9 @@ Aucune course n'est lue en entier ici : ses lignes brutes restent dans son dossi
 UNE fois par visite du Carnet (règle 140) : le Carnet passe sa liste, la page ne relit qu'après une suppression.
 Les pastilles des catégories ne paraissent que si le jeu a des courses de plus d'une catégorie ; changer de
 catégorie redessine la page sur la liste déjà lue.
+
+Sous ses courses, le classement Accio de la catégorie (`classement.py`, le cache que le Carnet passe) :
+rang, joueur, temps, jour, vidéo ; la place que prendrait le record du joueur ; comment y entrer.
 """
 
 from pathlib import Path
@@ -21,6 +24,7 @@ from PyQt6.QtWidgets import (
     QFrame,
     QGridLayout,
     QHBoxLayout,
+    QLabel,
     QMessageBox,
     QPushButton,
     QScrollArea,
@@ -29,10 +33,11 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from src.core import course, mode_course
+from src.core import classement, course, mode_course
 from src.core.ecriture_atomique import ecrire_atomique
 from src.core.game_data import GameData
 from src.core.i18n import tr, trn
+from src.core.liens import DISCORD_URL
 from src.core.phonographe import nom_de_fichier
 from src.ui.composants import feuille_de_style, filtre, lien
 from src.ui.course_ui import raison
@@ -40,7 +45,7 @@ from src.ui.fenetre_message import message
 from src.ui.folio_page import _tuile
 from src.ui.stats_widgets import _DISCRET, _Paragraphe, _texte
 from src.ui.theme import RAYON_CARTE, themed
-from src.ui.utils import BARRE_DEFILEMENT, open_local_path
+from src.ui.utils import BARRE_DEFILEMENT, open_local_path, open_url
 
 _LARGEUR_TUILE = 360         # celle des tuiles des Défis et du Folio
 
@@ -50,7 +55,7 @@ QScrollArea {{ background: transparent; border: none; }}
 QFrame#courseGardee {{ background: #0d0d1a; border: 1px solid rgba(214, 167, 44, 0.12);
                        border-radius: {RAYON_CARTE}px; }}
 QFrame#courseGardee[valable="true"] {{ border-color: rgba(214, 167, 44, 0.32); }}
-QFrame#parCarte {{ background: #0d0d1a; border: 1px solid rgba(214, 167, 44, 0.12);
+QFrame#parCarte, QFrame#classement {{ background: #0d0d1a; border: 1px solid rgba(214, 167, 44, 0.12);
                   border-radius: {RAYON_CARTE}px; }}
 """
 
@@ -87,9 +92,10 @@ class _Ligne(QFrame):
 
 
 class CoursesPage(QWidget):
-    """Les courses gardées d'un jeu ; un mot quand il n'en a pas."""
+    """Les courses gardées d'un jeu et son classement Accio ; un mot quand il n'en a pas."""
 
-    def __init__(self, game: GameData, gardees: list[course.Passee], parent: QWidget | None = None) -> None:
+    def __init__(self, game: GameData, gardees: list[course.Passee],
+                 classement_: classement.Classement = classement.VIDE, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("courses")
         self.setStyleSheet(themed(_STYLE) + feuille_de_style())
@@ -98,9 +104,14 @@ class CoursesPage(QWidget):
         self.pastilles: dict[str, QPushButton] = {}
         self.passages: list[course.Passage] = []
         self.bouton_livesplit: QPushButton | None = None
+        self.classement = classement_
+        self.places: list[classement.Entree] = []
+        self.note_place: QLabel | None = None
         du_jeu = [c for c in gardees if c.jeu == game.id]
-        # La page s'ouvre sur la catégorie de la course la plus récente (`passees` : la plus récente d'abord).
-        self.categorie = du_jeu[0].categorie if du_jeu else course.ANY
+        # La page s'ouvre sur la catégorie de la course la plus récente (`passees` : la plus récente d'abord),
+        # sans course sur la première du classement.
+        classees = classement_.categories(game.id)
+        self.categorie = du_jeu[0].categorie if du_jeu else classees[0] if classees else course.ANY
         self._passees: list[course.Passee] = []
         # Une course effacée : le Carnet relit sa liste quand il retire la page.
         self.modifiee = False
@@ -110,11 +121,14 @@ class CoursesPage(QWidget):
 
     def _remplir(self, passees: list[course.Passee]) -> None:
         self._passees = passees
-        presentes = [c for c in course.CATEGORIES if any(p.categorie == c for p in passees)]
-        if self.categorie not in presentes and passees:
-            self.categorie = passees[0].categorie       # la catégorie choisie n'a plus de course (suppression)
+        classees = self.classement.categories(self.game.id)
+        presentes = [c for c in course.CATEGORIES if c in classees or any(p.categorie == c for p in passees)]
+        if self.categorie not in presentes and presentes:
+            # la catégorie choisie n'a plus de course (suppression)
+            self.categorie = passees[0].categorie if passees else presentes[0]
         passees = [p for p in passees if p.categorie == self.categorie]
-        self.lignes, self.pastilles, self.passages = [], {}, []
+        self.lignes, self.pastilles, self.passages, self.places = [], {}, [], []
+        self.note_place = None
         self.bouton_livesplit = None
         zone = QScrollArea()
         zone.setWidgetResizable(True)
@@ -128,7 +142,7 @@ class CoursesPage(QWidget):
         lay.setSpacing(8)
         zone.setWidget(corps)
         self._racine.addWidget(zone)
-        if not passees:
+        if not presentes:
             lay.addWidget(_Paragraphe(tr("Aucune course de ce jeu n'est gardée."), taille=16))
             lay.addStretch()
             return
@@ -136,6 +150,15 @@ class CoursesPage(QWidget):
         if len(presentes) > 1:
             lay.addLayout(self._choix(presentes))
             lay.addSpacing(10)
+        if passees:
+            self._mes_courses(lay, passees)
+        else:
+            lay.addWidget(_texte(tr("Aucune course gardée en {}.").format(self.categorie), 14, _DISCRET))
+        self._classement(lay, course.meilleure(passees, self.categorie))
+        lay.addStretch()
+
+    def _mes_courses(self, lay: QVBoxLayout, passees: list[course.Passee]) -> None:
+        """Le meilleur temps, l'export LiveSplit, les courses gardées, le meilleur passage par carte."""
         haut = QHBoxLayout()
         record = course.meilleure(passees, self.categorie)
         tuile = _tuile(course.format_temps(record.net_us) if record is not None else "—",
@@ -168,7 +191,54 @@ class CoursesPage(QWidget):
             lay.addWidget(_texte(tr("Pris dans les courses valables ; une carte rechargée ne compte pas."),
                                  12, _DISCRET))
             lay.addWidget(self._par_carte(self.passages))
-        lay.addStretch()
+
+    def _classement(self, lay: QVBoxLayout, record: course.Passee | None) -> None:
+        """Le classement Accio de la catégorie, la place qu'y prendrait le record, comment y entrer."""
+        self.places = list(self.classement.de(self.game.id, self.categorie))
+        lay.addSpacing(18)
+        lay.addWidget(_texte(tr("Classement Accio") + " · " + self.categorie, 14, "#d6a72c"))
+        if self.places:
+            lay.addWidget(self._grille(self.places))
+        else:
+            lay.addWidget(_texte(tr("Personne n'y est encore classé."), 12, _DISCRET))
+        if record is not None and record.code not in {e.code for e in self.places}:
+            place = classement.rang(tuple(self.places), record.net_us)
+            self.note_place = _texte(tr("Votre record ({}) y prendrait la place {}.").format(
+                course.format_temps(record.net_us), place), 12, "#e0e0f0")
+            lay.addWidget(self.note_place)
+        entrer = QHBoxLayout()
+        entrer.addWidget(_texte(tr("Pour y entrer, publiez la vidéo de la course et son course.json sur le "
+                                   "Discord : une fois validée, elle apparaît ici."), 12, _DISCRET))
+        discord = lien(tr("Ouvrir le Discord"), discret=True)
+        discord.clicked.connect(lambda: open_url(DISCORD_URL))
+        entrer.addSpacing(10)
+        entrer.addWidget(discord, alignment=Qt.AlignmentFlag.AlignVCenter)
+        entrer.addStretch()
+        lay.addLayout(entrer)
+
+    @staticmethod
+    def _grille(entrees: list[classement.Entree]) -> QFrame:
+        """Une ligne par course classée : rang, joueur, jour et code, temps, vidéo. Les noms viennent du
+        réseau : `_texte` les montre en texte brut."""
+        cadre = QFrame()
+        cadre.setObjectName("classement")
+        grille = QGridLayout(cadre)
+        grille.setContentsMargins(16, 10, 16, 10)
+        grille.setHorizontalSpacing(14)
+        grille.setVerticalSpacing(4)
+        grille.setColumnStretch(1, 1)
+        droite = Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        for i, e in enumerate(entrees):
+            grille.addWidget(_texte(str(i + 1), 12, "#d6a72c" if i < 3 else _DISCRET), i, 0, droite)
+            grille.addWidget(_texte(e.joueur, 12, "#e0e0f0"), i, 1)
+            grille.addWidget(_texte(" · ".join(x for x in (e.jour, e.code) if x), 11, _DISCRET), i, 2, droite)
+            grille.addWidget(_texte(course.format_temps(e.net_us), 12, "#ffffff"), i, 3, droite)
+            if e.video:
+                video = lien(tr("Vidéo"), discret=True)
+                video.setToolTip(e.video)
+                video.clicked.connect(lambda _c=False, u=e.video: open_url(u))
+                grille.addWidget(video, i, 4, droite)
+        return cadre
 
     def _choix(self, presentes: list[str]) -> QHBoxLayout:
         rangee = QHBoxLayout()

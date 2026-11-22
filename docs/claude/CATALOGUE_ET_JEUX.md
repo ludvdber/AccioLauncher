@@ -5,6 +5,8 @@ Déplacé tel quel depuis `CLAUDE.md` le 2026-10-03 (le fichier, chargé à chaq
 
 ## Catalogue
 
+**`classement.json`** (1.5) vit À CÔTÉ de `games.json` dans `accio-launcher-games`, jamais embarqué : le classement Accio, tenu à la main par Ludo (format et contrôles : `classement.py` d'ARCHITECTURE_CORE.md). Pour ajouter une course validée : une entrée `{"joueur": "…", "temps": "31:04.512", "date": "2026-12-01", "code": "7KQ2-M4XP", "video": "https://youtu.be/…"}` sous `jeux.<id>.<catégorie>` (Any%, 100%, Glitchless), l'ordre n'importe pas ; `temps`, `date` et `code` se lisent dans le Carnet ou le `course.json`. Publié, il arrive à la vérification suivante, sans numéro à monter.
+
 `src/data/games.json` (embarqué) est bumpé avec le distant (`accio-launcher-games`). **Les garder en phase** — un `executable` faux donne des échecs silencieux de lancement et de désinstallation. Le contenu doit être identique ; l'indentation et les fins de ligne peuvent différer.
 
 **Bloc `trailers`** (racine) :

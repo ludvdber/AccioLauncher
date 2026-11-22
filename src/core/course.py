@@ -36,6 +36,7 @@ from src.core.ecriture_atomique import ecrire_atomique
 log = logging.getLogger(__name__)
 
 FICHIER = "accio_course.tsv"
+FANTOME = "accio_fantome.tsv"                  # le record à battre, à côté du journal (`race::kGhostFile`)
 JOURNAL = "course.json"
 AVANT = "avant.json"
 AVANT_RENDU = "avant.rendu.json"     # `avant.json` une fois les réglages rendus
@@ -791,6 +792,47 @@ def livesplit(nom_jeu: str, categorie: str, courses_du_jeu: Iterable[Passee]) ->
         "  <Segments>\n" + "".join(segments) + "  </Segments>\n"
         "  <AutoSplitterSettings />\n"
         "</Run>\n")
+
+
+_FANTOME_MAX = 512                              # `race::Ghost::splits` : au-delà, le correctif refuserait tout
+
+
+def fantome(courses_du_jeu: Iterable[Passee], categorie: str) -> str | None:
+    """Le fichier du fantôme (`race::ReadGhost` du correctif) : le meilleur temps valable de la catégorie,
+    carte par carte, `<carte>\t<µs>\n`, le temps sans chargements où le record a QUITTÉ chaque carte ; la
+    dernière ligne porte son temps. Une carte quittée deux fois de suite (rechargée) ne compte qu'une fois, à
+    la seconde ; un nom vide ou qui casserait la ligne devient « ? » (il ne se comparera à rien). None sans
+    record, sans segment, ou au-delà de ce que le correctif lit."""
+    record = meilleure(courses_du_jeu, categorie)
+    if record is None or not record.segments:
+        return None
+    lignes_: list[tuple[str, int]] = []
+    cumul = 0
+    for s in record.segments:
+        cumul += max(0, s.net_us)
+        nom = s.carte if s.carte and not any(c in s.carte for c in "\t\r\n") else "?"
+        if lignes_ and lignes_[-1][0] == nom:
+            lignes_[-1] = (nom, cumul)
+        else:
+            lignes_.append((nom, cumul))
+    lignes_[-1] = (lignes_[-1][0], max(cumul, record.net_us))
+    if len(lignes_) > _FANTOME_MAX:
+        return None
+    return "".join(f"{nom}\t{us}\n" for nom, us in lignes_)
+
+
+def poser_fantome(dossier_exe: Path, texte: str | None) -> None:
+    """Pose le fantôme à côté du journal (None : le retire, celui d'une course passée compris). Il n'est
+    qu'affiché : un échec se note et la course part quand même."""
+    chemin = dossier_exe / FANTOME
+    try:
+        if texte is None:
+            chemin.unlink(missing_ok=True)
+        else:
+            ecrire_atomique(chemin, texte)
+    except OSError:
+        log.warning("Course : fantôme non %s dans %s", "retiré" if texte is None else "posé", dossier_exe,
+                    exc_info=True)
 
 
 def format_temps(us: int) -> str:

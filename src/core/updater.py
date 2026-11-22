@@ -10,7 +10,7 @@ from typing import Any
 
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
 
-from src.core import liens, reseau
+from src.core import classement, liens, reseau
 from src.core.config import APP_VERSION, LOCAL_CATALOG_PATH
 from src.core.ecriture_atomique import ecrire_octets_atomique
 from src.core.game_data import _parse_catalog
@@ -310,6 +310,19 @@ def asset_de_la_plateforme(assets: Iterable[dict[str, Any]], plateforme: str | N
     return generiques[0] if generiques else None
 
 
+def _lire_borne(resp: Any, maximum: int, quoi: str) -> bytes:
+    """Le corps d'une réponse en streaming, `ValueError` au-delà de `maximum` octets : `client.get()`
+    chargerait en mémoire tout ce que le serveur envoie."""
+    morceaux: list[bytes] = []
+    recus = 0
+    for bloc in resp.iter_bytes(64 * 1024):
+        recus += len(bloc)
+        if recus > maximum:
+            raise ValueError(f"{quoi} trop volumineux (> {maximum} octets), ignoré")
+        morceaux.append(bloc)
+    return b"".join(morceaux)
+
+
 class UpdateChecker(QThread):
     """Vérifie les mises à jour du catalogue et du launcher en arrière-plan."""
 
@@ -343,7 +356,7 @@ class UpdateChecker(QThread):
         self._transport_errors = 0
 
     def run(self) -> None:
-        """Trois étapes réseau séquentielles, interruptibles entre chacune.
+        """Quatre étapes réseau séquentielles, interruptibles entre chacune.
 
         `requestInterruption()` ne peut pas avorter une requête HTTP en cours
         (httpx n'expose pas d'annulation), mais tester le drapeau entre les
@@ -362,6 +375,10 @@ class UpdateChecker(QThread):
             log.info("Vérification des mises à jour interrompue (après launcher)")
             return
         self._check_download_counts()
+        if self.isInterruptionRequested():
+            log.info("Vérification des mises à jour interrompue (après compteurs)")
+            return
+        self._check_classement()
         self.network_status.emit(self.is_online)
 
     @property
@@ -443,16 +460,7 @@ class UpdateChecker(QThread):
                 with client.stream("GET", self._catalog_url) as resp:
                     self._contact = True
                     resp.raise_for_status()
-                    morceaux: list[bytes] = []
-                    recus = 0
-                    for bloc in resp.iter_bytes(64 * 1024):
-                        recus += len(bloc)
-                        if recus > _CATALOG_MAX_BYTES:
-                            raise ValueError(
-                                f"catalogue distant trop volumineux "
-                                f"(> {_CATALOG_MAX_BYTES} octets), ignoré")
-                        morceaux.append(bloc)
-                brut = b"".join(morceaux)
+                    brut = _lire_borne(resp, _CATALOG_MAX_BYTES, "catalogue distant")
             raw = json.loads(brut.decode("utf-8"))
 
             catalog = _parse_catalog(raw)
@@ -497,6 +505,24 @@ class UpdateChecker(QThread):
                 AttributeError, TypeError, RecursionError) as exc:
             self._note_transport_error(exc)
             log.warning("Impossible de vérifier le catalogue distant : %s", exc)
+
+    def _check_classement(self) -> None:
+        """Le classement Accio publié à côté du catalogue (`classement.py`), gardé en cache pour le Carnet.
+        Pas encore publié (404) : rien à dire."""
+        import httpx  # import différé (thread) — voir en-tête de module
+
+        try:
+            with reseau.client(httpx.Timeout(**_TIMEOUT_KW)) as client:
+                with client.stream("GET", liens.CLASSEMENT_URL) as resp:
+                    self._contact = True
+                    if resp.status_code == 404:
+                        return
+                    resp.raise_for_status()
+                    brut = _lire_borne(resp, classement.OCTETS_MAX, "classement distant")
+            classement.garder(brut)
+        except (httpx.HTTPError, ValueError) as exc:
+            self._note_transport_error(exc)
+            log.warning("Impossible de récupérer le classement : %s", exc)
 
     def _check_launcher(self) -> None:
         """Vérifie si une nouvelle version du launcher est disponible."""

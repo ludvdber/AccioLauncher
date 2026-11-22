@@ -27,7 +27,7 @@ from PyQt6.QtWidgets import (
     QButtonGroup, QDialog, QFrame, QHBoxLayout, QPushButton, QStackedWidget, QVBoxLayout, QWidget,
 )
 
-from src.core import course, folio
+from src.core import classement, course, folio
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
 from src.ui.courses_page import CoursesPage
@@ -76,8 +76,10 @@ class CarnetPage(QDialog):
         self._releve: QDialog | None = None
         self._defis: QWidget | None = None
         self._courses: CoursesPage | None = None
-        # Les courses gardées, lues UNE fois (règle 140) : la rubrique n'existe que s'il y en a.
+        # Les courses gardées et le classement Accio, lus UNE fois (règle 140) : la rubrique n'existe que
+        # s'il y a l'un ou l'autre pour un jeu installé.
         self._gardees = course.passees()
+        self._classement = classement.en_cache()
         self.jeu = ""
         # La rubrique affichée, tenue ici : la DÉDUIRE de la pile se trompait.
         # Retirer l'ancien folio fait passer la pile sur le Relevé, et changer
@@ -133,7 +135,7 @@ class CarnetPage(QDialog):
         groupe.setExclusive(True)
         rubriques = [(FOLIO, tr("Folio"), "folio"), (DEFIS, tr("Défis"), "medaille")]
         ids = {g.id for g in self._jeux}
-        if any(c.jeu in ids for c in self._gardees):
+        if any(c.jeu in ids for c in self._gardees) or any(self._classement.categories(j) for j in ids):
             rubriques.append((COURSES, tr("Courses"), "chrono"))
         rubriques.append((RELEVE, tr("Relevé"), "stats"))
         for cle, libelle, icone in rubriques:
@@ -279,7 +281,7 @@ class CarnetPage(QDialog):
             self._pile.setCurrentWidget(self._vide)
             return
         if self._courses is None:
-            self._courses = CoursesPage(game, self._gardees)
+            self._courses = CoursesPage(game, self._gardees, self._classement)
             self._pile.addWidget(self._courses)
         self._pile.setCurrentWidget(self._courses)
 

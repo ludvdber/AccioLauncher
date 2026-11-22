@@ -1766,6 +1766,16 @@
     "Supprimer la course": "Borrar la carrera",
     "Temps valable": "Tiempo válido",
     "{} course gardée": "{} carrera guardada",
-    "{} courses gardées": "{} carreras guardadas"
+    "{} courses gardées": "{} carreras guardadas",
+    "Fantôme": "Fantasma",
+    "Seuls le chrono et les images par seconde sont montrés.": "Solo se muestran el cronómetro y las imágenes por segundo.",
+    "Pas encore de record valable en {} : l'écart viendra avec le premier.": "Aún no hay récord válido en {}: la diferencia llegará con el primero.",
+    "L'écart à votre record en {} ({}) suit le chrono à chaque carte quittée.": "La diferencia con su récord en {} ({}) sigue al cronómetro cada vez que deja un mapa.",
+    "Aucune course gardée en {}.": "Ninguna carrera guardada en {}.",
+    "Classement Accio": "Clasificación Accio",
+    "Personne n'y est encore classé.": "Todavía no hay nadie clasificado.",
+    "Votre record ({}) y prendrait la place {}.": "Su récord ({}) ocuparía aquí el puesto {}.",
+    "Pour y entrer, publiez la vidéo de la course et son course.json sur le Discord : une fois validée, elle apparaît ici.": "Para entrar, publique el vídeo de la carrera y su course.json en el Discord: una vez validada, aparece aquí.",
+    "Vidéo": "Vídeo"
   }
 }
