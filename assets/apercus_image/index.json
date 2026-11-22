@@ -1,0 +1,60 @@
+{
+ "hp5": {
+  "filtrage": {
+   "autre": "Filtrage ×4"
+  },
+  "halo": {
+   "autre": "Coupé"
+  },
+  "couleurs": {
+   "autre": "D'origine"
+  },
+  "lissage": {
+   "autre": "Coupé"
+  },
+  "anticrenelage": {
+   "autre": "MSAA ×4"
+  },
+  "nettete": {
+   "autre": "Aucune"
+  },
+  "rayons": {
+   "autre": "Coupés"
+  },
+  "textures_lointaines": {
+   "autre": "D'origine"
+  },
+  "vignette": {
+   "autre": "Aucune"
+  },
+  "smaa": {
+   "autre": "Allumé"
+  }
+ },
+ "hp6": {
+  "filtrage": {
+   "autre": "Filtrage ×4"
+  },
+  "feuillage_lointain": {
+   "autre": "Allumé"
+  },
+  "lissage": {
+   "autre": "Coupé"
+  },
+  "nettete": {
+   "autre": "Maximale"
+  },
+  "textures_hd": {
+   "autre": "Pack HD"
+  },
+  "surechantillonnage": {
+   "autre": "×1,5"
+  },
+  "vignette": {
+   "autre": "Aucune"
+  },
+  "smaa": {
+   "autre": "Allumé"
+  }
+ }
+}

@@ -88,6 +88,8 @@ class ActionPanel(QWidget):
     # ABSENT là où aucun preset ne change encore rien : grisé sur HP3, il
     # passait pour un bouton cassé (Ludo, 2026-10-31 : « l'épée fonctionne pas »).
     difficulte_clicked = pyqtSignal()
+    # La course (1.5) : seulement là où le correctif installé la connaît (`mode_course.ini`).
+    course_clicked = pyqtSignal()
 
     def __init__(self, manager: GameManager, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -495,6 +497,7 @@ class ActionPanel(QWidget):
         self._btn_reglages = btn_reglages
         self._ajouter_medias()
         self._ajouter_difficulte()
+        self._ajouter_course()
 
         if self._manager.has_update(self._game.id):
             installed_ver = self._manager.installed_version(self._game.id) or "?"
@@ -532,6 +535,18 @@ class ActionPanel(QWidget):
         btn.clicked.connect(self.difficulte_clicked)
         self._action_layout.addWidget(btn)
         self._btn_difficulte = btn
+
+    def _ajouter_course(self) -> None:
+        from src.core import mode_course
+        if mode_course.ini(self._game, self._manager.config.install_path) is None:
+            return
+        btn = _BoutonIcone("chrono")
+        btn.setObjectName("boutonCourse")
+        btn.setToolTip(tr("Course chronométrée"))
+        btn.setAccessibleName(tr("Course chronométrée de {}").format(self._game.name))
+        btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn.clicked.connect(self.course_clicked)
+        self._action_layout.addWidget(btn)
 
     def _ajouter_medias(self) -> None:
         from src.ui.mediatheque import a_de_la_musique, a_des_medias

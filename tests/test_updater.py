@@ -82,6 +82,7 @@ def _stub_checker(interrupt_after: str | None) -> tuple[UpdateChecker, list[str]
     checker._check_catalog = _step("catalog")
     checker._check_launcher = _step("launcher")
     checker._check_download_counts = _step("counts")
+    checker._check_classement = _step("classement")
     checker.isInterruptionRequested = lambda: state["interrupted"]
     return checker, steps
 
@@ -90,8 +91,13 @@ class TestInterruption:
     """Régression : sans ces contrôles, requestInterruption() était sans effet et
     la fermeture de la fenêtre pouvait détruire un QThread encore en cours."""
 
-    def test_sans_interruption_les_trois_etapes_tournent(self):
+    def test_sans_interruption_les_quatre_etapes_tournent(self):
         checker, steps = _stub_checker(interrupt_after=None)
+        checker.run()
+        assert steps == ["catalog", "launcher", "counts", "classement"]
+
+    def test_interruption_apres_compteurs_arrete_le_classement(self):
+        checker, steps = _stub_checker(interrupt_after="counts")
         checker.run()
         assert steps == ["catalog", "launcher", "counts"]
 

@@ -40,7 +40,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.core import reglages_correctif as rc
-from src.core import reglages_image, resolution_jeu
+from src.core import apercus_image, reglages_image, resolution_jeu
 from src.core.config import Config
 from src.core.game_data import GameData
 from src.core.i18n import tr, trn, typo
@@ -49,6 +49,7 @@ from src.ui.composants import (
     bouton, ENCRE_DOUCE, icone_de_bouton, lien, LISTE, MARGES_PAGE, pastille, petit_titre, police, Rangee,
     transparent,
 )
+from src.ui.comparateur_image import Comparateur
 from src.ui.fonts import cinzel
 from src.ui.reglages_rubriques import _COULEUR_NOTE, _COULEURS_COUT, _NIVEAUX, _RESSOURCES
 from src.ui.reglages_widgets import _CartePrereglage, _etiquette_beta, _Points, _texte_beta
@@ -475,6 +476,9 @@ class _Fiche(QFrame):
         self.titre.setFont(cinzel(12, bold=True))
         self.titre.setStyleSheet("color: #f4f2f8; background: transparent;")
         lay.addWidget(self.titre)
+        # L'avant/après pris en jeu, quand le réglage en a un (HP5, HP6) : caché sinon.
+        self.apercu = Comparateur(_LARGEUR_FICHE - 36)
+        lay.addWidget(self.apercu)
         self.texte = QLabel("")
         self.texte.setWordWrap(True)
         self.texte.setTextFormat(Qt.TextFormat.RichText)
@@ -505,7 +509,7 @@ class _Fiche(QFrame):
         lay.addLayout(boutons)
         lay.addStretch()
         if simple:
-            for w in (self.valeurs, self.notes, self.bouton_accio, self.bouton_jeu):
+            for w in (self.apercu, self.valeurs, self.notes, self.bouton_accio, self.bouton_jeu):
                 w.hide()
 
 
@@ -1487,6 +1491,8 @@ class PageImage(QWidget):
         """La fiche du réglage actif ; `en_cours` : la valeur d'un curseur pendant le geste."""
         f = self.fiche
         e = html.escape
+        r = self.reglages.get(self._actif)
+        f.apercu.montrer(apercus_image.apercu(self.game.id, r.ident) if r is not None else None)
         if self._actif == RESOLUTION:
             f.titre.setText(tr("Résolution"))
             f.texte.setText(typo(f"<p>{e(self._aide_resolution())}</p>"))
@@ -1507,7 +1513,6 @@ class PageImage(QWidget):
             f.bouton_accio.setEnabled(False)
             f.bouton_jeu.setEnabled(False)
             return
-        r = self.reglages.get(self._actif)
         if r is None:
             # Une recherche sans résultat : la fiche ne parle plus du réglage d'avant (v45).
             for champ in (f.titre, f.texte, f.valeurs, f.notes):

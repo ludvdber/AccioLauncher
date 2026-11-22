@@ -16,7 +16,7 @@ from src.core import captures, compat, demarrage, incrustation_wine, manette
 from src.core.chemins import chemin_relatif_sur
 from src.core import game_language as langue
 from src.core import copies_sauvegardes, memoire_4go, reglages_correctif, reprise, resolution_jeu, stats
-from src.core import journaux_jeux, qualite_rendu, texte_ue1, une_vie
+from src.core import journaux_jeux, mode_course, qualite_rendu, texte_ue1, une_vie
 from src.core.catalogue_blocs import GameLanguage, LangueFichiers, Trailer
 from src.core.config import Config, cache_pour
 from src.core.game_registry import Confirmer
@@ -360,8 +360,11 @@ class GameManager:
 
         # Reprendre en un clic (HP1 à HP3) : la dernière partie, sans le menu du jeu ; en une
         # seule vie, celle du dossier du mode, et HP2 toujours sur son emplacement (`une_vie`).
+        # Une course (1.5) part d'une nouvelle partie : ni reprise, ni une seule vie (`mode_course`).
         joue = une_vie.pour_la_partie(game, self.config.install_path)
-        arguments = une_vie.arguments(joue)
+        arguments = mode_course.arguments(game, self.config.install_path)
+        if arguments is None:
+            arguments = une_vie.arguments(joue)
         if arguments is None:
             arguments = reprise.arguments(joue) if self.config.reprise.get(game.id, False) else ()
         log.info("Lancement de %s (%s) %s", game.name, exe_path, " ".join(arguments))

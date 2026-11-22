@@ -31,6 +31,8 @@ IDENTIQUES_TOLEREES = {
     "Gris",
     # Les mots techniques des fiches de la page Image (refonte B) : des sigles.
     "FXAA", "MSAA",
+    # Les noms des aperçus avant/après de la page Image (1.5) : la marque et des sigles.
+    "Accio", "MSAA ×4", "Pack HD", "×1,5",
     # Le preset le plus dur (Ludo, 2026-11-20) : la formule du livre, la même dans toutes les éditions.
     "Avada Kedavra",
     # Couleurs du ciel de HP6 qui s'écrivent pareil en anglais.

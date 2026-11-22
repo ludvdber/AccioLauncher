@@ -547,6 +547,23 @@ def poser_valeur(ini: Path, section: str, cle: str, valeur: str) -> bool:
     return True
 
 
+def retirer_valeur(ini: Path, section: str, cle: str) -> bool:
+    """Retire la ligne active d'une clé que le LANCEUR a posée là où l'ini ne la portait pas (une
+    course la rend ainsi à l'octet, `mode_course.sortir`). Rend True s'il a été écrit ; OSError
+    si le fichier ne peut pas l'être."""
+    lignes, fin = _lire(ini)
+    bornes = _bornes(lignes, section)
+    if bornes is None:
+        return False
+    motif = _motif_cle(cle, commentee=False)
+    gardees = [ligne for i, ligne in enumerate(lignes)
+               if not (bornes[0] <= i < bornes[1] and motif.match(ligne))]
+    if len(gardees) == len(lignes):
+        return False
+    _ecrire(ini, gardees, fin)
+    return True
+
+
 def chemin_origine(ini: Path) -> Path:
     return ini.with_name(ini.name + SUFFIXE_ORIGINE)
 

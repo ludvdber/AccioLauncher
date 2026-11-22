@@ -1,6 +1,7 @@
 """Le Carnet : ce qui se lit dans les sauvegardes, en rubriques.
 
-Trois rubriques : le Folio d'abord, les Défis, puis le Relevé de scolarité. Une
+Trois rubriques : le Folio d'abord, les Défis, puis le Relevé de scolarité (et les
+Courses de la 1.5 après les Défis, quand une course est gardée). Une
 idée qui se lit dans les sauvegardes viendra ici en rubrique, pas dans un
 onglet de plus.
 
@@ -12,6 +13,10 @@ première visite ; le folio est rebâti quand le jeu change.
 Les Défis (2026-10-26) : les succès en médailles (`defis_page.py`), entre les
 deux, sur le jeu choisi comme le Folio. Bâtis à la visite, oubliés quand le
 jeu change.
+
+Les Courses (1.5, `courses_page.py`) : les courses gardées du jeu choisi, après
+les Défis, et seulement quand une course a été gardée. Bâties à la visite,
+oubliées quand le jeu change, comme les Défis.
 """
 
 from pathlib import Path
@@ -22,9 +27,10 @@ from PyQt6.QtWidgets import (
     QButtonGroup, QDialog, QFrame, QHBoxLayout, QPushButton, QStackedWidget, QVBoxLayout, QWidget,
 )
 
-from src.core import folio
+from src.core import classement, course, folio
 from src.core.game_manager import GameManager
 from src.core.i18n import tr
+from src.ui.courses_page import CoursesPage
 from src.ui.composants import colonne_centree, TAILLE_MINIMALE_PAGE, feuille_de_style, filtre, texte
 from src.ui.flow_layout import FlowLayout
 from src.ui.choix_jeux import espacee, numeros, pastille
@@ -35,8 +41,9 @@ from src.ui.title_bar import CARNET
 FOLIO = "folio"
 RELEVE = "releve"
 DEFIS = "defis"
+COURSES = "courses"
 # Les rubriques qui suivent le jeu choisi en haut.
-_PAR_JEU = (FOLIO, DEFIS)
+_PAR_JEU = (FOLIO, DEFIS, COURSES)
 
 _STYLE = """
 QDialog#carnet { background: #070712; }
@@ -68,6 +75,11 @@ class CarnetPage(QDialog):
         self._folio: QDialog | None = None
         self._releve: QDialog | None = None
         self._defis: QWidget | None = None
+        self._courses: CoursesPage | None = None
+        # Les courses gardées et le classement Accio, lus UNE fois (règle 140) : la rubrique n'existe que
+        # s'il y a l'un ou l'autre pour un jeu installé.
+        self._gardees = course.passees()
+        self._classement = classement.en_cache()
         self.jeu = ""
         # La rubrique affichée, tenue ici : la DÉDUIRE de la pile se trompait.
         # Retirer l'ancien folio fait passer la pile sur le Relevé, et changer
@@ -121,8 +133,12 @@ class CarnetPage(QDialog):
         self._rubriques: dict[str, QPushButton] = {}
         groupe = QButtonGroup(self)
         groupe.setExclusive(True)
-        for cle, libelle, icone in ((FOLIO, tr("Folio"), "folio"), (DEFIS, tr("Défis"), "medaille"),
-                                    (RELEVE, tr("Relevé"), "stats")):
+        rubriques = [(FOLIO, tr("Folio"), "folio"), (DEFIS, tr("Défis"), "medaille")]
+        ids = {g.id for g in self._jeux}
+        if any(c.jeu in ids for c in self._gardees) or any(self._classement.categories(j) for j in ids):
+            rubriques.append((COURSES, tr("Courses"), "chrono"))
+        rubriques.append((RELEVE, tr("Relevé"), "stats"))
+        for cle, libelle, icone in rubriques:
             b = filtre(libelle, grand=True)
             pictogramme, taille = espacee(pixmap_icone(icone, 18, QColor("#e6e4f0")), QSize(18, 18))
             b.setIcon(pictogramme)
@@ -185,11 +201,14 @@ class CarnetPage(QDialog):
             self._retirer_folio()
             self.jeu = jeu
             self._retirer_defis()
+            self._retirer_courses()
         self._boutons[jeu].setChecked(True)
         if self._rubrique == FOLIO:
             self._montrer_folio()
         elif self._rubrique == DEFIS:
             self._montrer_defis()
+        elif self._rubrique == COURSES:
+            self._montrer_courses()
 
     def _retirer_folio(self) -> None:
         """Le folio d'un autre jeu : rebâti à la prochaine visite de la rubrique. Changer de jeu
@@ -246,6 +265,26 @@ class CarnetPage(QDialog):
             self._pile.addWidget(self._defis)
         self._pile.setCurrentWidget(self._defis)
 
+    def _retirer_courses(self) -> None:
+        """Les courses d'un autre jeu : rebâties à la prochaine visite (sur la liste relue si une course a été
+        effacée entre-temps)."""
+        if self._courses is not None:
+            if self._courses.modifiee:
+                self._gardees = course.passees()
+            self._pile.removeWidget(self._courses)
+            self._courses.deleteLater()
+            self._courses = None
+
+    def _montrer_courses(self) -> None:
+        game = next((g for g in self._jeux if g.id == self.jeu), None)
+        if game is None:
+            self._pile.setCurrentWidget(self._vide)
+            return
+        if self._courses is None:
+            self._courses = CoursesPage(game, self._gardees, self._classement)
+            self._pile.addWidget(self._courses)
+        self._pile.setCurrentWidget(self._courses)
+
     def _depuis_le_releve(self, jeu: str) -> None:
         self.rubrique(FOLIO)
         self.montrer(jeu)
@@ -266,6 +305,8 @@ class CarnetPage(QDialog):
             self._pile.setCurrentWidget(self._releve)
         elif cle == DEFIS:
             self._montrer_defis()
+        elif cle == COURSES:
+            self._montrer_courses()
         else:
             self._montrer_folio()
 

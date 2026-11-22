@@ -152,6 +152,19 @@ def main():
         from src.ui.verification_exe import executer
         _sortir(executer(rapport))
 
+    # Le vérificateur d'une course (1.5) : rapport sur la sortie et à côté du journal, puis on quitte, sans
+    # rien écrire chez l'utilisateur (l'exe n'a pas de console : le fichier `.verification.txt` est la trace).
+    from src.core import course
+    if (journal := course.demande_de_verification(sys.argv)) is not None:
+        texte, code = course.rapport_verification(journal)
+        if sys.stdout is not None:
+            print(texte)
+        try:
+            journal.with_name(journal.name + ".verification.txt").write_text(texte + "\n", encoding="utf-8")
+        except (OSError, ValueError):     # ValueError : aucun fichier nommé après l'option
+            pass
+        _sortir(code)
+
     # AVANT le logging : le journal s'ouvre dans `_Launcher/logs/`, et un
     # `RotatingFileHandler` qui tient l'ancien fichier ouvert empêcherait de le
     # déplacer. Avant `Config.exists()` aussi, sinon un `config.json` resté à

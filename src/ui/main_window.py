@@ -9,7 +9,7 @@ from src.core.config import APP_VERSION, Config
 from src.core.game_manager import GameManager
 from src.core.i18n import set_language, tr
 from src.core.liens import DISCORD_URL, KOFI_URL
-from src.ui import (dialogues_fenetre, filtres_globaux, game_detail_handlers, pendant_la_partie, succes_widgets,
+from src.ui import (course_ui, dialogues_fenetre, filtres_globaux, game_detail_handlers, pendant_la_partie, succes_widgets,
                     toast_correctif, toast_une_vie, verification_forcee)
 from src.ui.barre_de_statut import BarreDeStatut
 from src.ui.carousel import Carousel
@@ -244,7 +244,7 @@ class MainWindow(QMainWindow):
         self._session.configuration_cassee.connect(self._on_configuration_cassee)
         self._session.arret_fatal.connect(self._on_arret_fatal)
         self._session.diagnostic.connect(self._on_diagnostic)
-        for au_retour in (toast_correctif, toast_une_vie, pendant_la_partie):   # jamais par-dessus le jeu
+        for au_retour in (toast_correctif, toast_une_vie, pendant_la_partie, course_ui):   # jamais par-dessus le jeu
             au_retour.brancher(self)
         self._mediatheque = Mediatheque(self, self.manager, self._pages, self._detail, self._status_bar,
                                         self._session, self._title_bar)

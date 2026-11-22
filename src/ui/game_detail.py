@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import QGraphicsOpacityEffect, QWidget
 from src.ui import game_detail_handlers as handlers
 from src.ui.action_panel import ActionPanel
 from src.ui.audio_bar import AudioBar
-from src.ui import fiche_gpu
+from src.ui import course_ui, fiche_gpu
 from src.ui import filtres_globaux
 from src.ui import fond_gpu
 from src.ui import bandeau_jeu
@@ -195,6 +195,7 @@ class GameDetailView(QWidget):
         self._info.language_clicked.connect(lambda: handlers.on_language_clicked(self))
         self._action_panel.game_settings_clicked.connect(
             lambda: handlers.on_game_settings(self))
+        self._action_panel.course_clicked.connect(lambda: course_ui.partir(self))
         self._action_panel.difficulte_clicked.connect(
             lambda: handlers.on_game_settings(self, onglet="difficulte"))
         self._info.folio_clicked.connect(self.ouvrir_folio)

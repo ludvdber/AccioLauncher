@@ -25,6 +25,8 @@ DEPOT_URL = "https://github.com/ludvdber/AccioLauncher"
 # les launchers auraient suivi la sienne pour toujours, empreintes comprises.
 DEPOT_JEUX = "ludvdber/accio-launcher-games"
 CATALOGUE_URL = f"https://raw.githubusercontent.com/{DEPOT_JEUX}/main/games.json"
+# Le classement Accio (1.5, `classement.py`), à côté du catalogue et pour la même raison une constante.
+CLASSEMENT_URL = f"https://raw.githubusercontent.com/{DEPOT_JEUX}/main/classement.json"
 RELEASES_JEUX_API = f"https://api.github.com/repos/{DEPOT_JEUX}/releases?per_page=100"
 # Notes de chaque version du launcher, ouvertes par le numéro de version dans
 # À propos. La LISTE et non le tag courant : un exe lancé avant la publication

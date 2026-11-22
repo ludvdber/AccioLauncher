@@ -37,6 +37,7 @@ from src.core import (
     diagnostic_plantage,
     folio,
     journal_correctif,
+    mode_course,
     progression,
     reparation_config,
     sauvegardes,
@@ -47,6 +48,7 @@ from src.core import (
 )
 from src.core import difficulte_presets as dp
 from src.core.catalogue_blocs import Sauvegardes
+from src.core.config import APP_VERSION
 from src.core.discord_presence import DiscordPresence
 from src.core.game_manager import GameManager
 from src.core.i18n import get_language, tr
@@ -91,6 +93,9 @@ class GameSession(QObject):
     # Une partie à une seule vie s'est terminée par la mort (`une_vie_fin` écrit pendant
     # cette partie, `compteur_morts`) : identifiant du jeu. Émis APRÈS `terminee`.
     vie_terminee = pyqtSignal(str)
+    # Une course (1.5) s'est terminée avec la partie : son journal est lu, signé, et ses réglages rendus
+    # (`mode_course.conclure`) : `mode_course.Conclusion`. Émis APRÈS `terminee`.
+    course_terminee = pyqtSignal(object)
 
     def __init__(self, manager: GameManager, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -227,6 +232,7 @@ class GameSession(QObject):
         a_diagnostiquer: tuple | None = None
         echecs_correctif: tuple[journal_correctif.Echec, ...] = ()
         vie_finie = False
+        conclusions: list[mode_course.Conclusion] = []
         self.succes_obtenus = []
         if self._game_id:
             game = self._manager.get_game_by_id(self._game_id)
@@ -253,6 +259,8 @@ class GameSession(QObject):
             # hors de ce qu'une désinstallation emporterait.
             if game is not None:
                 captures.ramasser(game, self._manager.config.install_path)
+                # Une course : lue et rendue MÊME après un arrêt (le joueur doit retrouver ses réglages).
+                conclusions = [mode_course.conclure(e, APP_VERSION) for e in mode_course.en_cours(game.id)]
                 # La DLL a vidé le dossier du mode : le joueur l'apprend en revenant.
                 if self._une_vie and self._debut is not None:
                     fin = compteur_morts.lire(
@@ -299,9 +307,24 @@ class GameSession(QObject):
             self.correctif_en_echec.emit(game_id, echecs_correctif)
         if vie_finie:
             self.vie_terminee.emit(game_id)
+        for conclusion in conclusions:
+            self.course_terminee.emit(conclusion)
         if a_diagnostiquer is not None:
             threading.Thread(target=self._diagnostiquer, args=(game_id, *a_diagnostiquer),
                              daemon=True, name=f"diagnostic-{game_id}").start()
+
+    def courses_interrompues(self) -> list[mode_course.Conclusion]:
+        """Au démarrage : une course dont le launcher a été tué pendant la partie (`avant.json` non
+        rendu) est conclue, ses réglages rendus, si son jeu ne tourne plus. Un jeu qu'on ne sait pas dire
+        fermé (liste des processus refusée) garde sa course pour le démarrage suivant."""
+        sortie = []
+        for etat in mode_course.en_cours():
+            game = self._manager.get_game_by_id(etat.jeu)
+            exe = Path(game.executable).name.lower() if game is not None else ""
+            if exe and ProcessMonitor._is_exe_running(exe) is not False:
+                continue
+            sortie.append(mode_course.conclure(etat, APP_VERSION))
+        return sortie
 
     def _diagnostiquer(self, game_id: str, *args) -> None:
         """Hors du fil de l'interface : le signal arrive en file à la fenêtre."""
