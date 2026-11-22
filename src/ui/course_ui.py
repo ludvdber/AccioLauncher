@@ -9,7 +9,6 @@ tranchée (S7.7) : la signature n'arrête qu'une retouche à la main du fichier.
 
 import json
 import logging
-import sys
 import threading
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -195,7 +194,7 @@ class CourseDialog(QDialog):
             layout.addWidget(_libelle(tr(
                 "HP1 : une course Accio ne compte pas sur le classement speedrun.com du jeu tant que ses "
                 "modérateurs n'ont pas accepté la limite d'images d'Accio."), _GRIS, 11))
-        if sys.platform != "win32":
+        if mode_course.plateforme() != "win32":
             layout.addWidget(_libelle(raison(course.SOUS_WINE), _GRIS, 11))
         if ecarts:
             note = _libelle(trn(len(ecarts),

@@ -20,6 +20,13 @@ _CATALOGUE = {g.id: g for g in load_catalog().games}
 _DEMI_SECONDE = 0.5
 
 
+@pytest.fixture(autouse=True)
+def _course_sous_windows(monkeypatch):
+    """Ces tests jugent une course « Windows » : sous Linux (CI), une course n'entre pas au classement
+    (`course.SOUS_WINE`), ce que `test_sous_linux_la_course_est_refusee` vérifie à part."""
+    monkeypatch.setattr(mode_course, "plateforme", lambda: "win32")
+
+
 def _poser_ini(install_path: Path, texte: str = INI_HP2) -> Path:
     game = _CATALOGUE["hp2"]
     ini = install_path / Path(game.executable).parent / "winmm.ini"

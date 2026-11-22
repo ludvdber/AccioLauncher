@@ -9,6 +9,13 @@ import pytest
 from src.core import course, mode_course
 from src.core.game_data import GameData
 
+
+@pytest.fixture(autouse=True)
+def _course_sous_windows(monkeypatch):
+    """Ces tests jugent une course « Windows » : sous Linux (CI), une course n'entre pas au classement
+    (`course.SOUS_WINE`), ce que `test_sous_linux_la_course_est_refusee` vérifie à part."""
+    monkeypatch.setattr(mode_course, "plateforme", lambda: "win32")
+
 INI_HP2 = ("[Accio.Window]\r\nFPSLimit=0\r\nFillScreen=1\r\n\r\n[Accio.Lumos]\r\nLumosFade=1\r\n\r\n"
            "[Accio.Game]\r\nQuidditchDifficulty=2\r\nOneLife=0\r\nDeathCounter=0\r\nOneLifeSaves=\r\nRaceLog=0\r\n\r\n"
            "[Accio.Overlay]\r\nShowFPS=1\r\nRaceId=\r\n\r\n[Accio.Hardcore]\r\nDamageTaken=3\r\nDamageDealt=1\r\n")
@@ -142,6 +149,20 @@ def test_conclure(tmp_path):
     donnees = course.lire_journal(fin.journal)
     assert donnees is not None and f"RaceId={etat.ligne_id}" in donnees["ini"]   # l'ini tel que posé
     assert ini.read_bytes() == avant and mode_course.en_cours() == []
+
+
+def test_sous_linux_la_course_est_refusee(tmp_path, monkeypatch):
+    """Hors Windows (Wine), la course est gardée mais refusée au classement, et le journal le dit."""
+    from tests.test_course import HP2, journal
+    monkeypatch.setattr(mode_course, "plateforme", lambda: "linux")
+    jeu, ini = _installer(tmp_path, "hp2", "HP2/system/Game.exe", "winmm.ini", INI_HP2)
+    etat = mode_course.entrer(jeu, ini, "Any%", EMPREINTE, "normal")
+    evts = list(HP2)
+    evts[0] = (0, "seance", "", f"HP2;fix=2.5.0;RaceId={etat.ligne_id}")
+    (ini.parent / course.FICHIER).write_text(journal(*evts), encoding="utf-8", newline="\n")
+    fin = mode_course.conclure(etat, "1.5.0")
+    assert fin.rendu and fin.refus == (course.SOUS_WINE,)
+    assert fin.journal is not None and course.verifier_journal(fin.journal).refus == (course.SOUS_WINE,)
 
 
 def test_conclure_sans_journal(tmp_path):

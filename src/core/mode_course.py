@@ -103,6 +103,12 @@ A_TENIR: dict[str, tuple[Tenue, ...]] = {
 
 # ── Ce que porte l'ini ──
 
+def plateforme() -> str:
+    """Le système qui fait tourner la course : hors Windows (Wine), une course n'entre pas au classement
+    (`course.SOUS_WINE`). Une seule porte, que les tests remplacent pour juger une course « Windows » partout."""
+    return sys.platform
+
+
 def ini(game: GameData, install_path: Path) -> Path | None:
     """L'ini du correctif de ce jeu s'il connaît la course (il porte `RaceLog`, et `RaceSaves` pour HP4 à HP6)."""
     if game.id not in A_TENIR:
@@ -321,12 +327,13 @@ def conclure(etat: EnCours, launcher: str) -> Conclusion:
     resultat = course.analyser(texte)
     tenu = not etat.ecarts_au_depart or all(
         rc.valeur_posee(etat.ini, x.section, x.cle) == x.posee for x in etat.ecarts_au_depart)
-    refus = course.verdict(resultat, course.Attendu(etat.ligne_id, tenu, sous_wine=sys.platform != "win32"))
+    systeme = plateforme()
+    refus = course.verdict(resultat, course.Attendu(etat.ligne_id, tenu, sous_wine=systeme != "win32"))
     donnees = course.contenu(
         game_id=etat.jeu, categorie=etat.categorie, code=etat.code, jour=etat.jour, ligne=etat.ligne_id,
         empreinte_jeu=etat.empreinte, launcher=launcher, ini=texte_ini,
         ecarts=() if tenu else [(x.section, x.cle, str(x.valeur), x.posee) for x in etat.ecarts_au_depart],
-        resultat=resultat, refus=refus, plateforme=sys.platform, difficulte=etat.difficulte)
+        resultat=resultat, refus=refus, plateforme=systeme, difficulte=etat.difficulte)
     try:
         journal: Path | None = course.ecrire_journal(etat.code, donnees)
     except (OSError, ValueError):
