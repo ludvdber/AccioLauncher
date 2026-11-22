@@ -110,6 +110,8 @@ _FICHIERS = {
     # Personnages et Bestiaire des Collections (2026-10-26).
     "personnages": "phosphor/users-three-bold.svg",
     "patte": "phosphor/paw-print-bold.svg",
+    # La course de la 1.5 (2026-11-19).
+    "chrono": "phosphor/timer-bold.svg",
     "discord": "marques/Discord-Symbol-White.svg",
     "kofi": "marques/kofi.svg",
 }

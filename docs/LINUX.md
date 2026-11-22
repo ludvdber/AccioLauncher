@@ -375,6 +375,13 @@ qui deviendra la 3.0). Détail : `docs/linux/RETOUR_BAZZITE.md`, septième passa
   Un ini sans la clé n'est pas touché.
 - **wined3d** (`PROTON_USE_WINED3D=1`) : pas de gel, le défaut est propre au
   couple DXVK + ANV.
+- **La course (1.5, branche `feat/speedrun-1.5`).** La ligne `ACCIO <code> …`
+  que le correctif dessine toute la course passe par cette incrustation : elle
+  n'a JAMAIS été vue sous Wine. Une course y est donc chronométrée mais pas
+  classée (`course.SOUS_WINE`, dit dans le dialogue et le résultat). À lever
+  quand la ligne aura été vue en jeu sous Wine, `DrawUnderWine=1` compris.
+  `RaceSaves` (HP4 à HP6) est un chemin vu par Wine, comme `OneLifeSaves`
+  (`une_vie.pour_le_jeu`).
 
 ---
 
