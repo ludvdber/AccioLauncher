@@ -1,6 +1,37 @@
 {
   "versions": [
     {
+      "version": "1.4.2",
+      "nom": "Oculus Reparo",
+      "depuis": "1.4.1",
+      "points_forts": [
+        {
+          "icone": "ecran",
+          "jeux": ["hp4", "hp5", "hp6"],
+          "titre": {
+            "fr": "Des bords plus nets",
+            "en": "Cleaner edges",
+            "es": "Bordes más limpios"
+          },
+          "texte": {
+            "fr": "Nouveau lissage SMAA dans l'onglet Image : les lignes fines et les cadres en escalier sont mieux lissés, sans flouter l'image. Il est dans le préréglage Maximale ; le FXAA reste là pour les PC plus modestes. Et la résolution de rendu n'a plus de limite en 4K.",
+            "en": "New SMAA smoothing in the Graphics tab: thin lines and stair-stepped frames are smoothed better, without blurring the picture. It is part of the Maximum preset; FXAA stays for more modest PCs. And the render resolution is no longer capped at 4K.",
+            "es": "Nuevo suavizado SMAA en la pestaña Imagen: las líneas finas y los marcos escalonados se suavizan mejor, sin desenfocar la imagen. Está en el preajuste Máxima; el FXAA sigue ahí para los PC más modestos. Y la resolución de renderizado ya no tiene límite en 4K."
+          }
+        }
+      ],
+      "changements": [
+        {
+          "genre": "corrige",
+          "texte": {
+            "fr": "HP5 : avec la caméra fluide, Nick Quasi-Sans-Tête ne devrait plus bloquer le jeu quand il vient parler à Harry.",
+            "en": "HP5: with the smooth camera, Nearly Headless Nick should no longer freeze the game when he comes to talk to Harry.",
+            "es": "HP5: con la cámara fluida, Nick Casi Decapitado ya no debería bloquear el juego cuando viene a hablar con Harry."
+          }
+        }
+      ]
+    },
+    {
       "version": "1.4.1",
       "nom": "Avada Kedavra",
       "depuis": "1.4.0",
