@@ -1775,6 +1775,13 @@
     "Personne n'y est encore classé.": "Nobody is ranked here yet.",
     "Votre record ({}) y prendrait la place {}.": "Your record ({}) would take place {} here.",
     "Pour y entrer, publiez la vidéo de la course et son course.json sur le Discord : une fois validée, elle apparaît ici.": "To get in, post the run's video and its course.json on the Discord: once approved, it shows up here.",
-    "Vidéo": "Video"
+    "Vidéo": "Video",
+    "Coupé": "Off",
+    "Coupés": "Off",
+    "Pack HD": "HD pack",
+    "Filtrage ×4": "Filtering ×4",
+    "MSAA ×4": "MSAA ×4",
+    "×1,5": "×1.5",
+    "Accio": "Accio"
   }
 }

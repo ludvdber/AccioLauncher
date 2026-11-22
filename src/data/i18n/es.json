@@ -1776,6 +1776,13 @@
     "Personne n'y est encore classé.": "Todavía no hay nadie clasificado.",
     "Votre record ({}) y prendrait la place {}.": "Su récord ({}) ocuparía aquí el puesto {}.",
     "Pour y entrer, publiez la vidéo de la course et son course.json sur le Discord : une fois validée, elle apparaît ici.": "Para entrar, publique el vídeo de la carrera y su course.json en el Discord: una vez validada, aparece aquí.",
-    "Vidéo": "Vídeo"
+    "Vidéo": "Vídeo",
+    "Coupé": "Desactivado",
+    "Coupés": "Desactivados",
+    "Pack HD": "Pack HD",
+    "Filtrage ×4": "Filtrado ×4",
+    "MSAA ×4": "MSAA ×4",
+    "×1,5": "×1,5",
+    "Accio": "Accio"
   }
 }

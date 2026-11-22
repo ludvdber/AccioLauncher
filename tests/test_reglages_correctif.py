@@ -1272,6 +1272,24 @@ class TestPageImage:
         assert ligne.eventFilter(ligne.points, bulle) is False
         assert ligne.toolTip(), "la description reste pour la fenêtre étroite"
 
+    def test_la_fiche_montre_l_avant_apres_du_reglage_qui_en_a_un(self, qtbot, tmp_path, monkeypatch):
+        """Les aperçus pris en jeu (`apercus_image`) : la fiche montre celui du réglage actif, du jeu
+        de la page, et se cache pour un réglage qui n'en a pas."""
+        from src.core import apercus_image
+        from src.ui import page_image
+        demandes = []
+
+        def apercu(jeu, ident):
+            demandes.append((jeu, ident))
+            return apercus_image.Apercu(tmp_path / "a.jpg", tmp_path / "b.jpg", "Coupé") if ident == "lissage" else None
+
+        monkeypatch.setattr(page_image.apercus_image, "apercu", apercu)
+        _dlg, page, _ini = self._fenetre(qtbot, tmp_path)
+        page._activer("lissage")
+        assert not page.fiche.apercu.isHidden() and ("hp4", "lissage") in demandes
+        page._activer("nettete")
+        assert page.fiche.apercu.isHidden()
+
     def test_la_ligne_dont_parle_la_fiche_est_en_surbrillance(self, qtbot, tmp_path):
         """La règle est sur la ligne elle-même : le « background: transparent » sans sélecteur
         des conteneurs écrasait celle de la page (surbrillance invisible, 2026-11-13)."""
