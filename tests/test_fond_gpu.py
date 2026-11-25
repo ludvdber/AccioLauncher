@@ -8,6 +8,11 @@ from src.ui import fond_gpu
 
 pytestmark = pytest.mark.skipif(not fond_gpu.QUICK_DISPONIBLE, reason="Qt Quick absent")
 
+# La première image peinte : la machine Windows de la CI n'a pas de carte graphique, Qt Quick y dessine
+# en logiciel ; 5 s y ont manqué aux trois tests ci-dessous (2026-11-23), puis à l'un d'eux (2026-11-25),
+# sous pytest -n auto. L'attente finit dès que l'image est là : rien de plus lent ailleurs.
+PREMIERE_IMAGE_MS = 30_000
+
 
 def test_allume_par_defaut_sous_windows_seulement(monkeypatch):
     monkeypatch.delenv("ACCIO_FOND_GPU", raising=False)
@@ -102,7 +107,7 @@ def test_l_etendu_prolonge_l_image_dans_son_flou_pas_dans_du_noir(qtbot, tmp_pat
         # Les voiles assombrissent la gauche (sous le texte) : on compare les teintes, pas les niveaux.
         gauche, droite = rendu.pixelColor(400, 600), rendu.pixelColor(1100, 600)
         assert (gauche.green() - gauche.blue()) > (droite.green() - droite.blue()) + 15, (gauche.name(), droite.name())
-    qtbot.waitUntil(teintes_du_flou, timeout=5000)
+    qtbot.waitUntil(teintes_du_flou, timeout=PREMIERE_IMAGE_MS)
 
 
 def test_le_fondu_de_l_etendu_descend_sans_rayure(qtbot, tmp_path):
@@ -130,7 +135,7 @@ def test_le_fondu_de_l_etendu_descend_sans_rayure(qtbot, tmp_path):
         return sum(abs(rendu.pixelColor(x, y).red() - rendu.pixelColor(x + 16, y).red())
                    for x in range(800, 1200, 8)) / 50
 
-    qtbot.waitUntil(lambda: contraste(fond.grabFramebuffer(), 300) > 40, timeout=5000)
+    qtbot.waitUntil(lambda: contraste(fond.grabFramebuffer(), 300) > 40, timeout=PREMIERE_IMAGE_MS)
     rendu = fond.grabFramebuffer()
     lignes = [contraste(rendu, y) for y in range(rendu.height())]
     debut = next(y for y in range(rendu.height() // 3, rendu.height()) if lignes[y] < lignes[y - 1] - 1)
@@ -169,7 +174,7 @@ def test_au_changement_de_jeu_l_ancien_fond_reste_ou_il_etait(qtbot, tmp_path):
     def _bandes_visibles():
         img = fond.grabFramebuffer()
         return max(img.pixelColor(x, 200).red() for x in range(300, 500)) > 80
-    qtbot.waitUntil(_bandes_visibles, timeout=5000)     # l'image se charge sans bloquer
+    qtbot.waitUntil(_bandes_visibles, timeout=PREMIERE_IMAGE_MS)     # l'image se charge sans bloquer
     avant = fond.grabFramebuffer()
 
     fond.begin_crossfade()
