@@ -188,6 +188,17 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Harry court : la course ne donne plus une impression de vitesse excessive. Éteint, le champ de "
             "vision choisi vaut partout.",
             onglet="affichage", depend_de="champ_vision"),
+    # [Accio.Window] Monitor du correctif (2026-11-24, ticket #47 ; VU le 2026-11-24 : HP4 en 3840x2160 sur
+    # l'écran 4K secondaire, essais 76-77) : fenêtre ET carte graphique de l'écran DISPLAYN de Windows ; 0 = là
+    # où Windows le met. Il passe avant « Toujours sur l'écran principal ».
+    Reglage("ecran_jeu", "Accio.Window", "Monitor",
+            "Écran du jeu",
+            "Avec plusieurs écrans, ouvre le jeu sur l'écran choisi, avec ses résolutions : un jeu sur un "
+            "écran 4K secondaire y prend vraiment la 4K. Le numéro est celui des paramètres d'affichage de "
+            "Windows. Un écran choisi passe avant « Toujours sur l'écran principal ». « Celui de Windows » "
+            "laisse Windows décider ; un écran débranché aussi.",
+            choix=(0, 1, 2, 3, 4), zero="Celui de Windows", format_choix="Écran {}",
+            onglet="affichage"),
     Reglage("ecran_principal", "Accio.Window", "UsePrimaryMonitor",
             "Toujours sur l'écran principal",
             "Avec plusieurs écrans, ouvre toujours le jeu sur l'écran principal de Windows. "

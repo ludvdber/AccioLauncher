@@ -1266,7 +1266,7 @@ class PageImage(QWidget):
         liste.setCursor(Qt.CursorShape.PointingHandCursor)
         liste.setStyleSheet(themed(LISTE))
         place = resolution_jeu.place_pour(self.game, self.config)
-        modes = resolution_jeu.modes_pour(self.game)
+        modes = resolution_jeu.modes_pour(self.game, self.config)
         liste.addItem((tr("Remplir l'écran ({} × {})").format(*place) if place else tr("Remplir l'écran")) + "  ◆", "")
         for taille in resolution_jeu.proposees(place, modes):
             liste.addItem("{} × {}".format(*taille), resolution_jeu.ecrire(taille))

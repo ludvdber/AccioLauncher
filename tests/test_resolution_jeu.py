@@ -325,7 +325,7 @@ class TestCorrectifHp4AHp6:
 
     def test_ecrite_en_place_sans_toucher_au_reste(self, hp6, monkeypatch):
         game, config, ini = hp6
-        monkeypatch.setattr(rj, "modes_ecran", lambda: [(2560, 1440), (1920, 1080)])
+        monkeypatch.setattr(rj, "modes_ecran", lambda _numero=0: [(2560, 1440), (1920, 1080)])
         monkeypatch.setattr(rj.registre, "disponible", lambda: False)
         assert rj.appliquer(game, config, (2560, 1440)) == (2560, 1440)
         texte = ini.read_bytes().decode("utf-8")
@@ -334,7 +334,7 @@ class TestCorrectifHp4AHp6:
 
     def test_le_rang_du_menu_remis_a_zero_en_prevenant(self, hp6, monkeypatch):
         game, config, _ini = hp6
-        monkeypatch.setattr(rj, "modes_ecran", lambda: [(2560, 1440)])
+        monkeypatch.setattr(rj, "modes_ecran", lambda _numero=0: [(2560, 1440)])
         monkeypatch.setattr(rj.registre, "disponible", lambda: True)
         monkeypatch.setattr(rj.registre, "lire_valeurs", lambda *_a: {"OptionResolution": 1})
         ecrits = []
@@ -346,7 +346,7 @@ class TestCorrectifHp4AHp6:
 
     def test_rang_deja_a_zero_le_registre_n_est_pas_touche(self, hp6, monkeypatch):
         game, config, _ini = hp6
-        monkeypatch.setattr(rj, "modes_ecran", lambda: [(2560, 1440)])
+        monkeypatch.setattr(rj, "modes_ecran", lambda _numero=0: [(2560, 1440)])
         monkeypatch.setattr(rj.registre, "disponible", lambda: True)
         monkeypatch.setattr(rj.registre, "lire_valeurs", lambda *_a: {"OptionResolution": 0})
         monkeypatch.setattr(rj.registre, "ecrire_valeurs", lambda *_a, **_k: pytest.fail("écrit pour rien"))
@@ -357,6 +357,37 @@ class TestCorrectifHp4AHp6:
         game, config, ini = hp6
         ini.write_bytes(D3D9_INI.replace("WindowStyle=1", f"WindowStyle={style}").encode("utf-8"))
         assert rj.sans_bordure(game, config) is ecran
+
+    @pytest.mark.parametrize("ligne, numero", [("", 0), ("Monitor=0\r\n", 0), ("Monitor=2\r\n", 2),
+                                               ("monitor = 3\r\n", 3), ("Monitor=99\r\n", 16)])
+    def test_l_ecran_du_jeu_vient_de_monitor(self, hp6, ligne, numero):
+        """« Écran du jeu » (2026-11-25, ticket #47) : `[Accio.Window] Monitor` du correctif, borné à 16 comme lui."""
+        game, config, ini = hp6
+        ini.write_bytes(D3D9_INI.replace("WindowStyle=1\r\n", "WindowStyle=1\r\n" + ligne).encode("utf-8"))
+        assert rj.ecran_du_jeu(game, config) == numero
+
+    def test_sans_correctif_ni_ini_l_ecran_est_celui_de_windows(self, hp6, jeu):
+        game, config, ini = hp6
+        ini.unlink()
+        assert rj.ecran_du_jeu(game, config) == 0
+        hp2, config2, _ini = jeu
+        assert rj.ecran_du_jeu(hp2, config2) == 0, "HP1 et HP2 n'ont pas de choix d'écran"
+
+    def test_les_modes_et_la_taille_viennent_de_l_ecran_choisi(self, hp6, monkeypatch):
+        """Un jeu envoyé sur l'écran 4K y prend la 4K : la taille écrite est un mode de CET écran."""
+        game, config, ini = hp6
+        ini.write_bytes(D3D9_INI.replace("WindowStyle=1\r\n", "WindowStyle=1\r\nMonitor=2\r\n").encode("utf-8"))
+        demandes = []
+        monkeypatch.setattr(rj, "modes_ecran", lambda numero=0: demandes.append(numero) or [(3840, 2160), (2560, 1440)])
+        monkeypatch.setattr(rj.registre, "disponible", lambda: False)
+        assert rj.modes_pour(game, config) == [(3840, 2160), (2560, 1440)]
+        assert rj.appliquer(game, config, (3840, 2160)) == (3840, 2160)
+        assert demandes == [2, 2]
+        assert "Width=3840\r\nHeight=2160\r\n" in ini.read_bytes().decode("utf-8")
+
+    def test_le_nom_windows_de_l_ecran(self):
+        assert rj._nom_ecran(0) is None
+        assert rj._nom_ecran(2) == "\\\\.\\DISPLAY2"
 
 
 def test_les_modes_de_l_ecran_se_demandent_une_fois(monkeypatch):
