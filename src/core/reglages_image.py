@@ -46,6 +46,7 @@ _PLACES: dict[str, tuple[str, str]] = {
     "format_image": ("ecran", "Affichage"),
     "champ_vision": ("ecran", "Affichage"),
     "fov_course": ("ecran", "Affichage"),
+    "ecran_jeu": ("ecran", "Fenêtre"),
     "ecran_principal": ("ecran", "Fenêtre"),
     "premier_plan": ("ecran", "Fenêtre"),
     "surechantillonnage": ("qualite", "Contours"),

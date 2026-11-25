@@ -19,7 +19,10 @@ Règles (mesures et récit : ARCHITECTURE_CORE.md) :
   `place_pour`), sinon la zone de travail moins le cadre de la fenêtre
   (`AdjustWindowRectExForDpi`) ;
 - **jamais plus grand que la place disponible** : on replie, sans effacer le
-  choix, qui revaudra sur le grand écran.
+  choix, qui revaudra sur le grand écran ;
+- HP4 à HP7 (2026-11-25) : l'écran est celui que le joueur a choisi pour le jeu (`[Accio.Window] Monitor`
+  du correctif, réglage « Écran du jeu », `ecran_du_jeu`), l'écran principal sinon ou s'il est débranché,
+  comme le fait le correctif : un jeu envoyé sur l'écran 4K y prend la 4K et ses modes.
 """
 
 import logging
@@ -28,6 +31,7 @@ import sys
 from collections.abc import Iterable
 from functools import lru_cache
 from pathlib import Path, PureWindowsPath
+from typing import TYPE_CHECKING
 
 from src.core import game_registry as registre
 from src.core import reglages_correctif
@@ -36,6 +40,9 @@ from src.core.catalogue_blocs import ChoixRegistre, IniPatch, Resolution
 from src.core.game_data import GameData
 from src.core.lecture_ini import lire_lignes
 from src.core.pre_launch import ecrire_cle_ini, resolve_safe_path
+
+if TYPE_CHECKING:
+    from PyQt6.QtGui import QScreen
 
 log = logging.getLogger(__name__)
 
@@ -96,9 +103,10 @@ def proposees(place: tuple[int, int] | None,
             and t[0] >= _MINIMUM[0] and t[1] >= _MINIMUM[1]]
 
 
-@lru_cache(maxsize=1)
-def modes_ecran() -> list[tuple[int, int]] | None:
-    """Les tailles d'image que l'écran principal sait afficher, en couleurs 32 bits.
+@lru_cache(maxsize=8)
+def modes_ecran(numero: int = 0) -> list[tuple[int, int]] | None:
+    """Les tailles d'image que l'écran `\\\\.\\DISPLAY<numero>` sait afficher (0 : l'écran principal), en
+    couleurs 32 bits ; un écran inconnu donne l'écran principal.
 
     Demandées une fois : l'énumération prend 42 ms, à chaque ouverture des réglages de HP4 à
     HP6 (2026-11-16). Un écran branché ou retiré les fait relire (`oublier_les_modes`).
@@ -132,13 +140,55 @@ def modes_ecran() -> list[tuple[int, int]] | None:
         mode.dmSize = ctypes.sizeof(_DevMode)
         tailles: set[tuple[int, int]] = set()
         i = 0
-        while ctypes.windll.user32.EnumDisplaySettingsW(None, i, ctypes.byref(mode)):
+        nom = _nom_ecran(numero)
+        while ctypes.windll.user32.EnumDisplaySettingsW(nom, i, ctypes.byref(mode)):
             if mode.dmBitsPerPel == 32:
                 tailles.add((int(mode.dmPelsWidth), int(mode.dmPelsHeight)))
             i += 1
     except (AttributeError, OSError):
         return None
+    if not tailles and numero:
+        return modes_ecran(0)          # écran débranché : le correctif prend l'écran de Windows
     return sorted(tailles, reverse=True) or None
+
+
+def _nom_ecran(numero: int) -> str | None:
+    """Le nom Windows de l'écran choisi (`\\\\.\\DISPLAY2`), None pour l'écran principal."""
+    return f"\\\\.\\DISPLAY{numero}" if numero > 0 else None
+
+
+def _ecran_qt(numero: int) -> QScreen | None:
+    """Le QScreen de l'écran choisi (son nom finit par DISPLAY<numero>), l'écran principal sinon ;
+    None sans application Qt."""
+    try:
+        from PyQt6.QtGui import QGuiApplication
+    except ImportError:
+        return None
+    if QGuiApplication.instance() is None:
+        return None
+    if numero > 0:
+        fin = f"DISPLAY{numero}"
+        for ecran in QGuiApplication.screens():
+            if ecran.name().upper().endswith(fin):
+                return ecran
+    return QGuiApplication.primaryScreen()
+
+
+# [Accio.Window] Monitor du correctif (2026-11-24) : 0 = l'écran de Windows.
+_MONITOR = re.compile(r"^\s*Monitor\s*=\s*(\d+)", re.IGNORECASE | re.MULTILINE)
+
+
+def ecran_du_jeu(game: GameData, config: Config) -> int:
+    """Le numéro de l'écran choisi pour ce jeu (réglage « Écran du jeu »), 0 sans choix ou sans correctif."""
+    if game.resolution is None or not du_correctif(game.resolution):
+        return 0
+    ini = config.install_path / Path(game.executable).parent / reglages_correctif.NOM_INI
+    try:
+        texte = "\n".join(lire_lignes(ini)[0])   # lu une fois (règle 140)
+    except OSError:
+        return 0
+    m = _MONITOR.search(texte)
+    return min(int(m.group(1)), 16) if m else 0
 
 
 def oublier_les_modes() -> None:
@@ -207,13 +257,10 @@ def remplit_l_ecran(game: GameData, config: Config) -> bool:
     return m is None or int(m.group(1)) != 0
 
 
-def ecran_entier() -> tuple[int, int] | None:
-    """La taille de l'écran principal entier, en pixels réels ; None sans affichage."""
-    try:
-        from PyQt6.QtGui import QGuiApplication
-    except ImportError:
-        return None
-    ecran = QGuiApplication.primaryScreen() if QGuiApplication.instance() is not None else None
+def ecran_entier(numero: int = 0) -> tuple[int, int] | None:
+    """La taille de l'écran entier (`numero` : DISPLAY<numero>, 0 : le principal), en pixels réels ; None
+    sans affichage."""
+    ecran = _ecran_qt(numero)
     if ecran is None:
         return None
     g, ratio = ecran.geometry(), ecran.devicePixelRatio()
@@ -224,7 +271,8 @@ def ecran_entier() -> tuple[int, int] | None:
 def place_pour(game: GameData, config: Config) -> tuple[int, int] | None:
     """La plus grande image pour CE jeu : l'écran entier si son correctif le remplit."""
     if game.resolution is not None and du_correctif(game.resolution):
-        return ecran_entier() if sans_bordure(game, config) else place_disponible()
+        numero = ecran_du_jeu(game, config)
+        return ecran_entier(numero) if sans_bordure(game, config) else place_disponible(numero)
     return ecran_entier() if remplit_l_ecran(game, config) else place_disponible()
 
 
@@ -244,28 +292,22 @@ def sans_bordure(game: GameData, config: Config) -> bool:
     return m is None or int(m.group(1)) in (1, 4)
 
 
-def modes_pour(game: GameData) -> list[tuple[int, int]] | None:
-    """Les seules tailles que ce jeu accepte : les modes de l'écran pour HP4 à HP6, sinon toutes."""
+def modes_pour(game: GameData, config: Config) -> list[tuple[int, int]] | None:
+    """Les seules tailles que ce jeu accepte : les modes de SON écran pour HP4 à HP6, sinon toutes."""
     if game.resolution is not None and du_correctif(game.resolution):
-        return modes_ecran()
+        return modes_ecran(ecran_du_jeu(game, config))
     return None
 
 
-def place_disponible() -> tuple[int, int] | None:
-    """La plus grande image qui tient à l'écran principal, en PIXELS RÉELS.
+def place_disponible(numero: int = 0) -> tuple[int, int] | None:
+    """La plus grande image qui tient à l'écran (`numero` : DISPLAY<numero>, 0 : le principal), en PIXELS RÉELS.
 
     Zone de travail (sans la barre des tâches) moins le cadre de la fenêtre.
     Pixels réels et non logiques : le jeu est lancé avec la couche DPI (règle
     104), il voit donc l'écran tel qu'il est. À 150 %, Qt annonce 1707×960 pour
     un écran 2560×1440. None sans affichage.
     """
-    try:
-        from PyQt6.QtGui import QGuiApplication
-    except ImportError:
-        return None
-    if QGuiApplication.instance() is None:
-        return None
-    ecran = QGuiApplication.primaryScreen()
+    ecran = _ecran_qt(numero)
     if ecran is None:
         return None
     g, ratio = ecran.availableGeometry(), ecran.devicePixelRatio()
@@ -323,7 +365,7 @@ def appliquer(game: GameData, config: Config, place: tuple[int, int] | None,
         return None
     correctif = du_correctif(spec)
     taille = taille_pour(config.resolution_jeu.get(game.id, ""), place,
-                         modes_ecran() if correctif else None)
+                         modes_ecran(ecran_du_jeu(game, config)) if correctif else None)
     if taille is None:
         log.info("Résolution de %s non réglée : écran inconnu", game.id)
         return None
