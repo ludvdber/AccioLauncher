@@ -29,7 +29,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from src.core import course
+from src.core import course, course_regles
 from src.core.ecriture_atomique import ecrire_octets_atomique
 
 log = logging.getLogger(__name__)
@@ -48,7 +48,7 @@ _TEMPS = re.compile(r"(?:(\d{1,3}):)?([0-5]?\d):([0-5]\d)\.(\d{3})")
 @dataclass(frozen=True)
 class Entree:
     joueur: str
-    net_us: int
+    temps_us: int    # le temps qui classe le jeu (réel pour HP4 à HP6, sans chargements pour HP1 à HP3)
     jour: str
     code: str        # "" s'il manque ou n'est pas un code de course
     video: str       # "" si absente ou refusée
@@ -61,10 +61,12 @@ class Classement:
     def de(self, game_id: str, categorie: str) -> tuple[Entree, ...]:
         return self.jeux.get(game_id, {}).get(categorie, ())
 
-    def categories(self, game_id: str) -> tuple[str, ...]:
-        """Les catégories du jeu qui ont au moins une entrée, dans l'ordre de `course.CATEGORIES`."""
+    def categories(self, game_id: str, ordre: tuple[str, ...] = ()) -> tuple[str, ...]:
+        """Les catégories du jeu qui ont au moins une entrée : celles d'`ordre` (le catalogue) dans son ordre,
+        puis les autres dans celui du fichier."""
         du_jeu = self.jeux.get(game_id, {})
-        return tuple(c for c in course.CATEGORIES if du_jeu.get(c))
+        presentes = [c for c in du_jeu if du_jeu[c]]
+        return tuple(sorted(presentes, key=lambda c: ordre.index(c) if c in ordre else len(ordre)))
 
 
 VIDE = Classement({})
@@ -146,10 +148,10 @@ def lire(brut: bytes) -> Classement | None:
             continue
         du_jeu: dict[str, tuple[Entree, ...]] = {}
         for categorie, liste in categories.items():
-            if categorie not in course.CATEGORIES or not isinstance(liste, list):
+            if not course_regles.categorie_valide(categorie) or not isinstance(liste, list):
                 continue
             entrees = [e for e in map(_entree, liste[:PAR_CATEGORIE_MAX]) if e is not None]
-            du_jeu[categorie] = tuple(sorted(entrees, key=lambda e: (e.net_us, e.jour)))
+            du_jeu[categorie] = tuple(sorted(entrees, key=lambda e: (e.temps_us, e.jour)))
         jeux[game_id] = du_jeu
     return Classement(jeux)
 
@@ -185,6 +187,6 @@ def en_cache() -> Classement:
     return lire(brut) or VIDE
 
 
-def rang(entrees: tuple[Entree, ...], net_us: int) -> int:
+def rang(entrees: tuple[Entree, ...], temps: int) -> int:
     """La place qu'un temps prendrait dans le classement (1 : premier) ; à égalité, derrière."""
-    return 1 + sum(1 for e in entrees if e.net_us <= net_us)
+    return 1 + sum(1 for e in entrees if e.temps_us <= temps)

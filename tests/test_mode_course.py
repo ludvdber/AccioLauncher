@@ -1,13 +1,14 @@
 """`core/mode_course` (1.5) : la table « à tenir » de chaque jeu, les écarts, entrer puis sortir rend l'ini À
 L'OCTET, les clés de la course, le dossier neuf, la conclusion et la course interrompue. Logique pure."""
 
+import os
 from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
 from src.core import course, mode_course
-from src.core.game_data import GameData
+from src.core.game_data import GameData, load_catalog
 
 
 @pytest.fixture(autouse=True)
@@ -17,25 +18,49 @@ def _course_sous_windows(monkeypatch):
     monkeypatch.setattr(mode_course, "plateforme", lambda: "win32")
 
 INI_HP2 = ("[Accio.Window]\r\nFPSLimit=0\r\nFillScreen=1\r\n\r\n[Accio.Lumos]\r\nLumosFade=1\r\n\r\n"
-           "[Accio.Game]\r\nQuidditchDifficulty=2\r\nOneLife=0\r\nDeathCounter=0\r\nOneLifeSaves=\r\nRaceLog=0\r\n\r\n"
-           "[Accio.Overlay]\r\nShowFPS=1\r\nRaceId=\r\n\r\n[Accio.Hardcore]\r\nDamageTaken=3\r\nDamageDealt=1\r\n")
+           "[Accio.Game]\r\nQuidditchDifficulty=2\r\nOneLife=0\r\nDeathCounter=0\r\nOneLifeSaves=\r\n\r\n"
+           "[Accio.Overlay]\r\nShowFPS=1\r\n\r\n[Accio.Hardcore]\r\nDamageTaken=3\r\nDamageDealt=1\r\n")
 INI_HP5 = ("[Accio.Window]\r\nFPSLimit=120\r\n\r\n[Accio.Game]\r\nUnlockFrameRate=1\r\nFrameRateCap=120\r\n"
            "RealFrameTime=1\r\nSimulationStep=0\r\nStepTimers=1\r\nStepPacing=1\r\nWandGate=0\r\n"
-           "OneLife=0\r\nDeathCounter=0\r\nOneLifeSaves=\r\nRaceLog=0\r\nRaceSaves=\r\n\r\n"
-           "[Accio.Graphics]\r\nSkyMode=0\r\n\r\n[Accio.Shaders]\r\nDump=0\r\n\r\n[Accio.Overlay]\r\nRaceId=\r\n\r\n"
+           "OneLife=0\r\nDeathCounter=0\r\nOneLifeSaves=\r\n\r\n"
+           "[Accio.Graphics]\r\nSkyMode=0\r\n\r\n[Accio.Shaders]\r\nDump=0\r\n\r\n[Accio.Overlay]\r\nShowFPS=0\r\n\r\n"
            "[Accio.Hardcore]\r\nDamageTaken=1\r\nDamageDealt=1\r\nPlayerHealth=1\r\nInvincible=0\r\n")
+# Les ini livrés ne portent AUCUNE clé de course (`settings_test.cpp` du correctif les y refuse) : la course
+# se propose selon la version de la DLL, que ces ini de test portent à côté d'eux (`dll_versionnee`).
+_REGLES = {g.id: g.course for g in load_catalog().games}
+
+
+def dll_versionnee(chemin: Path, version: tuple[int, int, int, int] = (2, 5, 0, 0)) -> Path:
+    """Une DLL réduite à sa ressource de version : un en-tête de 16 octets, puis VS_VERSIONINFO (wLength,
+    wValueLength, wType, la clé en UTF-16 et son nul, 2 octets de bourrage) et VS_FIXEDFILEINFO."""
+    cle = "VS_VERSION_INFO\0".encode("utf-16-le")
+    fixe = (b"".join(n.to_bytes(4, "little") for n in (0xFEEF04BD, 0x10000, (version[0] << 16) | version[1],
+                                                        (version[2] << 16) | version[3])) + bytes(36))
+    corps = (52).to_bytes(2, "little") + bytes(2) + cle + bytes(2) + fixe
+    chemin.write_bytes(b"MZ" + bytes(14) + (len(corps) + 2).to_bytes(2, "little") + corps)
+    # Une DLL remplacée a une autre date, comme une vraie mise à jour : `version_dll` garde sa lecture par
+    # (taille, date), et deux écritures dans le même tic de l'horloge auraient la même.
+    _DATES.append(_DATES[-1] + 1_000_000_000)
+    os.utime(chemin, ns=(_DATES[-1], _DATES[-1]))
+    return chemin
+
+
+_DATES = [1_700_000_000_000_000_000]
 
 
 def _jeu(game_id: str, exe: str) -> GameData:
     return GameData(id=game_id, name=game_id.upper(), year=2002, description="", developer="", executable=exe,
-                    cover_image="", latest_version="1", recommended_version="1")
+                    cover_image="", latest_version="1", recommended_version="1", course=_REGLES.get(game_id))
 
 
-def _installer(tmp_path: Path, game_id: str, exe: str, nom_ini: str, texte: str) -> tuple[GameData, Path]:
+def _installer(tmp_path: Path, game_id: str, exe: str, nom_ini: str, texte: str,
+               version: tuple[int, int, int, int] | None = (2, 5, 0, 0)) -> tuple[GameData, Path]:
     chemin = tmp_path / "jeux" / exe
     chemin.parent.mkdir(parents=True, exist_ok=True)
     ini = chemin.parent / nom_ini
     ini.write_bytes(texte.encode("utf-8"))
+    if version is not None:
+        dll_versionnee(ini.with_suffix(".dll"), version)
     return _jeu(game_id, exe), ini
 
 
@@ -65,13 +90,34 @@ def test_limite_d_images():
     assert sky.tenue("0") and sky.tenue("1") and not sky.tenue("2") and not sky.tenue("3")
 
 
-def test_sans_les_cles_de_course_pas_de_course(tmp_path):
-    """Les ini livrés de la 1.4 n'ont pas `RaceLog` : rien à proposer."""
-    jeu, _ = _installer(tmp_path, "hp2", "HP2/system/Game.exe", "winmm.ini", INI_HP2.replace("RaceLog=0\r\n", ""))
-    assert mode_course.ini(jeu, tmp_path / "jeux") is None
-    jeu5, _ = _installer(tmp_path, "hp5", "HP5/hp.exe", "d3d9.ini", INI_HP5.replace("RaceSaves=\r\n", ""))
-    assert mode_course.ini(jeu5, tmp_path / "jeux") is None
-    assert mode_course.ini(_jeu("hp7a", "HP7a/pc/hp7.exe"), tmp_path / "jeux") is None
+def test_la_course_suit_la_version_du_correctif(tmp_path):
+    """Le correctif de la version du catalogue (`fix_min`) ou plus récent : course ; plus ancien, sans DLL, ou un
+    ancien correctif sans `[Accio.Window]` : pas de course (la page le dit). HP7 n'a pas de course."""
+    racine = tmp_path / "jeux"
+    jeu, ini = _installer(tmp_path, "hp2", "HP2/system/Game.exe", "winmm.ini", INI_HP2)
+    assert mode_course.propose(jeu) and mode_course.ini(jeu, racine) == ini
+    assert jeu.course is not None and jeu.course.correctif_min == (2, 5, 0)
+    for version in ((2, 4, 0, 0), (1, 9, 9, 9)):
+        dll_versionnee(ini.with_suffix(".dll"), version)
+        assert mode_course.ini(jeu, racine) is None, version
+    dll_versionnee(ini.with_suffix(".dll"), (2, 10, 0, 0))
+    assert mode_course.ini(jeu, racine) == ini, "2.10 vient après 2.5"
+    ini.with_suffix(".dll").unlink()
+    assert mode_course.ini(jeu, racine) is None
+    jeu5, ini5 = _installer(tmp_path, "hp5", "HP5/hp.exe", "d3d9.ini", INI_HP5.replace("[Accio.Window]", "[Fix]"))
+    assert mode_course.ini(jeu5, racine) is None, "ancien correctif"
+    sept = _jeu("hp7a", "HP7a/pc/hp7.exe")
+    assert not mode_course.propose(sept) and mode_course.ini(sept, racine) is None
+
+
+def test_version_dll(tmp_path):
+    assert mode_course.version_dll(dll_versionnee(tmp_path / "a.dll", (2, 5, 1, 3))) == (2, 5, 1, 3)
+    (tmp_path / "b.dll").write_bytes(b"MZ" + bytes(100))
+    assert mode_course.version_dll(tmp_path / "b.dll") is None
+    assert mode_course.version_dll(tmp_path / "absente.dll") is None
+    faux = tmp_path / "c.dll"
+    faux.write_bytes(b"MZ" + bytes(14) + b"\0" * 6 + "VS_VERSION_INFO\0".encode("utf-16-le") + bytes(40))
+    assert mode_course.version_dll(faux) is None, "la clé sans la signature de VS_FIXEDFILEINFO"
 
 
 def test_ecarts(tmp_path):
@@ -127,7 +173,7 @@ def test_cle_ajoutee_puis_retiree(tmp_path):
 
 def test_ini_sans_section_refuse_et_rend(tmp_path):
     jeu, ini = _installer(tmp_path, "hp2", "HP2/system/Game.exe", "winmm.ini",
-                          INI_HP2.replace("[Accio.Overlay]\r\nShowFPS=1\r\nRaceId=\r\n\r\n", ""))
+                          INI_HP2.replace("[Accio.Overlay]\r\nShowFPS=1\r\n\r\n", ""))
     avant = ini.read_bytes()
     with pytest.raises(mode_course.CourseRefusee):
         mode_course.entrer(jeu, ini, "Any%", EMPREINTE, "normal")

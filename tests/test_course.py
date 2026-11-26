@@ -3,6 +3,7 @@ journal signé. Logique pure, aucun `qtbot`. Les lignes ont la forme de `race::F
 correctif (cinq champs, « \\n », sceau FNV-1a des octets de la séance avant chaque `etat` et `fin`)."""
 
 import json
+import os
 from datetime import date
 from pathlib import Path
 
@@ -66,13 +67,24 @@ class TestIdentifiant:
         assert texte == "ACCIO 7KQ2-M4XP 2026-11-18 a3f9c1d2 HP2 Any%"
         assert len(texte) <= course.LONGUEUR_ID
 
-    def test_trois_categories_dans_la_ligne(self):
-        assert course.CATEGORIES == ("Any%", "100%", "Glitchless")
-        for categorie in course.CATEGORIES:
-            texte = course.ligne_id("7KQ2-M4XP", date(2026, 11, 18), "a3f9c1d2", "hp6", categorie)
-            assert texte.endswith(f" HP6 {categorie}") and len(texte) <= course.LONGUEUR_ID
-        with pytest.raises(ValueError):
-            course.ligne_id("7KQ2-M4XP", date(2026, 11, 18), "a3f9c1d2", "hp2", "any%")
+    def test_chaque_categorie_du_catalogue_tient_dans_la_ligne(self):
+        """Les six jeux de la course ont leurs catégories (celles de speedrun.com), et chacune s'écrit dans la
+        ligne ACCIO ; HP7 n'a pas de course."""
+        from src.core.game_data import load_catalog
+        jeux = {g.id: g for g in load_catalog().games}
+        assert {j for j, g in jeux.items() if g.course is not None} == set(course.JEUX)
+        for j in course.JEUX:
+            regles = jeux[j].course
+            assert regles is not None and regles.categories[0].ident == course.ANY
+            for c in regles.categories:
+                texte = course.ligne_id("7KQ2-M4XP", date(2026, 11, 18), "a3f9c1d2", j, c.ident)
+                assert texte.endswith(f" {j.upper()} {c.ident}") and len(texte) <= course.LONGUEUR_ID
+        assert {c.ident for c in jeux["hp4"].course.categories} == {"Any%", "100%", "All Shields"}
+        assert all("Glitchless" not in jeux[j].course.idents for j in ("hp3", "hp4", "hp5", "hp6"))
+        assert jeux["hp4"].course.temps == course.REEL and jeux["hp2"].course.temps == course.SANS_CHARGEMENTS
+        for faux in ("Tout ; ou rien", "Any%\t", " Any%", "x" * 24):
+            with pytest.raises(ValueError):
+                course.ligne_id("7KQ2-M4XP", date(2026, 11, 18), "a3f9c1d2", "hp2", faux)
 
     def test_ligne_id_bornee_et_ascii(self):
         with pytest.raises(ValueError):
@@ -293,6 +305,11 @@ class TestJournalSigne:
         donnees["refus"] = [course.DEPART_CHARGE]
         donnees["resultat"]["net_us"] = 1_000_000            # plus rapide, mais refusée
         chemin.write_text(json.dumps(donnees), encoding="utf-8")
+        # Deux écritures dans le même tic de l'horloge des fichiers ont la même date (un échec sur quatre sous
+        # Windows) : la seconde est datée une seconde plus tard, comme deux courses réelles.
+        premiere = course.dossier("7KQ2-M4XP") / course.JOURNAL
+        t = premiere.stat().st_mtime_ns
+        os.utime(chemin, ns=(t + 1_000_000_000, t + 1_000_000_000))
         gardees = course.passees("hp2")
         assert [c.code for c in gardees] == ["AAAA-BBBB", "7KQ2-M4XP"], "la plus récente d'abord"
         assert not gardees[0].valable and gardees[1].valable
@@ -321,9 +338,149 @@ class TestJournalSigne:
 
 
 def _gardee(code: str, net: int, *segments: tuple[str, int, bool], categorie: str = "Any%",
-            refus: tuple[str, ...] = (), jour: str = "2026-11-20", ecrite: int = 0) -> course.Passee:
+            refus: tuple[str, ...] = (), jour: str = "2026-11-20", ecrite: int = 0,
+            reel: int | None = None) -> course.Passee:
     return course.Passee(code, "hp2", jour, net, True, refus, ecrite, categorie,
-                         tuple(course.Segment(*s) for s in segments))
+                         tuple(course.Segment(*s) for s in segments), net if reel is None else reel)
+
+
+class TestTempsQuiClasse:
+    """Le temps qui classe le jeu (réel pour HP4 à HP6, sans chargements ailleurs), les records successifs, la
+    course idéale, les passages d'avant, la comparaison de deux courses."""
+
+    def test_le_record_suit_le_temps_du_jeu(self):
+        peu_de_chargements = _gardee("AAAA-AAAA", 100, reel=110, ecrite=1)
+        beaucoup = _gardee("BBBB-BBBB", 90, reel=130, ecrite=2)
+        assert course.meilleure([peu_de_chargements, beaucoup]).code == "BBBB-BBBB"
+        assert course.meilleure([peu_de_chargements, beaucoup], None, course.REEL).code == "AAAA-AAAA"
+        assert beaucoup.temps(course.REEL) == 130 and beaucoup.temps(course.SANS_CHARGEMENTS) == 90
+
+    def test_les_deux_temps_relus_du_journal(self):
+        r = course.analyser(journal(*HP2))
+        assert (r.reel, r.net) == (39_000_000, 34_000_000)
+        assert r.temps(course.REEL) == 39_000_000 and r.temps(course.SANS_CHARGEMENTS) == 34_000_000
+
+    def test_records_successifs(self):
+        suite = [_gardee("AAAA-AAAA", 50, jour="2026-11-01"), _gardee("BBBB-BBBB", 60, jour="2026-11-02"),
+                 _gardee("CCCC-CCCC", 40, jour="2026-11-03"), _gardee("DDDD-DDDD", 30, jour="2026-11-04",
+                                                                     refus=(course.RETOUCHE,)),
+                 _gardee("EEEE-EEEE", 35, jour="2026-11-05"), _gardee("FFFF-FFFF", 1, categorie="100%")]
+        assert [c.code for c in course.records(suite, "Any%")] == ["AAAA-AAAA", "CCCC-CCCC", "EEEE-EEEE"]
+
+    def test_course_ideale_et_carte_traversee_deux_fois(self):
+        """Le meilleur temps à chaque PLACE du parcours : le hub court de la première traversée ne remplace pas
+        la seconde, longue."""
+        a = _gardee("AAAA-AAAA", 60, ("Hub", 5, False), ("Donjon", 30, False), ("Hub", 25, False), ecrite=1)
+        b = _gardee("BBBB-BBBB", 70, ("Hub", 4, False), ("Donjon", 40, False), ("Hub", 26, False), ecrite=2)
+        detour = _gardee("CCCC-CCCC", 65, ("Hub", 1, False), ("Autre", 1, False), ecrite=3)
+        ideale = course.ideale([a, b, detour], "Any%")
+        assert ideale is not None and (ideale.net_us, ideale.a_gagner_us) == (4 + 30 + 25, 1)
+        assert course.ideale([detour], "100%") is None
+        seule = course.ideale([a], "Any%")
+        assert seule is not None and seule.a_gagner_us == 0
+
+    def test_passages_d_avant(self):
+        a = _gardee("AAAA-AAAA", 30, ("PrivetDr", 10, False), ("Adv1Willow", 20, False))
+        b = _gardee("BBBB-BBBB", 31, ("PrivetDr", 12, False), ("Adv1Willow", 19, False))
+        nouvelle = (course.Segment("PrivetDr", 11), course.Segment("Adv1Willow", 18))
+        assert course.passages_d_avant([a, b], "CCCC-CCCC", "Any%", nouvelle) == (10, 19)
+        assert course.passages_d_avant([a], "AAAA-AAAA", "Any%", a.segments) == (None, None), "pas elle-même"
+        assert course.passages_d_avant([a, b], "CCCC-CCCC", "100%", nouvelle) == (None, None)
+
+    def test_format_ecart(self):
+        assert course.format_ecart(-3_000_000) == "−3.000" and course.format_ecart(512_000) == "+0.512"
+        assert course.format_ecart(0) == "±0.000" and course.format_ecart(62_500_000) == "+1:02.500"
+        assert course.format_ecart(-59_999_000) == "−59.999"
+
+    def test_comparer_deux_courses(self):
+        moi = _gardee("AAAA-AAAA", 30, ("PrivetDr", 10, False), ("Hub", 5, False), ("Fin", 10, False),
+                      ("Hub", 5, False))
+        ami = _gardee("BBBB-BBBB", 28, ("PrivetDr", 8, False), ("Raccourci", 4, False), ("Fin", 16, False))
+        lignes = {c.carte: (c.a_us, c.b_us, c.ecart_us) for c in course.comparer(moi, ami)}
+        assert list(lignes) == ["PrivetDr", "Hub", "Fin", "Raccourci"]
+        assert lignes["PrivetDr"] == (10, 8, -2) and lignes["Hub"] == (10, None, None)
+        assert lignes["Fin"] == (10, 16, 6) and lignes["Raccourci"] == (None, 4, None)
+
+
+class TestCourseDUnAmi:
+    """Un `course.json` partagé : relu, vérifié, son temps RECALCULÉ depuis ses lignes brutes."""
+
+    @staticmethod
+    def _signee(tmp_path: Path, retoucher=None) -> Path:
+        r = course.analyser(journal(*HP2))
+        donnees = course.contenu(
+            game_id="hp2", categorie="Any%", code="7KQ2-M4XP", jour=date(2026, 11, 19), ligne=RACE_ID,
+            empreinte_jeu=course.Empreinte("ab" * 32, "abababab", ()), launcher="1.5.0", ini="", ecarts=[],
+            resultat=r, refus=course.verdict(r, course.Attendu(RACE_ID, True)), plateforme="win32",
+            difficulte="normal")
+        signe = dict(donnees)
+        signe["signature"] = course.signer(signe)
+        if retoucher is not None:
+            retoucher(signe)
+        chemin = tmp_path / "ami.json"
+        chemin.write_text(json.dumps(signe), encoding="utf-8")
+        return chemin
+
+    def test_en_regle(self, tmp_path):
+        ami = course.lire_externe(self._signee(tmp_path))
+        assert ami is not None and ami.en_regle and ami.passee.code == "7KQ2-M4XP"
+        assert (ami.passee.net_us, ami.passee.total_us) == (34_000_000, 39_000_000)
+        assert [s.carte for s in ami.passee.segments] == ["PrivetDr", "Adv1Willow"]
+
+    def test_temps_retouche_sans_refaire_la_signature(self, tmp_path):
+        def plus_rapide(d):
+            d["resultat"]["net_us"] = 1_000
+        ami = course.lire_externe(self._signee(tmp_path, plus_rapide))
+        assert ami is not None and not ami.en_regle and not ami.verification.signature
+        assert ami.passee.net_us == 34_000_000, "le temps recalculé, pas celui écrit"
+
+    def test_illisible(self, tmp_path):
+        (tmp_path / "rien.json").write_text("{}", encoding="utf-8")
+        assert course.lire_externe(tmp_path / "rien.json") is None
+        assert course.lire_externe(tmp_path / "absent.json") is None
+
+
+class TestReglesDuCatalogue:
+    """Le bloc `race` d'un jeu (`course_regles`) : le catalogue est distant, tout y est contrôlé."""
+
+    @staticmethod
+    def _bloc(**change) -> dict:
+        bloc = {"fix_min": "2.5.0", "timing": "real", "start": "Départ.", "end": "Arrivée.",
+                "categories": [{"id": "Any%", "rule": "Vite."}, {"id": "All Shields", "name": "Tous les boucliers",
+                                                                 "rule": "Les 38.", "note": "Écart."}],
+                "i18n": {"en": {"start": "Start.", "end": "End."}}}
+        bloc.update(change)
+        return bloc
+
+    def test_lu(self):
+        from src.core import course_regles
+        r = course_regles.lire(self._bloc())
+        assert r is not None and r.correctif_min == (2, 5, 0) and r.temps == course.REEL
+        assert r.idents == ("Any%", "All Shields") and r.categorie("All Shields").nom == "Tous les boucliers"
+        assert r.categorie("Any%").nom == "Any%" and r.categorie("All Shields").note == "Écart."
+        assert course_regles.lire(self._bloc(timing="loadless")).temps == course.SANS_CHARGEMENTS
+
+    def test_traduit(self, monkeypatch):
+        from src.core import course_regles, i18n
+        monkeypatch.setattr(i18n, "_lang", "en")
+        r = course_regles.lire(self._bloc())
+        assert r is not None and (r.depart, r.arrivee) == ("Start.", "End.")
+
+    @pytest.mark.parametrize("change", [
+        {"fix_min": "2.x"}, {"fix_min": None}, {"timing": "rta"}, {"timing": 1}, {"start": ""},
+        {"end": "x" * 401}, {"categories": []}, {"categories": "Any%"},
+        {"categories": [{"id": "Any%"}, {"id": "Tout ; rien", "rule": "x"}, {"id": 5, "rule": "x"}]},
+    ])
+    def test_refuse(self, change):
+        from src.core import course_regles
+        assert course_regles.lire(self._bloc(**change)) is None
+        assert course_regles.lire(None) is None and course_regles.lire([]) is None
+
+    def test_doublon_et_categories_mal_formees_sautees(self):
+        from src.core import course_regles
+        r = course_regles.lire(self._bloc(categories=[{"id": "Any%", "rule": "a"}, {"id": "Any%", "rule": "b"},
+                                                      {"id": "x" * 30, "rule": "c"}, {"id": "100%", "rule": "d"}]))
+        assert r is not None and r.idents == ("Any%", "100%") and r.categorie("Any%").regle == "a"
 
 
 class TestParCarte:

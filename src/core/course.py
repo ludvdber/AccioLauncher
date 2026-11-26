@@ -24,13 +24,13 @@ import json
 import logging
 import secrets
 from collections.abc import Callable, Iterable, Mapping
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from datetime import date
 from pathlib import Path
 from typing import Any, TypeGuard
 from xml.sax.saxutils import escape
 
-from src.core import signature
+from src.core import course_regles, signature
 from src.core.ecriture_atomique import ecrire_atomique
 
 log = logging.getLogger(__name__)
@@ -44,10 +44,11 @@ SAUVEGARDES = "saves"
 FORMAT = 1
 JEUX: tuple[str, ...] = ("hp1", "hp2", "hp3", "hp4", "hp5", "hp6")
 UE1: frozenset[str] = frozenset(("hp1", "hp2", "hp3"))
-# Les catégories de la base de la 1.5 (Ludo, 2026-11-22) : écrites telles quelles dans la ligne ACCIO (ASCII).
-# Le launcher ne vérifie pas ce que la catégorie exige (tout ramassé, aucun bug exploité) : la vidéo le montre.
-ANY, CENT, SANS_BUG = "Any%", "100%", "Glitchless"
-CATEGORIES: tuple[str, ...] = (ANY, CENT, SANS_BUG)
+# Les catégories de chaque jeu sont dans le catalogue (`course_regles`, bloc `race`) : celles de speedrun.com
+# pour CE jeu. Écrites telles quelles dans la ligne ACCIO (ASCII). Le launcher ne vérifie pas ce que la
+# catégorie exige (tout ramassé, aucun bug exploité) : la vidéo le montre. Any% est celle de tous les jeux.
+ANY = "Any%"
+REEL, SANS_CHARGEMENTS = course_regles.REEL, course_regles.SANS_CHARGEMENTS
 ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"    # sans 0, O, 1, I : un code se recopie d'une vidéo
 LONGUEUR_ID = 63                                # `race::IsRaceId` du correctif
 FPS_MAX = 65.0                                  # la règle est 60 ; marge choisie par Ludo (2026-11-25) : ces jeux ne sont pas stables
@@ -89,9 +90,9 @@ def code_valide(code: str) -> bool:
 
 def ligne_id(code: str, jour: date, courte: str, game_id: str, categorie: str) -> str:
     """`ACCIO 7KQ2-M4XP 2026-11-18 a3f9c1d2 HP2 Any%` : la ligne que le correctif dessine toute la course.
-    ValueError pour une catégorie inconnue, au-delà de 63 caractères ou hors de l'ASCII imprimable (le
+    ValueError pour une catégorie mal formée, au-delà de 63 caractères ou hors de l'ASCII imprimable (le
     correctif la refuserait en entier)."""
-    if categorie not in CATEGORIES:
+    if not course_regles.categorie_valide(categorie):
         raise ValueError(f"catégorie de course inconnue : {categorie!r}")
     texte = f"ACCIO {code} {jour.isoformat()} {courte} {game_id.upper()} {categorie}"
     if len(texte) > LONGUEUR_ID or not all(0x20 <= ord(c) <= 0x7E for c in texte):
@@ -272,8 +273,17 @@ class Resultat:
 
     @property
     def net(self) -> int:
-        """Le temps d'Accio (S7.4) : celui de la ligne `fin`, sinon le recalcul."""
+        """Le temps sans chargements : celui de la ligne `fin`, sinon le recalcul."""
         return self.net_us if self.fin else self.net_calcule_us
+
+    @property
+    def reel(self) -> int:
+        """Le temps réel, chargements compris : celui de la ligne `fin`, sinon le recalcul."""
+        return self.total_us if self.fin else self.total_calcule_us
+
+    def temps(self, quel: str) -> int:
+        """Le temps qui classe le jeu (`course_regles.Regles.temps`) : réel, ou sans chargements."""
+        return self.reel if quel == REEL else self.net
 
 
 def _entier(texte: str) -> int | None:
@@ -658,29 +668,71 @@ class Passee:
     ecrite_ns: int                # date d'écriture du journal : l'ordre de deux courses du même jour
     categorie: str = ANY
     segments: tuple[Segment, ...] = ()
+    total_us: int = 0             # le temps réel, chargements compris
 
     @property
     def valable(self) -> bool:
         return self.fin and not self.refus
+
+    def temps(self, quel: str) -> int:
+        """Le temps qui classe le jeu : réel (REEL), sinon sans chargements."""
+        return self.total_us if quel == REEL else self.net_us
+
+
+def _entier_lu(valeur: object) -> int:
+    return valeur if isinstance(valeur, int) and not isinstance(valeur, bool) else 0
+
+
+def _passee_de(d: Mapping[str, Any], code: str, ecrite: int) -> Passee | None:
+    r = d.get("resultat")
+    refus = d.get("refus")
+    if not _est_dict(r) or not isinstance(refus, list):
+        return None
+    fin = r.get("fin") is True
+    return Passee(code, str(d.get("jeu", "")), str(d.get("date", "")),
+                  _entier_lu(r.get("net_us" if fin else "net_calcule_us")), fin, tuple(str(x) for x in refus),
+                  ecrite, str(d.get("categorie", ANY)), _segments_lus(r.get("segments")),
+                  _entier_lu(r.get("total_us" if fin else "total_calcule_us")))
 
 
 def _passee(chemin: Path) -> Passee | None:
     d = lire_journal(chemin)
     if d is None:
         return None
-    r = d.get("resultat")
-    refus = d.get("refus")
-    if not _est_dict(r) or not isinstance(refus, list):
-        return None
-    fin = r.get("fin") is True
-    net = r.get("net_us" if fin else "net_calcule_us")
     try:
         ecrite = chemin.stat().st_mtime_ns
     except OSError:
         return None
-    return Passee(chemin.parent.name, str(d.get("jeu", "")), str(d.get("date", "")),
-                  net if isinstance(net, int) else 0, fin, tuple(str(x) for x in refus), ecrite,
-                  str(d.get("categorie", ANY)), _segments_lus(r.get("segments")))
+    return _passee_de(d, chemin.parent.name, ecrite)
+
+
+@dataclass(frozen=True)
+class Externe:
+    """La course d'un autre joueur, lue dans le `course.json` qu'il a partagé, et ce que vaut ce fichier."""
+    passee: Passee
+    verification: Verification
+
+    @property
+    def en_regle(self) -> bool:
+        """Signée par un launcher, et son verdict recalculé dit un temps valable, le même que le fichier."""
+        v = self.verification
+        return v.signature and v.concorde and not v.refus
+
+
+def lire_externe(chemin: Path) -> Externe | None:
+    """Un `course.json` venu d'ailleurs (un ami) : la course et sa vérification ; None s'il ne se lit pas.
+    Le temps gardé est celui RECALCULÉ depuis ses lignes brutes, pas celui qu'il écrit."""
+    d = lire_journal(chemin)
+    v = verifier(d)
+    code = d.get("code") if d is not None else None
+    if d is None or not v.lisible or not isinstance(code, str) or not code_valide(code):
+        return None
+    passee = _passee_de(d, code, 0)
+    if passee is None:
+        return None
+    recalcul = analyser(_texte_du_journal(d))
+    return Externe(replace(passee, net_us=recalcul.net, total_us=recalcul.reel, fin=recalcul.fin,
+                           refus=v.refus, segments=recalcul.segments), v)
 
 
 def _segments_lus(brut: object) -> tuple[Segment, ...]:
@@ -702,11 +754,84 @@ def passees(game_id: str | None = None) -> list[Passee]:
     return sorted(lues, key=lambda c: (c.jour, c.ecrite_ns), reverse=True)
 
 
-def meilleure(courses_du_jeu: Iterable[Passee], categorie: str | None = None) -> Passee | None:
-    """Le meilleur temps VALABLE (finie, sans refus) de la catégorie (de toutes : None) ; à égalité, la plus
-    ancienne l'a eu d'abord."""
+def meilleure(courses_du_jeu: Iterable[Passee], categorie: str | None = None,
+              temps: str = SANS_CHARGEMENTS) -> Passee | None:
+    """Le meilleur temps VALABLE (finie, sans refus) de la catégorie (de toutes : None), au temps qui classe le
+    jeu ; à égalité, la plus ancienne l'a eu d'abord."""
     valables = [c for c in courses_du_jeu if c.valable and categorie in (None, c.categorie)]
-    return min(valables, key=lambda c: (c.net_us, c.jour, c.ecrite_ns)) if valables else None
+    return min(valables, key=lambda c: (c.temps(temps), c.jour, c.ecrite_ns)) if valables else None
+
+
+def records(courses_du_jeu: Iterable[Passee], categorie: str, temps: str = SANS_CHARGEMENTS) -> tuple[Passee, ...]:
+    """Les records successifs de la catégorie, du premier au dernier : chaque course valable qui a battu toutes
+    celles d'avant."""
+    suite: list[Passee] = []
+    for c in sorted((c for c in courses_du_jeu if c.valable and c.categorie == categorie),
+                    key=lambda c: (c.jour, c.ecrite_ns)):
+        if not suite or c.temps(temps) < suite[-1].temps(temps):
+            suite.append(c)
+    return tuple(suite)
+
+
+@dataclass(frozen=True)
+class Ideale:
+    """La course idéale : le meilleur passage de chaque carte du parcours du record, mis bout à bout (temps sans
+    chargements : le seul que le journal découpe par carte)."""
+    net_us: int
+    a_gagner_us: int              # ce qui sépare le record (sans chargements) de la course idéale
+
+
+def ideale(courses_du_jeu: Iterable[Passee], categorie: str, temps: str = SANS_CHARGEMENTS) -> Ideale | None:
+    """Comme le « meilleur possible » de LiveSplit : parmi les courses valables qui ont suivi le MÊME parcours que
+    le record (les mêmes cartes, dans le même ordre), le meilleur temps à chaque place du parcours. Une carte
+    traversée deux fois garde ainsi ses deux passages. None sans record, ou sans découpage par carte."""
+    valables = [c for c in courses_du_jeu if c.valable and c.categorie == categorie]
+    record = meilleure(valables, temps=temps)
+    if record is None or not record.segments:
+        return None
+    parcours = [s.carte for s in record.segments]
+    memes = [c for c in valables if [s.carte for s in c.segments] == parcours]
+    total = sum(min(c.segments[i].net_us for c in memes) for i in range(len(parcours)))
+    return Ideale(total, max(0, record.net_us - total))
+
+
+def passages_d_avant(courses_du_jeu: Iterable[Passee], code: str, categorie: str,
+                     segments: tuple[Segment, ...]) -> tuple[int | None, ...]:
+    """Pour chaque morceau d'une course (`segments`), le meilleur temps fait à cette place du MÊME parcours par
+    les AUTRES courses valables de sa catégorie ; None partout s'il n'y en a pas. Un morceau égal ou plus court
+    est un meilleur passage (l'« or » de LiveSplit) ; la différence, l'écart à dire."""
+    parcours = [s.carte for s in segments]
+    memes = [c for c in courses_du_jeu if c.valable and c.categorie == categorie and c.code != code
+             and [s.carte for s in c.segments] == parcours]
+    if not memes:
+        return tuple(None for _ in segments)
+    return tuple(min(c.segments[i].net_us for c in memes) for i in range(len(segments)))
+
+
+@dataclass(frozen=True)
+class Comparaison:
+    """Une carte, le temps passé dessus dans deux courses (None : pas traversée), sans chargements."""
+    carte: str
+    a_us: int | None
+    b_us: int | None
+
+    @property
+    def ecart_us(self) -> int | None:
+        """b − a : positif, b a été plus lent sur cette carte."""
+        return None if self.a_us is None or self.b_us is None else self.b_us - self.a_us
+
+
+def comparer(a: Passee, b: Passee) -> tuple[Comparaison, ...]:
+    """Carte par carte, dans l'ordre du parcours de `a` puis des cartes que seule `b` traverse : le temps passé
+    sur chacune (la somme de ses passages). Une carte sans nom ne se compare pas."""
+    def par_nom(c: Passee) -> dict[str, int]:
+        sortie: dict[str, int] = {}
+        for s in c.segments:
+            if s.carte:
+                sortie[s.carte] = sortie.get(s.carte, 0) + s.net_us
+        return sortie
+    da, db = par_nom(a), par_nom(b)
+    return tuple(Comparaison(carte, da.get(carte), db.get(carte)) for carte in {**da, **db})
 
 
 @dataclass(frozen=True)
@@ -718,14 +843,15 @@ class Passage:
     jour: str
 
 
-def par_carte(courses_du_jeu: Iterable[Passee], categorie: str) -> tuple[Passage, ...]:
+def par_carte(courses_du_jeu: Iterable[Passee], categorie: str,
+              temps: str = SANS_CHARGEMENTS) -> tuple[Passage, ...]:
     """Le classement par niveau de la base de la 1.5 : pour chaque carte, le passage le plus court des courses
     VALABLES de la catégorie. Un passage venu d'une partie rechargée ne compte pas (il ne part pas de
     l'entrée de la carte), ni une carte sans nom. Dans l'ordre de la meilleure course, puis des autres ;
     à égalité, la plus ancienne course garde le passage."""
     valables = sorted((c for c in courses_du_jeu if c.valable and c.categorie == categorie),
                       key=lambda c: (c.jour, c.ecrite_ns))
-    record = meilleure(valables)
+    record = meilleure(valables, temps=temps)
     ordre: dict[str, None] = {}
     for c in ([record] if record is not None else []) + valables:
         ordre.update((s.carte, None) for s in c.segments if s.carte and not s.depuis_sauvegarde)
@@ -747,14 +873,15 @@ def _temps_lss(us: int) -> str:
     return f"{h:02d}:{m:02d}:{s:02d}.{us:06d}0"
 
 
-def livesplit(nom_jeu: str, categorie: str, courses_du_jeu: Iterable[Passee]) -> str | None:
+def livesplit(nom_jeu: str, categorie: str, courses_du_jeu: Iterable[Passee],
+              temps: str = SANS_CHARGEMENTS) -> str | None:
     """Le fichier LiveSplit (.lss) de la catégorie : un segment par carte du meilleur temps valable, en temps de
     jeu (sans chargements, celui que LiveSplit compare quand il retire les chargements), son meilleur temps
     comme record ; le meilleur segment est pris parmi les courses valables qui ont suivi le MÊME parcours (les
     mêmes cartes dans le même ordre), sinon c'est celui du record. None sans temps valable ou sans segment."""
     de_la_categorie = [c for c in courses_du_jeu if c.categorie == categorie]
     valables = [c for c in de_la_categorie if c.valable]
-    record = meilleure(valables)
+    record = meilleure(valables, temps=temps)
     if record is None or not record.segments:
         return None
     parcours = [s.carte for s in record.segments]
@@ -797,13 +924,14 @@ def livesplit(nom_jeu: str, categorie: str, courses_du_jeu: Iterable[Passee]) ->
 _FANTOME_MAX = 512                              # `race::Ghost::splits` : au-delà, le correctif refuserait tout
 
 
-def fantome(courses_du_jeu: Iterable[Passee], categorie: str) -> str | None:
+def fantome(courses_du_jeu: Iterable[Passee], categorie: str,
+            temps: str = SANS_CHARGEMENTS) -> str | None:
     """Le fichier du fantôme (`race::ReadGhost` du correctif) : le meilleur temps valable de la catégorie,
     carte par carte, `<carte>\t<µs>\n`, le temps sans chargements où le record a QUITTÉ chaque carte ; la
     dernière ligne porte son temps. Une carte quittée deux fois de suite (rechargée) ne compte qu'une fois, à
     la seconde ; un nom vide ou qui casserait la ligne devient « ? » (il ne se comparera à rien). None sans
     record, sans segment, ou au-delà de ce que le correctif lit."""
-    record = meilleure(courses_du_jeu, categorie)
+    record = meilleure(courses_du_jeu, categorie, temps)
     if record is None or not record.segments:
         return None
     lignes_: list[tuple[str, int]] = []
@@ -842,6 +970,13 @@ def format_temps(us: int) -> str:
     m, reste = divmod(reste, 60_000)
     s, ms = divmod(reste, 1000)
     return f"{h}:{m:02d}:{s:02d}.{ms:03d}" if h else f"{m}:{s:02d}.{ms:03d}"
+
+
+def format_ecart(us: int) -> str:
+    """Un écart signé, comme LiveSplit : `−3.000` plus rapide, `+1:02.500` plus lent, `±0.000` à égalité."""
+    signe = "+" if us > 0 else "−" if us < 0 else "±"
+    ms = abs(us) // 1000
+    return signe + (f"{ms // 1000}.{ms % 1000:03d}" if ms < 60_000 else format_temps(abs(us)))
 
 
 ARGUMENT_VERIFIER = "--verifier-course"

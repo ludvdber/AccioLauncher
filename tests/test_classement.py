@@ -47,7 +47,7 @@ class TestLire:
         assert lu is not None and [e.joueur for e in lu.de("hp2", "Any%")] == ["Ludo"]
 
     def test_categorie_et_jeu_inconnus_ignores(self):
-        lu = classement.lire(_octets({"hp2": {"Any%": [_course()], "Tout%": [_course()]},
+        lu = classement.lire(_octets({"hp2": {"Any%": [_course()], "Tout ; rien": [_course()], " Any%": [_course()]},
                                       "../hp2": {"Any%": [_course()]}, "hp3": []}))
         assert lu is not None and set(lu.jeux) == {"hp2"} and lu.categories("hp2") == ("Any%",)
 

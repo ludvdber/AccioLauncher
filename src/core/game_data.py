@@ -13,6 +13,7 @@ from pathlib import Path
 from src.core.version_utils import compare_versions
 from src.core.config import GAMES_JSON_PATH, LAUNCHER_DIR_NAME
 from src.core.chemins import refus_de_chemin
+from src.core import course_regles
 from src.core.catalogue_blocs import (  # noqa: F401  (réexportés)
     _https_ou_rien,
     _sha256_valide,
@@ -368,6 +369,9 @@ class GameData:
     # Logos joués au démarrage (HP3), relatifs au dossier des jeux : la rubrique
     # « Passer les logos » les renomme (`videos_lancement.py`).
     videos_lancement: tuple[str, ...] = ()
+    # Bloc `race` (1.5) : catégories, temps qui classe, départ et arrivée, version du correctif qui sait
+    # chronométrer (`course_regles`). None : ce jeu n'a pas de course (HP7 parties 1 et 2).
+    course: course_regles.Regles | None = None
 
     @property
     def langues(self) -> LanguageRegistry | LanguageFiles | None:
@@ -510,6 +514,7 @@ class GameData:
             captures=_motifs_captures(data.get("screenshots")),
             fichiers_essentiels=_fichiers_essentiels_valides(data.get("essential_files")),
             videos_lancement=_videos_de_lancement_valides(data.get("launch_videos")),
+            course=course_regles.lire(data.get("race")),
             post_install=PostInstall(
                 config_files=_blocs_listes(pi.get("config_files"), "config_files",
                                            ConfigFile.from_dict),

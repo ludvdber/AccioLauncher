@@ -537,8 +537,10 @@ class ActionPanel(QWidget):
         self._btn_difficulte = btn
 
     def _ajouter_course(self) -> None:
+        # Sur tout jeu installé qui a une course, même si son correctif est trop ancien pour chronométrer :
+        # la page de la course le dit et propose la mise à jour, plutôt qu'un chrono absent sans raison.
         from src.core import mode_course
-        if mode_course.ini(self._game, self._manager.config.install_path) is None:
+        if not mode_course.propose(self._game):
             return
         btn = _BoutonIcone("chrono")
         btn.setObjectName("boutonCourse")

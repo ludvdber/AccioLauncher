@@ -1,9 +1,12 @@
-"""La course (1.5) dans l'interface : le dialogue de départ, le fil de l'empreinte, le résultat.
+"""La course (1.5) dans l'interface : le départ orchestré, le fil de l'empreinte, le résultat.
 
 Le chrono, le temps et le verdict sont dans `core/course` ; les réglages tenus et rendus dans
-`core/mode_course`. Ici : ce qui se VOIT, et l'orchestration du départ (`partir`), comme
-`game_detail_handlers.on_play` qu'il appelle ensuite. Une course part d'une NOUVELLE partie (S7.1), le
-temps compté est celui sans les chargements (S7.4), et la phrase sur la vidéo est dite telle que Ludo l'a
+`core/mode_course` ; les règles de chaque jeu (catégories, temps qui classe) dans le catalogue
+(`core/course_regles`). La page de départ est `page_course.CoursePage`. Ici : `partir` (le chrono de la fiche
+ouvre la page), `lancer` (la page a dit oui : réglages tenus, clés de la course, lancement, comme
+`game_detail_handlers.on_play` qu'il appelle), et la fenêtre du résultat. Une course part d'une NOUVELLE
+partie (S7.1) ; le temps qui classe est celui que speedrun.com classe pour ce jeu (réel pour HP4 à HP6, sans
+chargements pour HP1 à HP3), l'autre est gardé aussi ; la phrase sur la vidéo est dite telle que Ludo l'a
 tranchée (S7.7) : la signature n'arrête qu'une retouche à la main du fichier.
 """
 
@@ -13,48 +16,47 @@ import threading
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import QThread, QTimer, Qt, pyqtSignal
+from PyQt6.QtCore import QThread, QTimer, Qt, pyqtBoundSignal, pyqtSignal
 from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtWidgets import (
-    QButtonGroup,
     QDialog,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QMessageBox,
-    QProgressBar,
-    QPushButton,
     QScrollArea,
     QVBoxLayout,
     QWidget,
 )
 
-from src.core import course, mode_course
+from src.core import classement, course, mode_course
 from src.core import difficulte_presets as dp
 from src.core.config import APP_VERSION, Config
 from src.core.game_data import GameData
-from src.core.thread_utils import liberer_apres_fin
 from src.core.i18n import tr, trn
-from src.ui.composants import bouton, feuille_de_style, filtre, lien, transparent
+from src.core.liens import DISCORD_URL
+from src.core.thread_utils import liberer_apres_fin
+from src.ui import filtres_globaux
+from src.ui.composants import bouton, feuille_de_style, lien, transparent
 from src.ui.entree_focus import entree_suit_le_focus
 from src.ui.fenetre_message import message
 from src.ui.fonts import body_font, cinzel
 from src.ui.theme import themed
-from src.ui.toggle_switch import ToggleSwitch
-from src.ui.utils import BARRE_DEFILEMENT, open_local_path
+from src.ui.utils import BARRE_DEFILEMENT, open_local_path, open_url
 
 if TYPE_CHECKING:
     from src.ui.game_detail import GameDetailView
     from src.ui.main_window import MainWindow
+    from src.ui.page_course import Choix
 
 log = logging.getLogger(__name__)
 
 _FENETRE = "QDialog { background: #0d0d1a; border: 1px solid rgba(214,167,44,0.3); }"
-_BARRE = ("QProgressBar { background: #141428; border: 1px solid #2a2a48; border-radius: 4px; height: 8px; }"
-          "QProgressBar::chunk { background: #d6a72c; border-radius: 3px; }")
 _GRIS = "color: #8a8aaa; background: transparent;"
 _TEXTE = "color: #e0e0f0; background: transparent;"
 _OR = "color: #d6a72c; background: transparent;"
 _ROUGE = "color: #e07a6a; background: transparent;"
+_VERT = "color: #7be0a4; background: transparent;"
 # Un fil d'empreinte annulé qui ne répond pas dans le délai : gardé ici jusqu'à sa fin (jamais détruit en
 # marche), comme `GameOperations._zombies`.
 _ZOMBIES: list[EmpreinteThread] = []
@@ -71,9 +73,9 @@ def raison(code: str) -> str:
         course.DEPART_CHARGE: tr("La course est partie d'une partie chargée, pas d'une nouvelle partie."),
         course.DEPART_CLIC: tr("Le clic de la nouvelle partie n'a pas été vu : le temps part trop tard."),
         course.DEPART_INCONNU: tr("Rien ne dit que la partie était neuve."),
-        course.SANS_FIN: tr("La fin de la course n'a pas été vue : partie quittée avant le générique."),
+        course.SANS_FIN: tr("La fin de la course n'a pas été vue : partie quittée avant l'arrivée."),
         course.RETOUCHE: tr("Le temps écrit ne correspond pas aux chargements du journal."),
-        course.TROP_D_IMAGES: tr("Le jeu a dépassé 60 images par seconde."),
+        course.TROP_D_IMAGES: tr("Le jeu a dépassé 65 images par seconde en moyenne sur 10 secondes."),
         course.MODE_NON_TENU: tr("Un réglage qui touche au temps du jeu a changé pendant la course."),
         course.INTERDITS: tr("Le correctif a vu un réglage interdit en course."),
         course.SOUS_WINE: tr("Sous Linux, la ligne ACCIO ne s'affiche pas encore à l'écran : le temps n'est pas classé."),
@@ -82,15 +84,6 @@ def raison(code: str) -> str:
         "journal_tenu": tr("Le journal d'une course passée est encore ouvert : fermez le jeu."),
     }
     return phrases.get(code, code)
-
-
-def regle_categorie(categorie: str) -> str:
-    """Ce que la catégorie demande, en une phrase. Le launcher ne le vérifie pas : la vidéo le montre."""
-    return {
-        course.ANY: tr("Finir le jeu le plus vite possible, par tous les moyens."),
-        course.CENT: tr("Finir le jeu en ayant tout ramassé, comme le demande le classement du jeu."),
-        course.SANS_BUG: tr("Finir le jeu sans exploiter aucun bug : ni traverser un mur, ni sauter une scène par une faille."),
-    }.get(categorie, "")
 
 
 class EmpreinteThread(QThread):
@@ -131,6 +124,23 @@ class EmpreinteThread(QThread):
         self.empreinte_prete.emit(emp)
 
 
+def lacher(fil: EmpreinteThread, *branchements: tuple[pyqtBoundSignal, object], sur_sa_fin: bool) -> None:
+    """Déconnecte le fil, puis : depuis un de ses signaux de fin, `liberer_apres_fin` (règle 133) ; sinon (page
+    fermée en route), l'annuler, l'attendre 3 s, et le garer s'il ne répond pas."""
+    for signal, slot in branchements:
+        try:
+            signal.disconnect(slot)
+        except TypeError:
+            pass
+    if sur_sa_fin:
+        liberer_apres_fin(fil)
+    elif fil.isRunning():
+        fil.cancel()
+        if not fil.wait(3000):
+            _ZOMBIES.append(fil)
+            fil.finished.connect(lambda: _ZOMBIES.remove(fil) if fil in _ZOMBIES else None)
+
+
 def _libelle(texte: str, style: str = _TEXTE, taille: int = 12) -> QLabel:
     """Un libellé en texte BRUT (noms du catalogue, raisons), à la ligne si besoin."""
     lbl = QLabel(texte)
@@ -141,199 +151,10 @@ def _libelle(texte: str, style: str = _TEXTE, taille: int = 12) -> QLabel:
     return lbl
 
 
-def _titre(texte: str) -> QLabel:
-    lbl = _libelle(texte, _OR)
-    lbl.setFont(cinzel(14, bold=True))
-    return lbl
-
-
 def dossiers(game: GameData, install_path: Path) -> tuple[Path, Path]:
     """(dossier du jeu, dossier de l'exe)."""
     exe = Path(game.executable)
     return Path(install_path) / exe.parts[0], (Path(install_path) / exe).parent
-
-
-class CourseDialog(QDialog):
-    """Catégorie, règles, fantôme, ce qui bloque, ce qui sera remis ; « Partir » calcule l'empreinte puis
-    rend la main (`empreinte` posée, dialogue accepté). Le départ lui-même est l'affaire de `partir`."""
-
-    def __init__(self, game: GameData, install_path: Path, bloquants: list[str],
-                 ecarts: list[mode_course.Ecart], parent: QWidget | None = None, *, fantome: bool = True) -> None:
-        super().__init__(parent)
-        entree_suit_le_focus(self)
-        self.game = game
-        self.empreinte: course.Empreinte | None = None
-        self.categorie = course.ANY
-        self.fantome = fantome
-        self._courses = course.passees(game.id)
-        self._install_path = Path(install_path)
-        self._fil: EmpreinteThread | None = None
-        self.setWindowTitle(tr("Course : {}").format(game.name))
-        self.setMinimumWidth(560)
-        self.setStyleSheet(themed(_FENETRE) + feuille_de_style())
-        self._construire(bloquants, ecarts)
-
-    def _construire(self, bloquants: list[str], ecarts: list[mode_course.Ecart]) -> None:
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(22, 20, 22, 16)
-        layout.setSpacing(10)
-        layout.addWidget(_titre(tr("Course : {}").format(self.game.name)))
-        layout.addLayout(self._choix_categorie())
-        self._regle = _libelle(regle_categorie(self.categorie), _OR, 12)
-        layout.addWidget(self._regle)
-        for regle in (
-                tr("Le chrono part d'une nouvelle partie et compte le temps sans les chargements."),
-                tr("60 images par seconde au plus ; ce qui touche au temps du jeu est remis le temps de la course,"
-                   " puis vos réglages vous sont rendus."),
-                tr("Une ligne ACCIO reste en bas de l'image toute la course, avec le chrono sans chargements"
-                   " et les images par seconde : elle doit se lire sur votre vidéo, entière. C'est la vidéo,"
-                   " jugée par une personne, qui prouve la course.")):
-            layout.addWidget(_libelle("• " + regle))
-        layout.addLayout(self._choix_fantome())
-        if self.game.id == "hp1":
-            layout.addWidget(_libelle(tr(
-                "HP1 : une course Accio ne compte pas sur le classement speedrun.com du jeu tant que ses "
-                "modérateurs n'ont pas accepté la limite d'images d'Accio."), _GRIS, 11))
-        if mode_course.plateforme() != "win32":
-            layout.addWidget(_libelle(raison(course.SOUS_WINE), _GRIS, 11))
-        if ecarts:
-            note = _libelle(trn(len(ecarts),
-                                       "{} réglage sera remis le temps de la course, puis rendu.",
-                                       "{} réglages seront remis le temps de la course, puis rendus.")
-                                   .format(len(ecarts)), _GRIS, 11)
-            note.setToolTip("\n".join(f"{e.cle} : {e.valeur if e.valeur is not None else '—'} → {e.posee or '—'}"
-                                      for e in ecarts))
-            layout.addWidget(note)
-        self._bloque = _libelle("\n".join(bloquants), _ROUGE, 12)
-        self._bloque.setVisible(bool(bloquants))
-        layout.addWidget(self._bloque)
-        self._barre = QProgressBar()
-        self._barre.setRange(0, 1000)
-        self._barre.setTextVisible(False)
-        self._barre.setStyleSheet(themed(_BARRE))
-        self._barre.hide()
-        layout.addWidget(self._barre)
-        self._etat = _libelle("", _GRIS, 11)
-        self._etat.hide()
-        layout.addWidget(self._etat)
-        pied = QHBoxLayout()
-        pied.addStretch()
-        self._partir = bouton(tr("Partir"), principal=True)
-        self._partir.setEnabled(not bloquants)
-        self._partir.clicked.connect(self._calculer)
-        fermer = bouton(tr("Fermer"))
-        fermer.clicked.connect(self.reject)
-        for b in (self._partir, fermer):
-            b.setAutoDefault(False)
-            pied.addWidget(b)
-        layout.addLayout(pied)
-
-    def _choix_categorie(self) -> QHBoxLayout:
-        """Une pastille par catégorie, Any% cochée ; la règle de la catégorie dessous."""
-        rangee = QHBoxLayout()
-        rangee.setSpacing(8)
-        rangee.addWidget(_libelle(tr("Catégorie"), _GRIS, 12))
-        self.pastilles: dict[str, QPushButton] = {}
-        self._groupe = QButtonGroup(self)
-        self._groupe.setExclusive(True)
-        for nom in course.CATEGORIES:
-            b = filtre(nom)
-            b.setChecked(nom == self.categorie)
-            b.toggled.connect(lambda coche, n=nom: coche and self._choisir(n))
-            self._groupe.addButton(b)
-            self.pastilles[nom] = b
-            rangee.addWidget(b)
-        rangee.addStretch()
-        return rangee
-
-    def _choix_fantome(self) -> QHBoxLayout:
-        """« Fantôme » : voir ou non l'écart à son record de la catégorie ; la phrase dit ce record."""
-        rangee = QHBoxLayout()
-        rangee.setSpacing(12)
-        colonne = QVBoxLayout()
-        colonne.setSpacing(2)
-        colonne.addWidget(_libelle(tr("Fantôme"), _TEXTE, 12))
-        self._note_fantome = _libelle("", _GRIS, 11)
-        colonne.addWidget(self._note_fantome)
-        rangee.addLayout(colonne, 1)
-        self.bascule_fantome = ToggleSwitch(self.fantome)
-        self.bascule_fantome.setAccessibleName(tr("Fantôme"))
-        self.bascule_fantome.toggled.connect(self._basculer_fantome)
-        rangee.addWidget(self.bascule_fantome, alignment=Qt.AlignmentFlag.AlignVCenter)
-        self._decrire_fantome()
-        return rangee
-
-    def _basculer_fantome(self, coche: bool) -> None:
-        self.fantome = coche
-        self._decrire_fantome()
-
-    def _decrire_fantome(self) -> None:
-        record = course.meilleure(self._courses, self.categorie)
-        if not self.fantome:
-            texte = tr("Seuls le chrono et les images par seconde sont montrés.")
-        elif record is None:
-            texte = tr("Pas encore de record valable en {} : l'écart viendra avec le premier.").format(self.categorie)
-        else:
-            texte = tr("L'écart à votre record en {} ({}) suit le chrono à chaque carte quittée.").format(
-                self.categorie, course.format_temps(record.net_us))
-        self._note_fantome.setText(texte)
-
-    def _choisir(self, categorie: str) -> None:
-        self.categorie = categorie
-        self._regle.setText(regle_categorie(categorie))
-        self._decrire_fantome()
-
-    def _calculer(self) -> None:
-        for b in (*self.pastilles.values(), self.bascule_fantome):
-            b.setEnabled(False)
-        self._partir.setEnabled(False)
-        self._barre.show()
-        self._etat.setText(tr("Empreinte des fichiers du jeu…"))
-        self._etat.show()
-        jeu, exe = dossiers(self.game, self._install_path)
-        fil = EmpreinteThread(self.game.id, jeu, exe)
-        fil.progress.connect(self._barre.setValue)
-        fil.error.connect(self._echec)
-        fil.empreinte_prete.connect(self._prete)
-        self._fil = fil
-        fil.start()
-
-    def _lacher_fil(self, sur_sa_fin: bool = False) -> None:
-        """Déconnecte le fil, puis : depuis un de ses signaux de fin, `liberer_apres_fin` (règle 133) ;
-        sinon (fenêtre fermée en route), l'annuler, l'attendre 3 s, et le garer s'il ne répond pas."""
-        fil, self._fil = self._fil, None
-        if fil is None:
-            return
-        for signal, slot in ((fil.progress, self._barre.setValue), (fil.error, self._echec),
-                             (fil.empreinte_prete, self._prete)):
-            try:
-                signal.disconnect(slot)
-            except TypeError:
-                pass
-        if sur_sa_fin:
-            liberer_apres_fin(fil)
-        elif fil.isRunning():
-            fil.cancel()
-            if not fil.wait(3000):
-                _ZOMBIES.append(fil)
-                fil.finished.connect(lambda: _ZOMBIES.remove(fil) if fil in _ZOMBIES else None)
-
-    def _prete(self, emp: course.Empreinte) -> None:
-        self._lacher_fil(sur_sa_fin=True)
-        self.empreinte = emp
-        self.accept()
-
-    def _echec(self, texte: str) -> None:
-        self._lacher_fil(sur_sa_fin=True)
-        self._barre.hide()
-        self._etat.setText(tr("L'empreinte n'a pas pu être calculée : {}").format(texte))
-        self._partir.setEnabled(True)
-        for b in (*self.pastilles.values(), self.bascule_fantome):
-            b.setEnabled(True)
-
-    def done(self, code: int) -> None:
-        self._lacher_fil()
-        super().done(code)
 
 
 def bloquants(game: GameData, config: Config) -> list[str]:
@@ -345,34 +166,57 @@ def bloquants(game: GameData, config: Config) -> list[str]:
     return sortie
 
 
+# ── Le départ ──
+
 def partir(view: GameDetailView) -> None:
-    """Le bouton « Course » de la fiche : dialogue, empreinte, réglages tenus et clés de la course, lancement.
-    Si le jeu ne part pas, les réglages sont rendus aussitôt."""
+    """Le chrono de la fiche : la page Course, à la place de la bibliothèque. Elle ne lance rien elle-même :
+    fermée avec un `Choix`, `lancer` prend la suite."""
     from src.ui import game_detail_handlers as handlers
-    game, config = view.game, view.manager.config
-    if game is None:
+    from src.ui.page_course import Actions, CoursePage
+    game = view.game
+    if game is None or not mode_course.propose(game):
         return
     if view.partie_en_cours():
         view.notify.emit(tr("{} est en train de démarrer ou déjà lancé.").format(view.partie_en_cours()))
         return
-    ini = mode_course.ini(game, config.install_path)
-    if ini is None:
+    en_page = bool(view.receivers(view.page_demandee))
+
+    def carnet() -> None:
+        from src.ui.carnet_page import COURSES, CarnetPage
+        view.page_demandee.emit(filtres_globaux.batie(
+            lambda: CarnetPage(view.manager, view.window(), rubrique=COURSES, jeu=game.id)))
+
+    actions = Actions(difficulte=lambda: handlers.on_game_settings(view, onglet="difficulte"),
+                      mettre_a_jour=lambda: handlers.on_update_clicked(view),
+                      carnet=carnet) if en_page else Actions()
+    page = filtres_globaux.batie(lambda: CoursePage(game, view.manager, actions=actions, parent=view))
+    page.accepted.connect(lambda: page.choix is not None and lancer(view, page.choix))
+    if en_page:
+        view.page_demandee.emit(page)
+    else:
+        page.exec()
+
+
+def lancer(view: GameDetailView, choix: Choix) -> None:
+    """La page a dit oui : réglages tenus et clés de la course, fantôme, puis le jeu. Si le jeu ne part pas,
+    les réglages sont rendus aussitôt."""
+    from src.ui import game_detail_handlers as handlers
+    game, config = view.game, view.manager.config
+    if game is None or game.id != choix.jeu or game.course is None or view.partie_en_cours():
         return
-    dlg = CourseDialog(game, config.install_path, bloquants(game, config),
-                       mode_course.ecarts(game.id, ini), view, fantome=config.course_fantome)
-    if dlg.exec() != QDialog.DialogCode.Accepted or dlg.empreinte is None:
-        return
-    if dlg.fantome != config.course_fantome:
-        config.course_fantome = dlg.fantome
+    if choix.fantome != config.course_fantome:
+        config.course_fantome = choix.fantome
         config.save()
-    fantome = course.fantome(course.passees(game.id), dlg.categorie) if dlg.fantome else None
+    fantome = (course.fantome(course.passees(game.id), choix.categorie, game.course.temps)
+               if choix.fantome else None)
     native = ""
     if game.difficulte is not None:
         from src.core import difficulte_jeu
         rang = difficulte_jeu.lire(game, config)
         native = f";native={rang}" if rang is not None else ""
     try:
-        etat = mode_course.entrer(game, ini, dlg.categorie, dlg.empreinte, "normal" + native, fantome=fantome)
+        etat = mode_course.entrer(game, choix.ini, choix.categorie, choix.empreinte, "normal" + native,
+                                  fantome=fantome)
     except (mode_course.CourseRefusee, OSError, ValueError) as exc:
         code = str(exc.args[0]) if isinstance(exc, mode_course.CourseRefusee) and exc.args else "ini"
         message(view, QMessageBox.Icon.Warning, tr("Course"), raison(code))
@@ -382,42 +226,69 @@ def partir(view: GameDetailView) -> None:
         mode_course.sortir(etat)
 
 
-def resume(conclusion: mode_course.Conclusion, nom: str) -> str:
-    """Le résumé à coller avec la vidéo : jeu, catégorie, temps, ligne d'identifiant, versions."""
+# ── Le résultat ──
+
+def _deux_temps(game: GameData | None, r: course.Resultat) -> tuple[int, str, str]:
+    """(le temps qui classe, son nom, l'autre dit en clair)."""
+    if game is not None and game.course is not None and game.course.temps == course.REEL:
+        return r.reel, tr("temps réel"), tr("{} sans chargements").format(course.format_temps(r.net))
+    return r.net, tr("sans les chargements"), tr("{} en temps réel").format(course.format_temps(r.reel))
+
+
+def resume(conclusion: mode_course.Conclusion, nom: str, game: GameData | None = None) -> str:
+    """Le résumé à coller avec la vidéo : jeu, catégorie, les deux temps, ligne d'identifiant, versions."""
     r = conclusion.resultat
     lignes = [f"{nom} — {conclusion.categorie}",
-              tr("Temps (sans chargements) : {}").format(course.format_temps(r.net)),
-              tr("Temps total : {}").format(course.format_temps(r.total_us if r.fin else r.total_calcule_us)),
+              tr("Temps réel : {}").format(course.format_temps(r.reel)),
+              tr("Temps sans chargements : {}").format(course.format_temps(r.net)),
               conclusion.ligne_id,
               tr("Launcher {} · correctif {}").format(APP_VERSION, r.version_fix or "?")]
+    if game is not None and game.course is not None:
+        lignes.insert(1, tr("Temps qui classe : {}").format(
+            tr("réel") if game.course.temps == course.REEL else tr("sans chargements")))
     lignes += [raison(code) for code in conclusion.refus]
     return "\n".join(lignes)
 
 
 class CourseResultat(QDialog):
-    """Le temps d'une course qui vient de finir : temps sans chargements, découpage par carte, refus."""
+    """Le temps d'une course qui vient de finir : les deux temps, l'essai, le record et la place au classement,
+    puis le découpage par carte avec les meilleurs passages en or et l'écart à chacun, la course idéale."""
 
-    def __init__(self, conclusion: mode_course.Conclusion, nom: str, parent: QWidget | None = None) -> None:
+    def __init__(self, conclusion: mode_course.Conclusion, nom: str, parent: QWidget | None = None, *,
+                 game: GameData | None = None, courses: list[course.Passee] | None = None,
+                 classement_: classement.Classement | None = None) -> None:
         super().__init__(parent)
         entree_suit_le_focus(self)
-        self._conclusion, self._nom = conclusion, nom
+        self._conclusion, self._nom, self._game = conclusion, nom, game
         r = conclusion.resultat
+        regles = game.course if game is not None else None
+        quel = regles.temps if regles is not None else course.SANS_CHARGEMENTS
+        cat = regles.categorie(conclusion.categorie) if regles is not None else None
+        nom_cat = cat.nom if cat is not None else conclusion.categorie
+        du_jeu = [c for c in (courses if courses is not None else course.passees(conclusion.jeu))
+                  if c.categorie == conclusion.categorie]
+        valable = r.fin and not conclusion.refus
         self.setWindowTitle(tr("Course : {}").format(nom))
-        self.setMinimumSize(520, 420)
+        self.setMinimumSize(560, 480)
         self.setStyleSheet(themed(_FENETRE) + feuille_de_style())
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(22, 20, 22, 16)
+        layout.setContentsMargins(24, 20, 24, 16)
         layout.setSpacing(8)
-        layout.addWidget(_titre(tr("Course terminée : {}").format(nom) if r.fin
-                                else tr("Course non terminée : {}").format(nom)))
-        layout.addWidget(_libelle(conclusion.categorie, _GRIS, 12))
-        temps = QLabel(course.format_temps(r.net))
+        titre = _libelle(tr("Course terminée : {}").format(nom) if r.fin
+                         else tr("Course non terminée : {}").format(nom), _OR)
+        titre.setFont(cinzel(14, bold=True))
+        layout.addWidget(titre)
+        ordre = sorted(du_jeu, key=lambda c: (c.jour, c.ecrite_ns))
+        rang_essai = next((i + 1 for i, c in enumerate(ordre) if c.code == conclusion.code), len(ordre) + 1)
+        layout.addWidget(_libelle(f"{nom_cat} · " + tr("essai {}").format(rang_essai), _GRIS, 12))
+
+        principal, nom_principal, autre = _deux_temps(game, r)
+        temps = QLabel(course.format_temps(principal))
         temps.setObjectName("tempsCourse")
-        temps.setFont(cinzel(26, bold=True))
-        temps.setStyleSheet(themed(_OR if not conclusion.refus else _TEXTE))
+        temps.setFont(cinzel(28, bold=True))
+        temps.setStyleSheet(themed(_OR if valable else _TEXTE))
         layout.addWidget(temps)
-        infos = [tr("sans les chargements"),
-                 tr("{} au total").format(course.format_temps(r.total_us if r.fin else r.total_calcule_us)),
+        infos = [nom_principal, autre,
                  trn(r.chargements, "{} chargement", "{} chargements").format(r.chargements)]
         if r.rechargements:
             infos.append(trn(r.rechargements, "{} partie rechargée", "{} parties rechargées").format(r.rechargements))
@@ -429,9 +300,17 @@ class CourseResultat(QDialog):
             "\n".join(raison(c) for c in conclusion.refus), _OR if not conclusion.refus else _ROUGE, 12))
         if r.interdits:
             layout.addWidget(_libelle(tr("Interdits en course : {}").format(", ".join(r.interdits)), _ROUGE, 11))
+        if valable:
+            self._record(layout, du_jeu, principal, quel, classement_)
         if r.segments:
+            layout.addSpacing(4)
             layout.addWidget(_libelle(tr("Par carte"), _OR, 12))
-            layout.addWidget(self._segments(r.segments), 1)
+            avant = course.passages_d_avant(du_jeu, conclusion.code, conclusion.categorie, r.segments)
+            layout.addWidget(self._segments(r.segments, avant), 1)
+            ideale = course.ideale(du_jeu, conclusion.categorie, quel)
+            if ideale is not None and ideale.a_gagner_us > 0:
+                layout.addWidget(_libelle(tr("Course idéale : {} sans chargements, encore {} à gagner.").format(
+                    course.format_temps(ideale.net_us), course.format_temps(ideale.a_gagner_us)), _GRIS, 11))
         layout.addWidget(_libelle(tr(
             "Le journal signé est dans le dossier de la course. Le launcher est libre : sa signature n'arrête "
             "qu'une retouche à la main du fichier. La vidéo reste la preuve."), _GRIS, 10))
@@ -440,7 +319,7 @@ class CourseResultat(QDialog):
                 "Vos réglages n'ont pas pu être rendus : le launcher réessaiera à son prochain démarrage."),
                 _ROUGE, 11))
         pied = QHBoxLayout()
-        dossier = lien(tr("Ouvrir le dossier de la course"))
+        dossier = lien(tr("Ouvrir le dossier de la course"), discret=True)
         dossier.clicked.connect(lambda: open_local_path(str(course.dossier(conclusion.code))))
         pied.addWidget(dossier)
         pied.addStretch()
@@ -453,22 +332,55 @@ class CourseResultat(QDialog):
             pied.addWidget(b)
         layout.addLayout(pied)
 
-    def _segments(self, segments: tuple[course.Segment, ...]) -> QScrollArea:
-        """Une ligne par carte : son nom (celui du jeu), son temps sans chargements."""
+    def _record(self, layout: QVBoxLayout, du_jeu: list[course.Passee], principal: int, quel: str,
+                classement_: classement.Classement | None) -> None:
+        """Le record d'avant battu ou non, et la place que ce temps prendrait au classement Accio."""
+        avant = course.meilleure([c for c in du_jeu if c.code != self._conclusion.code], None, quel)
+        if avant is None:
+            phrase, style = tr("Premier temps valable dans cette catégorie."), _VERT
+        elif principal < avant.temps(quel):
+            phrase = tr("Nouveau record : {} de mieux que le précédent.").format(
+                course.format_temps(avant.temps(quel) - principal))
+            style = _VERT
+        else:
+            phrase = tr("Votre record reste {} ({} de plus cette fois).").format(
+                course.format_temps(avant.temps(quel)), course.format_temps(principal - avant.temps(quel)))
+            style = _TEXTE
+        self.phrase_record = _libelle(phrase, style, 12)
+        layout.addWidget(self.phrase_record)
+        tableau = (classement_ or classement.en_cache()).de(self._conclusion.jeu, self._conclusion.categorie)
+        rangee = QHBoxLayout()
+        rangee.addWidget(_libelle(tr("Ce temps prendrait la place {} du classement Accio : publiez la vidéo et "
+                                     "le course.json sur le Discord pour y entrer.").format(
+            classement.rang(tableau, principal)), _TEXTE, 12), 1)
+        discord = lien(tr("Ouvrir le Discord"), discret=True)
+        discord.clicked.connect(lambda: open_url(DISCORD_URL))
+        rangee.addWidget(discord, alignment=Qt.AlignmentFlag.AlignVCenter)
+        layout.addLayout(rangee)
+
+    def _segments(self, segments: tuple[course.Segment, ...], avant: tuple[int | None, ...]) -> QScrollArea:
+        """Une ligne par carte : son nom (celui du jeu), son temps sans chargements, l'écart au meilleur passage
+        d'avant à cette place du parcours ; en or, un meilleur passage."""
         contenu = QWidget()
         transparent(contenu)
-        grille = QVBoxLayout(contenu)
+        grille = QGridLayout(contenu)
         grille.setContentsMargins(0, 0, 6, 0)
-        grille.setSpacing(2)
-        for s in segments:
-            rangee = QHBoxLayout()
-            nom = _libelle(s.carte or tr("(sans nom)"), _TEXTE, 11)
-            if s.depuis_sauvegarde:
-                nom.setText(tr("{} (rechargée)").format(s.carte))
-            rangee.addWidget(nom, 1)
-            rangee.addWidget(_libelle(course.format_temps(s.net_us), _TEXTE, 11))
-            grille.addLayout(rangee)
-        grille.addStretch()
+        grille.setHorizontalSpacing(14)
+        grille.setVerticalSpacing(2)
+        grille.setColumnStretch(0, 1)
+        droite = Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        self.meilleurs: list[int] = []
+        for i, (s, meilleur) in enumerate(zip(segments, avant, strict=True)):
+            nom = tr("{} (rechargée)").format(s.carte) if s.depuis_sauvegarde else s.carte or tr("(sans nom)")
+            dore = meilleur is not None and s.net_us <= meilleur
+            if dore:
+                self.meilleurs.append(i)
+            grille.addWidget(_libelle(nom, _OR if dore else _TEXTE, 11), i, 0)
+            grille.addWidget(_libelle(course.format_temps(s.net_us), _OR if dore else _TEXTE, 11), i, 1, droite)
+            if meilleur is not None:
+                ecart = _libelle(course.format_ecart(s.net_us - meilleur), _VERT if dore else _GRIS, 11)
+                grille.addWidget(ecart, i, 2, droite)
+        grille.setRowStretch(len(segments), 1)
         zone = QScrollArea()
         zone.setWidgetResizable(True)
         zone.setWidget(contenu)
@@ -476,14 +388,14 @@ class CourseResultat(QDialog):
         return zone
 
     def _copier(self) -> None:
-        QGuiApplication.clipboard().setText(resume(self._conclusion, self._nom))
+        QGuiApplication.clipboard().setText(resume(self._conclusion, self._nom, self._game))
 
 
 def montrer(window: MainWindow, conclusion: mode_course.Conclusion) -> None:
     """Fenêtre modale mais SANS boucle à elle : appelée depuis un minuteur, un `exec` bloquerait tout ce qui
     suit dans la boucle d'évènements."""
     game = window.manager.get_game_by_id(conclusion.jeu)
-    dlg = CourseResultat(conclusion, game.name if game is not None else conclusion.jeu, window)
+    dlg = CourseResultat(conclusion, game.name if game is not None else conclusion.jeu, window, game=game)
     dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
     dlg.setWindowModality(Qt.WindowModality.WindowModal)
     dlg.show()
@@ -497,4 +409,3 @@ def brancher(window: MainWindow) -> None:
         for c in window._session.courses_interrompues():
             montrer(window, c)
     QTimer.singleShot(0, interrompues)
-

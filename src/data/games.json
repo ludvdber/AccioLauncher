@@ -1,5 +1,5 @@
 {
-  "catalog_version": "0.62",
+  "catalog_version": "0.63",
   "contributors": [
     {
       "name": "ASTeam",
@@ -607,6 +607,81 @@
         "height": "WindowedViewportY"
       },
       "controller": "yes",
+      "race": {
+        "fix_min": "2.5.0",
+        "timing": "loadless",
+        "start": "Au clic qui crée la nouvelle partie : « Oui » pour remplacer une partie, ou un emplacement vide.",
+        "end": "Quand commence la cinématique d'après la victoire sur Voldemort.",
+        "categories": [
+          {
+            "id": "Any%",
+            "rule": "Finir le jeu le plus vite possible, par tous les moyens.",
+            "i18n": {
+              "en": {
+                "rule": "Finish the game as fast as possible, by any means."
+              },
+              "es": {
+                "rule": "Terminar el juego lo más rápido posible, por cualquier medio."
+              }
+            }
+          },
+          {
+            "id": "100%",
+            "rule": "Les 25 cartes (dont celle des 250 dragées), les cinq dessins de sorts réussis à leurs quatre niveaux, un score parfait à l'entraînement au balai, et tous les ingrédients, graines de feu et étoiles rapportés.",
+            "note": "speedrun.com arrête ce temps à la deuxième page du livre de fin, quand Ron donne la carte ; le chrono d'Accio s'arrête plus tôt, à la cinématique d'après Voldemort.",
+            "i18n": {
+              "en": {
+                "rule": "All 25 cards (including the 250-bean one), all five spell drawings passed at all four levels, a perfect score at broom training, and all ingredients, fire seeds and stars turned in.",
+                "note": "speedrun.com stops this time on the second page of the ending book, when Ron gives the card; Accio's timer stops earlier, at the cutscene after Voldemort."
+              },
+              "es": {
+                "rule": "Los 25 cromos (incluido el de las 250 grageas), los cinco dibujos de hechizos superados en sus cuatro niveles, una puntuación perfecta en el entrenamiento de escoba, y todos los ingredientes, semillas de fuego y estrellas entregados.",
+                "note": "speedrun.com detiene este tiempo en la segunda página del libro final, cuando Ron da el cromo; el cronómetro de Accio se detiene antes, en la cinemática tras Voldemort."
+              }
+            }
+          },
+          {
+            "id": "Glitchless",
+            "rule": "Finir le jeu sans aucune faille : ni marcher sur un mur ou le traverser, ni super-saut, ni invincibilité, ni rouvrir le jeu en route.",
+            "i18n": {
+              "en": {
+                "rule": "Finish the game without any glitch: no wall walks or clips, no superjumps, no invincibility, no reopening the game mid-run."
+              },
+              "es": {
+                "rule": "Terminar el juego sin ningún fallo: ni caminar sobre una pared ni atravesarla, ni supersaltos, ni invencibilidad, ni reabrir el juego a mitad."
+              }
+            }
+          },
+          {
+            "id": "All Wizard Cards",
+            "name": "Toutes les cartes",
+            "rule": "Finir le jeu avec les 25 cartes de sorciers.",
+            "note": "speedrun.com arrête ce temps à la deuxième page du livre de fin, quand Ron donne la carte ; le chrono d'Accio s'arrête plus tôt, à la cinématique d'après Voldemort.",
+            "i18n": {
+              "en": {
+                "name": "All Wizard Cards",
+                "rule": "Finish the game with all 25 Wizard Cards.",
+                "note": "speedrun.com stops this time on the second page of the ending book, when Ron gives the card; Accio's timer stops earlier, at the cutscene after Voldemort."
+              },
+              "es": {
+                "name": "Todos los cromos",
+                "rule": "Terminar el juego con los 25 cromos de magos.",
+                "note": "speedrun.com detiene este tiempo en la segunda página del libro final, cuando Ron da el cromo; el cronómetro de Accio se detiene antes, en la cinemática tras Voldemort."
+              }
+            }
+          }
+        ],
+        "i18n": {
+          "en": {
+            "start": "On the click that creates the new game: “Yes” to replace a game, or an empty slot.",
+            "end": "When the cutscene after defeating Voldemort starts."
+          },
+          "es": {
+            "start": "Al hacer clic para crear la partida nueva: «Sí» para reemplazar una partida, o una ranura vacía.",
+            "end": "Cuando empieza la cinemática tras vencer a Voldemort."
+          }
+        }
+      },
       "fix_settings": [
         "son_arriere_plan",
         "plein_ecran",
@@ -1180,6 +1255,90 @@
       },
       "controller": "partial",
       "controller_note": "Le jeu se joue à la manette, mais sa fenêtre de démarrage (avant la partie) se passe à la souris.",
+      "race": {
+        "fix_min": "2.5.0",
+        "timing": "loadless",
+        "start": "Le launcher ouvre une nouvelle partie à Privet Drive : le chrono part quand elle se charge.",
+        "end": "Quand le générique de fin commence à se charger.",
+        "categories": [
+          {
+            "id": "Any%",
+            "rule": "Finir le jeu le plus vite possible, sans triche.",
+            "i18n": {
+              "en": {
+                "rule": "Finish the game as fast as possible, without cheats."
+              },
+              "es": {
+                "rule": "Terminar el juego lo más rápido posible, sin trampas."
+              }
+            }
+          },
+          {
+            "id": "100%",
+            "rule": "Les 101 cartes, tous les secrets (Poudlard de jour et de nuit), tous les duels et les 6 matchs de Quidditch gagnés (un nul compte), toutes les améliorations de Quidditch, et le temps visé de chaque épreuve de sort battu.",
+            "i18n": {
+              "en": {
+                "rule": "All 101 cards, all secrets (Hogwarts by day and by night), all duels and all 6 Quidditch matches won (a tie counts), all Quidditch upgrades, and every spell challenge's goal time beaten."
+              },
+              "es": {
+                "rule": "Los 101 cromos, todos los secretos (Hogwarts de día y de noche), todos los duelos y los 6 partidos de Quidditch ganados (un empate cuenta), todas las mejoras de Quidditch, y el tiempo objetivo de cada desafío de hechizo superado."
+              }
+            }
+          },
+          {
+            "id": "Warpless",
+            "name": "Sans warp",
+            "rule": "Comme Any%, sans warp de Quidditch (lancer un match depuis le tableau du menu) ni saut du défi Rictusempra.",
+            "i18n": {
+              "en": {
+                "name": "Warpless",
+                "rule": "Like Any%, with no Quidditch warp (starting a match from the pause menu scoreboard) and no Rictusempra skip."
+              },
+              "es": {
+                "name": "Sin warp",
+                "rule": "Como Any%, sin warp de Quidditch (iniciar un partido desde el marcador del menú) ni salto del desafío Rictusempra."
+              }
+            }
+          },
+          {
+            "id": "Glitchless",
+            "rule": "Finir le jeu sans aucune faille : ni warp de Quidditch, ni marcher sur un mur, ni annuler un sort par la pause, ni rouvrir le jeu en route.",
+            "i18n": {
+              "en": {
+                "rule": "Finish the game without any glitch: no Quidditch warp, no wall walks, no pausecasting, no reopening the game mid-run."
+              },
+              "es": {
+                "rule": "Terminar el juego sin ningún fallo: ni warp de Quidditch, ni caminar sobre una pared, ni cancelar un hechizo con la pausa, ni reabrir el juego a mitad."
+              }
+            }
+          },
+          {
+            "id": "All Wizard Cards",
+            "name": "Toutes les cartes",
+            "rule": "Finir le jeu avec les 101 cartes (50 bronze, 40 argent, 11 or), sans en acheter.",
+            "i18n": {
+              "en": {
+                "name": "All Wizard Cards",
+                "rule": "Finish the game with all 101 cards (50 bronze, 40 silver, 11 gold), without buying any."
+              },
+              "es": {
+                "name": "Todos los cromos",
+                "rule": "Terminar el juego con los 101 cromos (50 de bronce, 40 de plata, 11 de oro), sin comprar ninguno."
+              }
+            }
+          }
+        ],
+        "i18n": {
+          "en": {
+            "start": "The launcher opens a new game at Privet Drive: the timer starts when it loads.",
+            "end": "When the end credits start loading."
+          },
+          "es": {
+            "start": "El launcher abre una partida nueva en Privet Drive: el cronómetro arranca cuando se carga.",
+            "end": "Cuando los créditos finales empiezan a cargarse."
+          }
+        }
+      },
       "fix_settings": [
         "son_arriere_plan",
         "plein_ecran",
@@ -1952,6 +2111,81 @@
       },
       "display_locked": true,
       "controller": "yes",
+      "race": {
+        "fix_min": "2.5.0",
+        "timing": "loadless",
+        "start": "Quand la nouvelle partie commence.",
+        "end": "Quand le dernier script ouvre le générique de fin.",
+        "categories": [
+          {
+            "id": "Any%",
+            "rule": "Finir le jeu le plus vite possible.",
+            "i18n": {
+              "en": {
+                "rule": "Finish the game as fast as possible."
+              },
+              "es": {
+                "rule": "Terminar el juego lo más rápido posible."
+              }
+            }
+          },
+          {
+            "id": "100%",
+            "rule": "Tous les secrets, les 80 cartes, tous les boucliers des épreuves et des examens, et les 8 mots de passe des tableaux.",
+            "i18n": {
+              "en": {
+                "rule": "All secrets, all 80 cards, all challenge and final exam shields, and all 8 portrait passwords."
+              },
+              "es": {
+                "rule": "Todos los secretos, los 80 cromos, todos los escudos de los desafíos y los exámenes, y las 8 contraseñas de los cuadros."
+              }
+            }
+          },
+          {
+            "id": "All Requirements",
+            "name": "Toutes les conditions",
+            "rule": "Sans sauter les conditions : les 5 cartes des 3 mini-jeux, 10 boucliers dans les 3 épreuves de sorts, et les 8 mots de passe des tableaux.",
+            "note": "speedrun.com arrête ce temps quand on ferme la liste des conditions remplies de Dumbledore ; le chrono d'Accio, au générique de fin.",
+            "i18n": {
+              "en": {
+                "name": "All Requirements",
+                "rule": "With no requirements skip: all 5 cards of the 3 minigames, 10 shields in the 3 spell challenges, and all 8 portrait passwords.",
+                "note": "speedrun.com stops this time when Dumbledore's completed requirements list is closed; Accio's timer, at the end credits."
+              },
+              "es": {
+                "name": "Todos los requisitos",
+                "rule": "Sin saltar los requisitos: los 5 cromos de los 3 minijuegos, 10 escudos en los 3 desafíos de hechizos, y las 8 contraseñas de los cuadros.",
+                "note": "speedrun.com detiene este tiempo al cerrar la lista de requisitos cumplidos de Dumbledore; el cronómetro de Accio, en los créditos finales."
+              }
+            }
+          },
+          {
+            "id": "All Wizard Cards",
+            "name": "Toutes les cartes",
+            "rule": "Finir le jeu avec les 80 cartes de sorciers.",
+            "i18n": {
+              "en": {
+                "name": "All Wizard Cards",
+                "rule": "Finish the game with all 80 Wizard Cards."
+              },
+              "es": {
+                "name": "Todos los cromos",
+                "rule": "Terminar el juego con los 80 cromos de magos."
+              }
+            }
+          }
+        ],
+        "i18n": {
+          "en": {
+            "start": "When the new game starts.",
+            "end": "When the last script opens the end credits."
+          },
+          "es": {
+            "start": "Cuando empieza la partida nueva.",
+            "end": "Cuando el último script abre los créditos finales."
+          }
+        }
+      },
       "fix_settings": [
         "son_arriere_plan_hp3",
         "degats_recus",
@@ -1982,6 +2216,66 @@
         "section": "Accio.Game",
         "width": "Width",
         "height": "Height"
+      },
+      "race": {
+        "fix_min": "2.5.0",
+        "timing": "real",
+        "start": "Quand la nouvelle partie commence : le jeu part sans sauvegarde, un dossier vide lui est donné le temps de la course.",
+        "end": "Quand le générique de fin commence : la cinématique finale est comptée.",
+        "categories": [
+          {
+            "id": "Any%",
+            "rule": "Finir le jeu le plus vite possible.",
+            "i18n": {
+              "en": {
+                "rule": "Finish the game as fast as possible."
+              },
+              "es": {
+                "rule": "Terminar el juego lo más rápido posible."
+              }
+            }
+          },
+          {
+            "id": "100%",
+            "rule": "Les 38 boucliers, toutes les cartes de collection achetées, toutes les cartes de quête et de créature, le rang Maître, et l'or aux 5 défis de Maugrey et aux 3 tâches. La vidéo montre l'écran des cartes de créature complet.",
+            "note": "speedrun.com arrête ce temps à la première image de la cinématique d'après la statue ; le chrono d'Accio, au générique.",
+            "i18n": {
+              "en": {
+                "rule": "All 38 shields, all collector cards bought, all quest and creature cards, Master rank, and gold in Moody's 5 challenges and the 3 tasks. The video shows the completed creature cards screen.",
+                "note": "speedrun.com stops this time on the first frame of the cutscene after the statue; Accio's timer, at the credits."
+              },
+              "es": {
+                "rule": "Los 38 escudos, todos los cromos de colección comprados, todos los cromos de misión y de criatura, el rango Maestro, y el oro en los 5 desafíos de Moody y las 3 pruebas. El vídeo muestra la pantalla de cromos de criatura completa.",
+                "note": "speedrun.com detiene este tiempo en el primer fotograma de la cinemática tras la estatua; el cronómetro de Accio, en los créditos."
+              }
+            }
+          },
+          {
+            "id": "All Shields",
+            "name": "Tous les boucliers",
+            "rule": "Finir le jeu avec les 38 boucliers des Trois Sorciers.",
+            "i18n": {
+              "en": {
+                "name": "All Shields",
+                "rule": "Finish the game with all 38 Triwizard shields."
+              },
+              "es": {
+                "name": "Todos los escudos",
+                "rule": "Terminar el juego con los 38 escudos de los Tres Magos."
+              }
+            }
+          }
+        ],
+        "i18n": {
+          "en": {
+            "start": "When the new game starts: the game starts with no save, it is given an empty folder for the run.",
+            "end": "When the end credits start: the final cutscene is counted."
+          },
+          "es": {
+            "start": "Cuando empieza la partida nueva: el juego arranca sin partida guardada, recibe una carpeta vacía durante la carrera.",
+            "end": "Cuando empiezan los créditos finales: la cinemática final cuenta."
+          }
+        }
       },
       "fix_settings": [
         "arriere_plan",
@@ -2368,6 +2662,51 @@
           "key": "Software\\Electronic Arts\\Harry Potter and the Order of the Phoenix\\GameSettings",
           "value": "OptionResolution",
           "set": 0
+        }
+      },
+      "race": {
+        "fix_min": "2.5.0",
+        "timing": "real",
+        "start": "Quand la nouvelle partie commence : le jeu part sans sauvegarde, un dossier vide lui est donné le temps de la course.",
+        "end": "Au début de la cinématique d'après la victoire sur Voldemort.",
+        "categories": [
+          {
+            "id": "Any%",
+            "rule": "Finir le jeu le plus vite possible.",
+            "i18n": {
+              "en": {
+                "rule": "Finish the game as fast as possible."
+              },
+              "es": {
+                "rule": "Terminar el juego lo más rápido posible."
+              }
+            }
+          },
+          {
+            "id": "100%",
+            "rule": "Tout ce que compte le 100 % du menu : points de découverte, mini-jeux gagnés, mots de passe, fantômes et créatures, quêtes des professeurs et meilleures notes, objets cachés, Poudlard rangé, puis le jeu fini.",
+            "note": "speedrun.com arrête ce temps quand le menu montre 100 % ; le chrono d'Accio, à la cinématique d'après Voldemort.",
+            "i18n": {
+              "en": {
+                "rule": "Everything the menu's 100% counts: discovery points, minigames won, passwords, ghosts and creatures, teacher quests and top grades, hidden items, Hogwarts tidied up, then the game beaten.",
+                "note": "speedrun.com stops this time when the menu shows 100%; Accio's timer, at the cutscene after Voldemort."
+              },
+              "es": {
+                "rule": "Todo lo que cuenta el 100 % del menú: puntos de descubrimiento, minijuegos ganados, contraseñas, fantasmas y criaturas, misiones de los profesores y mejores notas, objetos ocultos, Hogwarts ordenado, y luego el juego terminado.",
+                "note": "speedrun.com detiene este tiempo cuando el menú muestra el 100 %; el cronómetro de Accio, en la cinemática tras Voldemort."
+              }
+            }
+          }
+        ],
+        "i18n": {
+          "en": {
+            "start": "When the new game starts: the game starts with no save, it is given an empty folder for the run.",
+            "end": "At the start of the cutscene after defeating Voldemort."
+          },
+          "es": {
+            "start": "Cuando empieza la partida nueva: el juego arranca sin partida guardada, recibe una carpeta vacía durante la carrera.",
+            "end": "Al empezar la cinemática tras vencer a Voldemort."
+          }
         }
       },
       "fix_settings": [
@@ -2840,6 +3179,66 @@
           "key": "Software\\Electronic Arts\\Harry Potter and the Half Blood Prince\\GameSettings",
           "value": "OptionResolution",
           "set": 0
+        }
+      },
+      "race": {
+        "fix_min": "2.5.0",
+        "timing": "real",
+        "start": "Quand la nouvelle partie commence : le jeu part sans sauvegarde, un dossier vide lui est donné le temps de la course.",
+        "end": "Au début du film d'après la victoire sur Bellatrix.",
+        "categories": [
+          {
+            "id": "Any%",
+            "rule": "Finir le jeu le plus vite possible.",
+            "i18n": {
+              "en": {
+                "rule": "Finish the game as fast as possible."
+              },
+              "es": {
+                "rule": "Terminar el juego lo más rápido posible."
+              }
+            }
+          },
+          {
+            "id": "100%",
+            "rule": "Les 150 blasons, et tous les badges d'argent et d'or au Quidditch, en duel et en potions.",
+            "note": "Le chrono d'Accio s'arrête au film d'après Bellatrix : tout doit être ramassé avant. speedrun.com permet aussi de finir sur le dernier blason ou badge.",
+            "i18n": {
+              "en": {
+                "rule": "All 150 crests, and all silver and gold badges in Quidditch, duelling and potion making.",
+                "note": "Accio's timer stops at the cutscene after Bellatrix: everything must be collected before. speedrun.com also allows ending on the last crest or badge."
+              },
+              "es": {
+                "rule": "Los 150 blasones, y todas las insignias de plata y oro en Quidditch, duelos y pociones.",
+                "note": "El cronómetro de Accio se detiene en la cinemática tras Bellatrix: todo debe recogerse antes. speedrun.com también permite terminar en el último blasón o insignia."
+              }
+            }
+          },
+          {
+            "id": "All Crests",
+            "name": "Tous les blasons",
+            "rule": "Finir le jeu avec les 150 blasons.",
+            "i18n": {
+              "en": {
+                "name": "All Crests",
+                "rule": "Finish the game with all 150 crests."
+              },
+              "es": {
+                "name": "Todos los blasones",
+                "rule": "Terminar el juego con los 150 blasones."
+              }
+            }
+          }
+        ],
+        "i18n": {
+          "en": {
+            "start": "When the new game starts: the game starts with no save, it is given an empty folder for the run.",
+            "end": "At the start of the cutscene after defeating Bellatrix."
+          },
+          "es": {
+            "start": "Cuando empieza la partida nueva: el juego arranca sin partida guardada, recibe una carpeta vacía durante la carrera.",
+            "end": "Al empezar la cinemática tras vencer a Bellatrix."
+          }
         }
       },
       "fix_settings": [
