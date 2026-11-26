@@ -112,6 +112,11 @@ class Bandeau(QWidget):
         retrait = retrait_de_colonne(self.width())
         lay.setContentsMargins(gauche + retrait, haut, droite + retrait, bas)
 
+    def image_source(self) -> QPixmap:
+        """L'image du jeu telle que décodée pour ce bandeau (vide sans image) : un aperçu de la même page la
+        reprend sans la décoder une seconde fois (`course_visuel.EcranCoins`)."""
+        return self._image()
+
     def _image(self) -> QPixmap:
         """L'image source, attendue au besoin (le plus souvent déjà décodée à la première peinture)."""
         if self._pixmap is None:

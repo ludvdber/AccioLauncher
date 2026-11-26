@@ -11,9 +11,10 @@ comme la police à chasse fixe de la maquette, sans charger une police de plus.
 """
 
 import zlib
+from collections.abc import Callable
 
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QFont, QIcon
+from PyQt6.QtCore import QRectF, QSize, Qt, pyqtSignal
+from PyQt6.QtGui import QColor, QFont, QIcon, QPainter, QPainterPath, QPixmap
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QFrame,
@@ -236,14 +237,18 @@ def nom_coin(coin: int) -> str:
 
 class EcranCoins(QFrame):
     """L'écran du jeu en petit et ses quatre coins : le coin coché porte la boîte de la course, à la taille de
-    ce qu'elle montre (une bande en Simple, un pavé en Complet)."""
+    ce qu'elle montre (une bande en Simple, un pavé en Complet). `fond` donne l'image du jeu (celle du bandeau
+    de la page, déjà décodée), peinte comme la maquette : couvrant l'écran, voilée de nuit à 35 %."""
 
     coin_choisi = pyqtSignal(int)
     _LARGEUR, _HAUTEUR, _BORD = 160, 90, 5   # 16:9, l'écran du jeu
 
-    def __init__(self, coin: int, complet: bool) -> None:
+    def __init__(self, coin: int, complet: bool, fond: Callable[[], QPixmap] | None = None) -> None:
         super().__init__()
         self.setObjectName("ecranCoins")
+        self._fond = fond
+        self._cache: QPixmap | None = None
+        self._cache_pour: QSize | None = None
         self.setFixedSize(self._LARGEUR, self._HAUTEUR)
         self._groupe = QButtonGroup(self)
         self.coins: dict[int, QPushButton] = {}
@@ -267,6 +272,37 @@ class EcranCoins(QFrame):
             x = self._LARGEUR - large - self._BORD if n in (2, 4) else self._BORD
             y = self._HAUTEUR - haut - self._BORD if n in (3, 4) else self._BORD
             b.setGeometry(x, y, large, haut)
+
+    def _image(self) -> QPixmap | None:
+        """L'image du jeu à la taille de l'écran (à sa densité de pixels), mise à l'échelle une fois."""
+        source = self._fond() if self._fond is not None else None
+        if source is None or source.isNull():
+            return None
+        dpr = self.devicePixelRatioF()
+        taille = QSize(round((self._LARGEUR - 2) * dpr), round((self._HAUTEUR - 2) * dpr))
+        if self._cache is None or self._cache_pour != taille:
+            mise = source.scaled(taille, Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                                 Qt.TransformationMode.SmoothTransformation)
+            x, y = (mise.width() - taille.width()) // 2, (mise.height() - taille.height()) // 2
+            self._cache = mise.copy(x, y, taille.width(), taille.height())
+            self._cache.setDevicePixelRatio(dpr)
+            self._cache_pour = taille
+        return self._cache
+
+    def paintEvent(self, event) -> None:  # noqa: N802 (Qt)
+        super().paintEvent(event)
+        image = self._image()
+        if image is None:
+            return
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        zone = QRectF(1, 1, self._LARGEUR - 2, self._HAUTEUR - 2)
+        chemin = QPainterPath()
+        chemin.addRoundedRect(zone, 3, 3)
+        p.setClipPath(chemin)
+        p.drawPixmap(zone.topLeft(), image)
+        p.fillRect(zone, QColor(6, 6, 17, 89))
+        p.end()
 
 
 def rond(joueur: str, *, vous: bool = False, taille: int = 26) -> QLabel:

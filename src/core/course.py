@@ -932,26 +932,32 @@ _FANTOME_MAX = 512                              # `race::Ghost::splits` : au-del
 def fantome(courses_du_jeu: Iterable[Passee], categorie: str,
             temps: str = SANS_CHARGEMENTS) -> str | None:
     """Le fichier du fantôme (`race::ReadGhost` du correctif) : le meilleur temps valable de la catégorie,
-    carte par carte, `<carte>\t<µs>\n`, le temps sans chargements où le record a QUITTÉ chaque carte ; la
-    dernière ligne porte son temps. Une carte quittée deux fois de suite (rechargée) ne compte qu'une fois, à
-    la seconde ; un nom vide ou qui casserait la ligne devient « ? » (il ne se comparera à rien). None sans
+    carte par carte, `<carte>\t<µs>\t<meilleur>\n` : le temps sans chargements où le record a QUITTÉ chaque
+    carte, puis le meilleur passage fait à cette place par les courses valables du MÊME parcours (record compris,
+    comme `ideale`) ; la boîte du correctif en tire l'or et le meilleur possible. La dernière ligne porte le
+    temps du record. Une carte quittée deux fois de suite (rechargée) ne compte qu'une fois, à la seconde, ses
+    deux meilleurs additionnés ; un nom vide ou qui casserait la ligne devient « ? » (il ne se comparera à rien). None sans
     record, sans segment, ou au-delà de ce que le correctif lit."""
-    record = meilleure(courses_du_jeu, categorie, temps)
+    valables = [c for c in courses_du_jeu if c.valable and c.categorie == categorie]
+    record = meilleure(valables, temps=temps)
     if record is None or not record.segments:
         return None
-    lignes_: list[tuple[str, int]] = []
+    parcours = [s.carte for s in record.segments]
+    memes = [c for c in valables if [s.carte for s in c.segments] == parcours]
+    lignes_: list[tuple[str, int, int]] = []
     cumul = 0
-    for s in record.segments:
+    for i, s in enumerate(record.segments):
         cumul += max(0, s.net_us)
+        meilleur = max(0, min(c.segments[i].net_us for c in memes))
         nom = s.carte if s.carte and not any(c in s.carte for c in "\t\r\n") else "?"
         if lignes_ and lignes_[-1][0] == nom:
-            lignes_[-1] = (nom, cumul)
+            lignes_[-1] = (nom, cumul, lignes_[-1][2] + meilleur)
         else:
-            lignes_.append((nom, cumul))
-    lignes_[-1] = (lignes_[-1][0], max(cumul, record.net_us))
+            lignes_.append((nom, cumul, meilleur))
+    lignes_[-1] = (lignes_[-1][0], max(cumul, record.net_us), lignes_[-1][2])
     if len(lignes_) > _FANTOME_MAX:
         return None
-    return "".join(f"{nom}\t{us}\n" for nom, us in lignes_)
+    return "".join(f"{nom}\t{us}\t{meilleur}\n" for nom, us, meilleur in lignes_)
 
 
 def poser_fantome(dossier_exe: Path, texte: str | None) -> None:

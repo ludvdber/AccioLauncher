@@ -211,6 +211,23 @@ class TestPage:
         x = page.ecran.coins[2].geometry()
         assert x.right() > page.ecran.width() // 2 and x.top() < page.ecran.height() // 2, "en haut à droite"
 
+    def test_ecran_des_coins_peint_l_image_du_jeu(self, qtbot):
+        from PyQt6.QtGui import QColor, QPixmap
+
+        from src.ui.course_visuel import STYLE, EcranCoins
+        rouge = QPixmap(400, 200)
+        rouge.fill(QColor(200, 0, 0))
+        ecran = EcranCoins(1, False, lambda: rouge)
+        ecran.setStyleSheet(STYLE)
+        qtbot.addWidget(ecran)
+        milieu = ecran.grab().toImage().pixelColor(80, 45)
+        assert milieu.red() > 120 and milieu.green() < 20 and milieu.blue() < 30, (
+            f"l'image du jeu, voilée de nuit à 35 % : {milieu.name()}")
+        sans = EcranCoins(1, False, lambda: QPixmap())
+        sans.setStyleSheet(STYLE)
+        qtbot.addWidget(sans)
+        assert sans.grab().toImage().pixelColor(80, 45).red() < 60, "sans image : le fond uni"
+
     def test_regles_detaillees_repliees(self, make_window, monkeypatch, qtbot):
         _, page = self._page(make_window, monkeypatch, qtbot)
         assert not page.regles_detaillees.isVisible()

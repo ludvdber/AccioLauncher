@@ -2225,7 +2225,7 @@
         "timing": "real",
         "speedrun": "hp4",
         "start": "Quand la nouvelle partie commence : le jeu part sans sauvegarde, un dossier vide lui est donné le temps de la course.",
-        "end": "Quand le générique de fin commence : la cinématique finale est comptée.",
+        "end": "À la première image de la cinématique d'après la statue, dans le dernier niveau.",
         "categories": [
           {
             "id": "Any%",
@@ -2242,15 +2242,15 @@
           {
             "id": "100%",
             "rule": "Les 38 boucliers, toutes les cartes de collection achetées, toutes les cartes de quête et de créature, le rang Maître, et l'or aux 5 défis de Maugrey et aux 3 tâches. La vidéo montre l'écran des cartes de créature complet.",
-            "note": "speedrun.com arrête ce temps à la première image de la cinématique d'après la statue ; le chrono d'Accio, au générique.",
+            "note": "Le chrono d'Accio s'arrête à la cinématique d'après la statue : tout doit être ramassé avant. speedrun.com permet aussi de finir sur l'écran de maîtrise, au dernier objet ramassé après Voldemort.",
             "i18n": {
               "en": {
                 "rule": "All 38 shields, all collector cards bought, all quest and creature cards, Master rank, and gold in Moody's 5 challenges and the 3 tasks. The video shows the completed creature cards screen.",
-                "note": "speedrun.com stops this time on the first frame of the cutscene after the statue; Accio's timer, at the credits."
+                "note": "Accio's timer stops at the cutscene after the statue: everything must be collected before. speedrun.com also allows ending on the Mastery screen, at the last collectible picked up after Voldemort."
               },
               "es": {
                 "rule": "Los 38 escudos, todos los cromos de colección comprados, todos los cromos de misión y de criatura, el rango Maestro, y el oro en los 5 desafíos de Moody y las 3 pruebas. El vídeo muestra la pantalla de cromos de criatura completa.",
-                "note": "speedrun.com detiene este tiempo en el primer fotograma de la cinemática tras la estatua; el cronómetro de Accio, en los créditos."
+                "note": "El cronómetro de Accio se detiene en la cinemática tras la estatua: todo debe recogerse antes. speedrun.com también permite terminar en la pantalla de maestría, al último objeto recogido tras Voldemort."
               }
             }
           },
@@ -2273,11 +2273,11 @@
         "i18n": {
           "en": {
             "start": "When the new game starts: the game starts with no save, it is given an empty folder for the run.",
-            "end": "When the end credits start: the final cutscene is counted."
+            "end": "On the first frame of the cutscene after the statue, in the last level."
           },
           "es": {
             "start": "Cuando empieza la partida nueva: el juego arranca sin partida guardada, recibe una carpeta vacía durante la carrera.",
-            "end": "Cuando empiezan los créditos finales: la cinemática final cuenta."
+            "end": "En el primer fotograma de la cinemática tras la estatua, en el último nivel."
           }
         }
       },

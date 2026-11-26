@@ -568,22 +568,29 @@ class TestLiveSplit:
 
 class TestFantome:
     """Le fichier du fantôme que lit `race::ReadGhost` : le record carte par carte, cumulé, sa dernière ligne
-    portant son temps."""
+    portant son temps, et le meilleur passage à chaque place du même parcours."""
 
     def test_record_carte_par_carte(self):
         record = _gardee("AAAA-AAAA", 31, ("PrivetDr", 10, False), ("Burrow", 5, False), ("Burrow", 6, True),
                          ("Hub", 9, False), ecrite=1)
         plus_lent = _gardee("BBBB-BBBB", 40, ("PrivetDr", 1, False), ("Hub", 39, False), ecrite=2)
         autre = _gardee("CCCC-CCCC", 5, ("PrivetDr", 5, False), categorie="Glitchless")
-        assert course.fantome([record, plus_lent, autre], "Any%") == "PrivetDr\t10\nBurrow\t21\nHub\t31\n", (
-            "la carte rechargée compte une fois, à sa seconde sortie ; le temps du record en dernier")
+        assert course.fantome([record, plus_lent, autre], "Any%") == "PrivetDr\t10\t10\nBurrow\t21\t11\nHub\t31\t9\n", (
+            "la carte rechargée compte une fois, à sa seconde sortie, ses deux passages additionnés ; le temps du "
+            "record en dernier ; un autre parcours ne donne pas de meilleur passage")
         assert course.fantome([record], "Glitchless") is None, "pas de record dans la catégorie"
         assert course.fantome([_gardee("AAAA-AAAA", 5)], "Any%") is None, "un record sans segment"
 
     def test_noms_qui_casseraient_la_ligne_et_temps_final(self):
         record = _gardee("AAAA-AAAA", 50, ("", 10, False), ("A\tB", 10, False), ("Fin", 10, False))
-        assert course.fantome([record], "Any%") == "?\t20\nFin\t50\n", (
+        assert course.fantome([record], "Any%") == "?\t20\t20\nFin\t50\t10\n", (
             "un nom vide ou à tabulation devient « ? » ; la dernière ligne porte le temps officiel s'il est plus long")
+
+    def test_meilleurs_passages_du_meme_parcours(self):
+        record = _gardee("AAAA-AAAA", 20, ("A", 10, False), ("B", 10, False), ecrite=1)
+        meme = _gardee("BBBB-BBBB", 23, ("A", 8, False), ("B", 15, False), ecrite=2)
+        assert course.fantome([record, meme], "Any%") == "A\t10\t8\nB\t20\t10\n", (
+            "chaque place garde le passage le plus court du même parcours, le record compris")
 
     def test_trop_de_cartes(self):
         trop = _gardee("AAAA-AAAA", 600, *((f"M{i}", 1, False) for i in range(513)))

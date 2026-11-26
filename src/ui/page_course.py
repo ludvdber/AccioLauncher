@@ -144,6 +144,7 @@ class CoursePage(QDialog):
         racine.setContentsMargins(0, 0, 0, 0)
         racine.setSpacing(0)
         bandeau, _nom, rangee = bandeau_du_jeu(self.game, bouton_retour(tr("Bibliothèque"), self.reject))
+        self._bandeau = bandeau   # son image, déjà décodée, sert aussi au petit écran des coins
         rangee.addWidget(surtitre(tr("Course")))
         rangee.addSpacing(8)
         self.pastilles: dict[str, QPushButton] = {}
@@ -287,7 +288,7 @@ class CoursePage(QDialog):
         coin = QVBoxLayout()
         coin.setSpacing(6)
         coin.addWidget(surtitre(tr("Coin de l'écran")))
-        self.ecran = visuel.EcranCoins(self.coin, self.complet)
+        self.ecran = visuel.EcranCoins(self.coin, self.complet, self._bandeau.image_source)
         self.ecran.coin_choisi.connect(self._choisir_coin)
         coin.addWidget(self.ecran)
         self._nom_coin = visuel.libelle(visuel.nom_coin(self.coin), 12, visuel.GRIS)
