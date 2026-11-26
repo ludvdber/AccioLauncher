@@ -21,7 +21,8 @@ record. Pas de serveur : un fichier qu'on s'envoie.
 import shutil
 from pathlib import Path
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QPointF, Qt
+from PyQt6.QtGui import QColor, QPainter, QPen
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QFileDialog,
@@ -32,38 +33,31 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QScrollArea,
-    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
 
 from src.core import classement, course, mode_course
 from src.core.ecriture_atomique import ecrire_atomique
+from src.core.formatting import format_duree_compacte
 from src.core.game_data import GameData
 from src.core.i18n import tr, trn
 from src.core.liens import DISCORD_URL
 from src.core.phonographe import nom_de_fichier
-from src.ui.composants import feuille_de_style, filtre, lien
+from src.ui import course_visuel as visuel
+from src.ui.composants import feuille_de_style, filtre, lien, police, surtitre
 from src.ui.course_ui import raison
 from src.ui.fenetre_message import message
-from src.ui.folio_page import _tuile
 from src.ui.page_course import nom_categorie
-from src.ui.stats_widgets import _DISCRET, _Paragraphe, _texte
-from src.ui.theme import RAYON_CARTE, themed
+from src.ui.theme import themed
 from src.ui.utils import BARRE_DEFILEMENT, open_local_path, open_url
 
-_LARGEUR_TUILE = 360         # celle des tuiles des Défis et du Folio
-_VERT = "#7be0a4"
-_ROUGE = "#e07a6a"
-
-_STYLE = f"""
-QWidget#courses, QWidget#coursesCorps {{ background: transparent; }}
-QScrollArea {{ background: transparent; border: none; }}
-QFrame#courseGardee {{ background: #0d0d1a; border: 1px solid rgba(214, 167, 44, 0.12);
-                       border-radius: {RAYON_CARTE}px; }}
-QFrame#courseGardee[valable="true"] {{ border-color: rgba(214, 167, 44, 0.32); }}
-QFrame#parCarte, QFrame#classement, QFrame#records, QFrame#comparaison {{ background: #0d0d1a;
-                  border: 1px solid rgba(214, 167, 44, 0.12); border-radius: {RAYON_CARTE}px; }}
+_STYLE = """
+QWidget#courses, QWidget#coursesCorps { background: transparent; }
+QScrollArea { background: transparent; border: none; }
+QFrame#courseGardee { background: #0d0d1a; border: 1px solid #1b1b33; border-radius: 6px; }
+QFrame#listeCourse { background: #0d0d1a; border: 1px solid #1b1b33; border-radius: 8px; }
+QFrame#ligneListe { background: transparent; border: none; border-bottom: 1px solid #16162c; }
 """
 
 
@@ -73,49 +67,82 @@ def _documents() -> Path:
 
 
 class _Ligne(QFrame):
-    """Une course : jour et code, statut ; le temps qui classe et l'autre ; « Ouvrir le dossier », « Supprimer »."""
+    """Une course : le temps qui classe et le jour, son statut, « Ouvrir le dossier », « Supprimer »."""
 
-    def __init__(self, passee: course.Passee, page: CoursesPage) -> None:
+    def __init__(self, passee: course.Passee, page: CoursesPage, *, record: bool) -> None:
         super().__init__()
         self.setObjectName("courseGardee")
-        self.setProperty("valable", passee.valable)
         self.code = passee.code
-        h = QHBoxLayout(self)
-        h.setContentsMargins(16, 10, 16, 10)
-        h.setSpacing(14)
-        gauche = QVBoxLayout()
-        gauche.setSpacing(2)
-        gauche.addWidget(_texte(f"{passee.jour} · {passee.code}", 12, _DISCRET))
-        statut = (tr("Temps valable") if passee.valable
-                  else raison(passee.refus[0]) if passee.refus else raison(course.SANS_FIN))
-        self.statut = _texte(statut, 12, "#d6a72c" if passee.valable else _ROUGE)
-        self.statut.setWordWrap(True)
-        gauche.addWidget(self.statut)
-        h.addLayout(gauche, 1)
-        temps = QVBoxLayout()
-        temps.setSpacing(0)
-        principal = _texte(course.format_temps(passee.temps(page.temps)), 18,
-                           "#ffffff" if passee.valable else "#c9c7da")
+        v = QVBoxLayout(self)
+        v.setContentsMargins(14, 12, 14, 12)
+        v.setSpacing(4)
+        haut = QHBoxLayout()
+        principal = visuel.temps(course.format_temps(passee.temps(page.temps)), 17, visuel.CREME)
         principal.setObjectName("tempsGarde")
-        temps.addWidget(principal, alignment=Qt.AlignmentFlag.AlignRight)
-        temps.addWidget(_texte(page.autre_temps(passee), 11, _DISCRET), alignment=Qt.AlignmentFlag.AlignRight)
-        h.addLayout(temps)
-        dossier = lien(tr("Ouvrir le dossier"), discret=True)
+        principal.setToolTip(page.autre_temps(passee))
+        haut.addWidget(principal)
+        haut.addStretch()
+        jour = visuel.libelle(f"{passee.jour} · {passee.code}", 13, visuel.GRIS)
+        haut.addWidget(jour)
+        v.addLayout(haut)
+        if passee.valable:
+            statut = tr("Temps valable · record") if record else tr("Temps valable")
+        else:
+            statut = raison(passee.refus[0]) if passee.refus else raison(course.SANS_FIN)
+        self.statut = visuel.libelle(statut, 13, visuel.VERT if passee.valable else visuel.ROUGE, retour=True)
+        v.addWidget(self.statut)
+        gestes = QHBoxLayout()
+        gestes.setSpacing(16)
+        dossier = visuel.lien_or(tr("Ouvrir le dossier"))
+        dossier.setFont(police(13))
         dossier.clicked.connect(lambda: open_local_path(str(course.dossier(passee.code))))
-        h.addWidget(dossier, alignment=Qt.AlignmentFlag.AlignVCenter)
+        gestes.addWidget(dossier)
         self.bouton_supprimer = lien(tr("Supprimer"), discret=True)
         self.bouton_supprimer.clicked.connect(lambda: page.supprimer(passee))
-        h.addWidget(self.bouton_supprimer, alignment=Qt.AlignmentFlag.AlignVCenter)
+        gestes.addWidget(self.bouton_supprimer)
+        gestes.addStretch()
+        v.addLayout(gestes)
+
+
+class _Records(QWidget):
+    """La courbe des records successifs : le premier en haut à gauche, le dernier en bas à droite (plus bas =
+    plus rapide), un point or sur le record actuel."""
+
+    def __init__(self, temps_us: list[int]) -> None:
+        super().__init__()
+        self._temps = temps_us
+        self.setFixedHeight(54)
+        self.setMinimumWidth(120)
+
+    def paintEvent(self, _event) -> None:  # noqa: N802 (Qt)
+        if len(self._temps) < 2:
+            return
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        haut, bas = 8.0, float(self.height() - 8)
+        gauche, droite = 6.0, float(self.width() - 6)
+        lent, vite = max(self._temps), min(self._temps)
+        etendue = max(1, lent - vite)
+        pas = (droite - gauche) / (len(self._temps) - 1)
+        points = [QPointF(gauche + i * pas, haut + (lent - t) / etendue * (bas - haut))
+                  for i, t in enumerate(self._temps)]
+        p.setPen(QPen(QColor(visuel.OR), 2))
+        p.drawPolyline(points)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QColor(visuel.OR_CLAIR))
+        p.drawEllipse(points[-1], 4, 4)
+        p.end()
 
 
 class CoursesPage(QWidget):
-    """Les courses gardées d'un jeu et son classement Accio ; un mot quand il n'en a pas."""
+    """Les courses gardées d'un jeu et son classement Accio, en trois colonnes (maquette « Carnet, rubrique
+    Courses ») : le record et les courses ; le meilleur passage par carte ; le classement."""
 
     def __init__(self, game: GameData, gardees: list[course.Passee],
                  classement_: classement.Classement = classement.VIDE, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("courses")
-        self.setStyleSheet(themed(_STYLE) + feuille_de_style())
+        self.setStyleSheet(themed(_STYLE) + feuille_de_style() + visuel.STYLE)
         self.game = game
         self.regles = game.course
         self.temps = self.regles.temps if self.regles is not None else course.SANS_CHARGEMENTS
@@ -153,15 +180,15 @@ class CoursesPage(QWidget):
         return tr("{} en temps réel").format(course.format_temps(c.total_us))
 
     def _presentes(self, passees: list[course.Passee]) -> list[str]:
-        """Les catégories qui ont une course ou un classé, dans l'ordre du catalogue, puis les autres."""
-        noms = set(self.classement.categories(self.game.id, self._ordre)) | {p.categorie for p in passees}
+        """Les catégories du catalogue, puis celles qui ont une course ou un classé sans y être."""
+        noms = set(self._ordre) | set(self.classement.categories(self.game.id, self._ordre)) | {
+            p.categorie for p in passees}
         return sorted(noms, key=lambda c: (self._ordre.index(c) if c in self._ordre else len(self._ordre), c))
 
     def _remplir(self, passees: list[course.Passee]) -> None:
         self._passees = passees
         presentes = self._presentes(passees)
         if self.categorie not in presentes and presentes:
-            # la catégorie choisie n'a plus de course (suppression)
             self.categorie = passees[0].categorie if passees else presentes[0]
         passees = [p for p in passees if p.categorie == self.categorie]
         self.lignes, self.pastilles, self.passages, self.places = [], {}, [], []
@@ -173,196 +200,228 @@ class CoursesPage(QWidget):
         zone.setFrameShape(QFrame.Shape.NoFrame)
         zone.setObjectName("zoneCourses")
         zone.setStyleSheet(themed(BARRE_DEFILEMENT))
+        zone.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         corps = QWidget()
         corps.setObjectName("coursesCorps")
-        lay = QVBoxLayout(corps)
-        lay.setContentsMargins(40, 26, 40, 30)
-        lay.setSpacing(8)
+        colonnes = QHBoxLayout(corps)
+        colonnes.setContentsMargins(40, 28, 40, 40)
+        colonnes.setSpacing(28)
         zone.setWidget(corps)
         self._racine.addWidget(zone)
-        if not presentes:
-            lay.addWidget(_Paragraphe(tr("Aucune course de ce jeu n'est gardée."), taille=16))
-            lay.addStretch()
-            return
-        zone.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        if len(presentes) > 1:
-            lay.addLayout(self._choix(presentes))
-            lay.addSpacing(10)
         record = course.meilleure(passees, self.categorie, self.temps)
+        une, deux, trois = (QVBoxLayout() for _ in range(3))
+        for col, part in ((une, 105), (deux, 100), (trois, 100)):
+            col.setSpacing(12)
+            colonnes.addLayout(col, part)
+        une.addWidget(visuel.grand_titre(self.game.name, 22))
+        if len(presentes) > 1:
+            une.addLayout(self._choix(presentes))
         if passees:
-            self._mes_courses(lay, passees, record)
+            self._mes_courses(une, passees, record)
+            self._par_carte_et_ami(deux, passees, record)
         else:
-            lay.addWidget(_texte(tr("Aucune course gardée en {}.").format(self._nom(self.categorie)), 14, _DISCRET))
-        self._classement(lay, record)
-        lay.addStretch()
+            une.addWidget(visuel.libelle(tr("Aucune course gardée en {}.").format(self._nom(self.categorie)), 14,
+                                         visuel.GRIS, retour=True))
+        self._classement(trois, record)
+        for col in (une, deux, trois):
+            col.addStretch()
 
     def _nom(self, ident: str) -> str:
         return nom_categorie(self.regles, ident)
 
+    def _surtitre(self, lay: QVBoxLayout, contenu: str) -> None:
+        lay.addSpacing(6)
+        lay.addWidget(surtitre(contenu))
+
     def _mes_courses(self, lay: QVBoxLayout, passees: list[course.Passee], record: course.Passee | None) -> None:
-        """Le record et ses gestes, la course idéale, les records successifs, les courses gardées, le meilleur
-        passage par carte, la comparaison avec un ami."""
-        haut = QHBoxLayout()
-        tuile = _tuile(course.format_temps(record.temps(self.temps)) if record is not None else "—",
-                       (tr("Meilleur temps valable") if record is not None else tr("Aucun temps valable"))
-                       + " · " + self._nom(self.categorie))
-        tuile.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
-        tuile.setMaximumWidth(_LARGEUR_TUILE)
-        haut.addWidget(tuile)
-        gestes = QVBoxLayout()
-        gestes.setSpacing(4)
+        """Le record dans son cadre or (l'autre temps, la course idéale, les essais, le temps passé en course,
+        la courbe des records successifs, les gestes), puis chaque course gardée."""
+        cadre, v = visuel.cadre("panneauOr", (20, 18, 20, 18), 8)
         if record is not None:
-            self.bouton_partager = lien(tr("Partager mon record"), discret=True)
+            entete = tr("Meilleur temps valable")
+            place = self._place_du_record(record)
+            if place is not None:
+                entete += " · " + tr("place {} du classement Accio").format(place)
+            v.addWidget(visuel.libelle(entete, 14, "#b9b9d0"))
+            v.addWidget(visuel.temps(course.format_temps(record.temps(self.temps)), 36, visuel.OR_CLAIR))
+            v.addWidget(visuel.libelle(f"{record.jour} · {self.autre_temps(record)}", 13, visuel.GRIS))
+        else:
+            v.addWidget(visuel.libelle(tr("Aucun temps valable"), 14, "#b9b9d0"))
+            v.addWidget(visuel.temps("—", 36, visuel.GRIS))
+        ideale = course.ideale(passees, self.categorie, self.temps)
+        finis = sum(p.fin for p in passees)
+        chiffres = QGridLayout()
+        chiffres.setHorizontalSpacing(8)
+        for col, (titre, valeur, est_temps) in enumerate((
+                (tr("Course idéale"), course.format_temps(ideale.temps_us) if ideale is not None else "—", True),
+                (tr("Essais"), trn(len(passees), "{} essai", "{} essais").format(len(passees)) + " · "
+                 + trn(finis, "{} finie", "{} finies").format(finis), False),
+                (tr("Temps passé en course"),
+                 format_duree_compacte(sum(p.total_us for p in passees) // 1_000_000), False))):
+            chiffres.addWidget(visuel.libelle(titre, 12, visuel.GRIS), 0, col)
+            chiffres.addWidget(visuel.temps(valeur, 15) if est_temps else visuel.libelle(valeur, 15, visuel.CREME),
+                               1, col)
+            chiffres.setColumnStretch(col, 1)
+        v.addSpacing(4)
+        v.addLayout(chiffres)
+        self.records = course.records(passees, self.categorie, self.temps)
+        if len(self.records) > 1:
+            suite = [c.temps(self.temps) for c in self.records]
+            courbe = _Records(suite)
+            phrase = tr("Records successifs : de {} à {} en {} records.").format(
+                course.format_temps(suite[0]), course.format_temps(suite[-1]), len(suite))
+            courbe.setAccessibleName(phrase)
+            courbe.setToolTip("\n".join(f"{c.jour} · {course.format_temps(c.temps(self.temps))}"
+                                        for c in self.records))
+            v.addSpacing(4)
+            v.addWidget(courbe)
+            v.addWidget(visuel.libelle(phrase, 12, visuel.GRIS, retour=True))
+        if record is not None:
+            gestes = QHBoxLayout()
+            gestes.setSpacing(16)
+            self.bouton_partager = visuel.lien_or(tr("Partager mon record"))
             self.bouton_partager.setToolTip(tr("Une copie de son journal signé (course.json), pour un ami ou le "
                                                "Discord."))
             self.bouton_partager.clicked.connect(lambda: self.partager(record))
             gestes.addWidget(self.bouton_partager)
             if record.segments:
-                self.bouton_livesplit = lien(tr("Exporter pour LiveSplit"), discret=True)
+                self.bouton_livesplit = visuel.lien_or(tr("Exporter pour LiveSplit"))
                 self.bouton_livesplit.setToolTip(tr("Le meilleur temps de la catégorie, découpé par carte, en "
                                                     "fichier de découpage LiveSplit (.lss)."))
                 self.bouton_livesplit.clicked.connect(self.exporter_livesplit)
                 gestes.addWidget(self.bouton_livesplit)
-                self.bouton_comparer = lien(tr("Comparer à la course d'un ami"), discret=True)
+                self.bouton_comparer = visuel.lien_or(tr("Comparer à la course d'un ami"))
                 self.bouton_comparer.setToolTip(tr("Ouvrez le course.json qu'il vous a envoyé : il est vérifié, "
                                                    "puis mis carte par carte en face de votre record."))
                 self.bouton_comparer.clicked.connect(lambda: self.comparer(record))
                 gestes.addWidget(self.bouton_comparer)
-        haut.addSpacing(18)
-        haut.addLayout(gestes)
-        haut.addStretch()
-        lay.addLayout(haut)
-        if record is not None:
-            lay.addWidget(_texte(self.autre_temps(record) + " · " + record.jour, 12, _DISCRET))
-            ideale = course.ideale(passees, self.categorie, self.temps)
-            if ideale is not None and ideale.a_gagner_us > 0:
-                lay.addWidget(_texte(tr("Course idéale : {} sans chargements, encore {} à gagner.").format(
-                    course.format_temps(ideale.net_us), course.format_temps(ideale.a_gagner_us)), 12, _DISCRET))
-        if self._ami is not None and record is not None:
-            self._comparaison(lay, record, self._ami)
-        self.records = course.records(passees, self.categorie, self.temps)
-        if len(self.records) > 1:
-            lay.addSpacing(14)
-            lay.addWidget(_texte(tr("Records successifs"), 14, "#d6a72c"))
-            lay.addWidget(self._records(self.records))
-        lay.addSpacing(10)
-        valables = sum(p.valable for p in passees)
-        lay.addWidget(_texte(trn(len(passees), "{} essai", "{} essais").format(len(passees)) + " · "
-                             + trn(valables, "{} valable", "{} valables").format(valables), 12, _DISCRET))
-        lay.addSpacing(6)
+            gestes.addStretch()
+            v.addSpacing(4)
+            v.addLayout(gestes)
+        lay.addWidget(cadre)
+        self._surtitre(lay, tr("Vos courses"))
         for passee in passees:
-            ligne = _Ligne(passee, self)
+            ligne = _Ligne(passee, self, record=record is not None and passee.code == record.code)
             lay.addWidget(ligne)
             self.lignes.append(ligne)
+
+    def _par_carte_et_ami(self, lay: QVBoxLayout, passees: list[course.Passee],
+                          record: course.Passee | None) -> None:
+        """Le meilleur passage par carte et leur somme ; la comparaison avec un ami, quand il y en a une."""
         self.passages = list(course.par_carte(passees, self.categorie, self.temps))
         if self.passages:
-            lay.addSpacing(18)
-            lay.addWidget(_texte(tr("Meilleur passage par carte"), 14, "#d6a72c"))
-            lay.addWidget(_texte(tr("Pris dans les courses valables, sans les chargements ; une carte rechargée ne "
-                                    "compte pas."), 12, _DISCRET))
-            lay.addWidget(self._par_carte(self.passages))
+            self._surtitre(lay, tr("Meilleur passage par carte"))
+            lay.addWidget(visuel.libelle(tr("Pris dans les courses valables, sans les chargements ; une carte "
+                                            "rechargée ne compte pas."), 13, visuel.GRIS, retour=True))
+            liste, v = visuel.cadre("listeCourse", (16, 6, 16, 6), 0)
+            for s in self.passages:
+                ligne = self._ligne_liste(s.carte, course.format_temps(s.net_us))
+                ligne.setToolTip(f"{s.jour} · {s.code}")
+                v.addWidget(ligne)
+            ideale = course.ideale(passees, self.categorie, self.temps)
+            if ideale is not None:
+                v.addWidget(self._ligne_liste(tr("Course idéale (vos meilleurs passages bout à bout)"),
+                                              course.format_temps(ideale.net_us), or_=True))
+            lay.addWidget(liste)
+        if self._ami is not None and record is not None:
+            self._comparaison(lay, record, self._ami)
 
-    def _records(self, suite: tuple[course.Passee, ...]) -> QFrame:
-        """Chaque record battu, du premier au dernier : le jour, le temps, ce qu'il a gagné sur le précédent."""
-        cadre = QFrame()
-        cadre.setObjectName("records")
-        grille = QGridLayout(cadre)
-        grille.setContentsMargins(16, 10, 16, 10)
-        grille.setHorizontalSpacing(14)
-        grille.setVerticalSpacing(4)
-        grille.setColumnStretch(0, 1)
-        droite = Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
-        for i, c in enumerate(suite):
-            grille.addWidget(_texte(f"{c.jour} · {c.code}", 12, "#e0e0f0"), i, 0)
-            grille.addWidget(_texte(course.format_temps(c.temps(self.temps)), 12, "#ffffff"), i, 1, droite)
-            if i:
-                gain = c.temps(self.temps) - suite[i - 1].temps(self.temps)
-                grille.addWidget(_texte(course.format_ecart(gain), 12, _VERT), i, 2, droite)
-        return cadre
+    @staticmethod
+    def _ligne_liste(gauche: str, droite: str, *, or_: bool = False) -> QFrame:
+        ligne, h = visuel.cadre("ligneListe" if not or_ else "ligneFin", (0, 9, 0, 9), 12, horizontal=True)
+        h.addWidget(visuel.libelle(gauche, 14, "#b9b9d0" if or_ else "#e0e0f0", retour=True), 1)
+        h.addWidget(visuel.temps(droite, 14, visuel.OR_CLAIR if or_ else visuel.CREME))
+        return ligne
 
     def _comparaison(self, lay: QVBoxLayout, record: course.Passee, ami: course.Externe) -> None:
         """La course de l'ami en face du record : ses deux temps, ce que vaut son fichier, carte par carte."""
-        lay.addSpacing(14)
         a = ami.passee
-        lay.addWidget(_texte(tr("Comparaison avec la course {} du {}").format(a.code, a.jour), 14, "#d6a72c"))
+        self._surtitre(lay, tr("Comparaison avec la course {} du {}").format(a.code, a.jour))
         ecart = a.temps(self.temps) - record.temps(self.temps)
         phrase = tr("Son temps : {} ({} par rapport au vôtre).").format(course.format_temps(a.temps(self.temps)),
                                                                         course.format_ecart(ecart))
         valeur = (tr("Fichier signé, temps recalculé valable.") if ami.en_regle
                   else tr("Attention : fichier non signé, retouché, ou temps refusé."))
-        self.note_comparaison = _texte(phrase + " " + valeur, 12, "#e0e0f0" if ami.en_regle else _ROUGE)
-        self.note_comparaison.setWordWrap(True)
+        self.note_comparaison = visuel.libelle(phrase + " " + valeur, 13,
+                                               "#e0e0f0" if ami.en_regle else visuel.ROUGE, retour=True)
         lay.addWidget(self.note_comparaison)
         self.comparaison = course.comparer(record, a)
         if not self.comparaison:
             return
-        cadre = QFrame()
-        cadre.setObjectName("comparaison")
-        grille = QGridLayout(cadre)
-        grille.setContentsMargins(16, 10, 16, 10)
+        cadre, _v = visuel.cadre("listeCourse", (16, 10, 16, 10), 0)
+        grille = QGridLayout()
+        _v.addLayout(grille)
         grille.setHorizontalSpacing(14)
-        grille.setVerticalSpacing(4)
+        grille.setVerticalSpacing(6)
         grille.setColumnStretch(0, 1)
         droite = Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
         for col, titre in enumerate((tr("Carte"), tr("Vous"), tr("Votre ami"), tr("Écart"))):
-            grille.addWidget(_texte(titre, 11, _DISCRET), 0, col, droite if col else Qt.AlignmentFlag.AlignLeft)
+            grille.addWidget(visuel.libelle(titre, 12, visuel.GRIS), 0, col,
+                             droite if col else Qt.AlignmentFlag.AlignLeft)
         for i, c in enumerate(self.comparaison, start=1):
-            grille.addWidget(_texte(c.carte, 12, "#e0e0f0"), i, 0)
+            grille.addWidget(visuel.libelle(c.carte, 13, "#e0e0f0"), i, 0)
             for col, us in ((1, c.a_us), (2, c.b_us)):
-                grille.addWidget(_texte(course.format_temps(us) if us is not None else "—", 12, "#ffffff"),
-                                 i, col, droite)
+                grille.addWidget(visuel.temps(course.format_temps(us) if us is not None else "—", 13), i, col,
+                                 droite)
             if (e := c.ecart_us) is not None:
-                encre = _VERT if e > 0 else _ROUGE if e < 0 else _DISCRET
-                grille.addWidget(_texte(course.format_ecart(e), 12, encre), i, 3, droite)
+                encre = visuel.VERT if e > 0 else visuel.ROUGE if e < 0 else visuel.GRIS
+                grille.addWidget(visuel.temps(course.format_ecart(e), 13, encre), i, 3, droite)
         lay.addWidget(cadre)
+
+    def _place_du_record(self, record: course.Passee) -> int | None:
+        """La place du record au classement : la sienne s'il y est, celle qu'il prendrait sinon."""
+        places = list(self.classement.de(self.game.id, self.categorie))
+        if not places:
+            return None
+        codes = [e.code for e in places]
+        if record.code in codes:
+            return codes.index(record.code) + 1
+        return classement.rang(tuple(places), record.temps(self.temps))
 
     def _classement(self, lay: QVBoxLayout, record: course.Passee | None) -> None:
         """Le classement Accio de la catégorie, la place qu'y prendrait le record, comment y entrer."""
         self.places = list(self.classement.de(self.game.id, self.categorie))
-        lay.addSpacing(18)
-        lay.addWidget(_texte(tr("Classement Accio") + " · " + self._nom(self.categorie), 14, "#d6a72c"))
+        lay.addSpacing(36)
+        lay.addWidget(surtitre(tr("Classement Accio") + " · " + self._nom(self.categorie)))
         if self.places:
-            lay.addWidget(self._grille(self.places))
+            liste, v = visuel.cadre("listeCourse", (16, 6, 16, 6), 0)
+            for i, e in enumerate(self.places):
+                video = None
+                if e.video:
+                    video = visuel.lien_or(tr("Vidéo"))
+                    video.setFont(police(13))
+                    video.setToolTip(e.video)
+                    video.clicked.connect(lambda _c=False, u=e.video: open_url(u))
+                ligne = visuel.ligne_classee(i + 1, e.joueur, course.format_temps(e.temps_us), apres=video)
+                ligne.setToolTip(" · ".join(x for x in (e.jour, e.code) if x))
+                v.addWidget(ligne)
+            lay.addWidget(liste)
         else:
-            lay.addWidget(_texte(tr("Personne n'y est encore classé."), 12, _DISCRET))
+            lay.addWidget(visuel.libelle(tr("Personne n'est encore classé en {}.").format(self._nom(self.categorie)),
+                                         14, visuel.CREME, retour=True))
+        boite, v = visuel.cadre("placeCourse", (16, 14, 16, 14), 8)
         if record is not None and record.code not in {e.code for e in self.places}:
-            place = classement.rang(tuple(self.places), record.temps(self.temps))
-            self.note_place = _texte(tr("Votre record ({}) y prendrait la place {}.").format(
-                course.format_temps(record.temps(self.temps)), place), 12, "#e0e0f0")
-            lay.addWidget(self.note_place)
-        entrer = QHBoxLayout()
-        entrer.addWidget(_texte(tr("Pour y entrer, publiez la vidéo de la course et son course.json sur le "
-                                   "Discord : une fois validée, elle apparaît ici."), 12, _DISCRET))
-        discord = lien(tr("Ouvrir le Discord"), discret=True)
+            temps = record.temps(self.temps)
+            place = classement.rang(tuple(self.places), temps)
+            self.note_place = visuel.libelle(tr("Votre record ({}) y prendrait la place {}.").format(
+                course.format_temps(temps), place), 14, visuel.CREME, retour=True)
+            v.addWidget(self.note_place)
+            if place > 1:
+                v.addWidget(visuel.libelle(tr("À {} de la place {}.").format(
+                    course.format_temps(temps - self.places[place - 2].temps_us), place - 1), 13, "#b9b9d0"))
+        v.addWidget(visuel.libelle(tr("Pour y entrer, publiez la vidéo de la course et son course.json sur le "
+                                      "Discord : une fois validée, elle apparaît ici."), 13, "#b9b9d0", retour=True))
+        discord = visuel.lien_or(tr("Ouvrir le Discord"))
         discord.clicked.connect(lambda: open_url(DISCORD_URL))
-        entrer.addSpacing(10)
-        entrer.addWidget(discord, alignment=Qt.AlignmentFlag.AlignVCenter)
-        entrer.addStretch()
-        lay.addLayout(entrer)
-
-    @staticmethod
-    def _grille(entrees: list[classement.Entree]) -> QFrame:
-        """Une ligne par course classée : rang, joueur, jour et code, temps, vidéo. Les noms viennent du
-        réseau : `_texte` les montre en texte brut."""
-        cadre = QFrame()
-        cadre.setObjectName("classement")
-        grille = QGridLayout(cadre)
-        grille.setContentsMargins(16, 10, 16, 10)
-        grille.setHorizontalSpacing(14)
-        grille.setVerticalSpacing(4)
-        grille.setColumnStretch(1, 1)
-        droite = Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
-        for i, e in enumerate(entrees):
-            grille.addWidget(_texte(str(i + 1), 12, "#d6a72c" if i < 3 else _DISCRET), i, 0, droite)
-            grille.addWidget(_texte(e.joueur, 12, "#e0e0f0"), i, 1)
-            grille.addWidget(_texte(" · ".join(x for x in (e.jour, e.code) if x), 11, _DISCRET), i, 2, droite)
-            grille.addWidget(_texte(course.format_temps(e.temps_us), 12, "#ffffff"), i, 3, droite)
-            if e.video:
-                video = lien(tr("Vidéo"), discret=True)
-                video.setToolTip(e.video)
-                video.clicked.connect(lambda _c=False, u=e.video: open_url(u))
-                grille.addWidget(video, i, 4, droite)
-        return cadre
+        v.addWidget(discord)
+        lay.addWidget(boite)
+        if self.regles is not None and self.regles.speedrun:
+            source = visuel.lien_or(tr("Les records du jeu d'origine sur speedrun.com ›"))
+            source.setFont(police(13))
+            adresse = f"https://www.speedrun.com/{self.regles.speedrun}"
+            source.setToolTip(adresse)
+            source.clicked.connect(lambda: open_url(adresse))
+            lay.addWidget(source)
 
     def _choix(self, presentes: list[str]) -> QHBoxLayout:
         rangee = QHBoxLayout()
@@ -378,23 +437,6 @@ class CoursesPage(QWidget):
             rangee.addWidget(b)
         rangee.addStretch()
         return rangee
-
-    @staticmethod
-    def _par_carte(passages: list[course.Passage]) -> QFrame:
-        """Une ligne par carte : son nom (celui du jeu), le temps, la course qui l'a fait."""
-        cadre = QFrame()
-        cadre.setObjectName("parCarte")
-        grille = QGridLayout(cadre)              # une grille : les temps restent alignés en colonne
-        grille.setContentsMargins(16, 10, 16, 10)
-        grille.setHorizontalSpacing(14)
-        grille.setVerticalSpacing(4)
-        grille.setColumnStretch(0, 1)
-        droite = Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
-        for rang, s in enumerate(passages):
-            grille.addWidget(_texte(s.carte, 12, "#e0e0f0"), rang, 0)
-            grille.addWidget(_texte(f"{s.jour} · {s.code}", 11, _DISCRET), rang, 1, droite)
-            grille.addWidget(_texte(course.format_temps(s.net_us), 12, "#ffffff"), rang, 2, droite)
-        return cadre
 
     # ── Gestes ──
 

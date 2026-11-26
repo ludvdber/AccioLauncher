@@ -610,6 +610,7 @@
       "race": {
         "fix_min": "2.5.0",
         "timing": "loadless",
+        "speedrun": "hp1pc",
         "start": "Au clic qui crée la nouvelle partie : « Oui » pour remplacer une partie, ou un emplacement vide.",
         "end": "Quand commence la cinématique d'après la victoire sur Voldemort.",
         "categories": [
@@ -1258,6 +1259,7 @@
       "race": {
         "fix_min": "2.5.0",
         "timing": "loadless",
+        "speedrun": "hp2pc",
         "start": "Le launcher ouvre une nouvelle partie à Privet Drive : le chrono part quand elle se charge.",
         "end": "Quand le générique de fin commence à se charger.",
         "categories": [
@@ -2114,6 +2116,7 @@
       "race": {
         "fix_min": "2.5.0",
         "timing": "loadless",
+        "speedrun": "hp3pc",
         "start": "Quand la nouvelle partie commence.",
         "end": "Quand le dernier script ouvre le générique de fin.",
         "categories": [
@@ -2220,6 +2223,7 @@
       "race": {
         "fix_min": "2.5.0",
         "timing": "real",
+        "speedrun": "hp4",
         "start": "Quand la nouvelle partie commence : le jeu part sans sauvegarde, un dossier vide lui est donné le temps de la course.",
         "end": "Quand le générique de fin commence : la cinématique finale est comptée.",
         "categories": [
@@ -2667,6 +2671,7 @@
       "race": {
         "fix_min": "2.5.0",
         "timing": "real",
+        "speedrun": "hp5",
         "start": "Quand la nouvelle partie commence : le jeu part sans sauvegarde, un dossier vide lui est donné le temps de la course.",
         "end": "Au début de la cinématique d'après la victoire sur Voldemort.",
         "categories": [
@@ -3184,6 +3189,7 @@
       "race": {
         "fix_min": "2.5.0",
         "timing": "real",
+        "speedrun": "hp6",
         "start": "Quand la nouvelle partie commence : le jeu part sans sauvegarde, un dossier vide lui est donné le temps de la course.",
         "end": "Au début du film d'après la victoire sur Bellatrix.",
         "categories": [

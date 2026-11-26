@@ -253,9 +253,10 @@ class TestPage:
         assert page.temps_record.text() == course.format_temps(fin.resultat.net_us)
         textes = _textes(page)
         assert "Rapide" in textes and "1 essai" in textes and "0:39.000 en temps réel" in textes
-        assert page.note_place is not None and "place 2" in page.note_place.text()
+        assert page.place_record == 2 and "Vous (non envoyé)" in textes, "le joueur à la place de son record"
         page.pastilles["100%"].click()
-        assert page.temps_record.text() == "—" and page.note_place is None
+        assert page.temps_record.text() == "—" and page.place_record is None
+        assert "Personne n'est encore classé en 100%." in _textes(page)
 
 
 class TestResultat:
@@ -301,6 +302,32 @@ class TestResultat:
         assert dlg.meilleurs == [0, 1], "à égalité, un meilleur passage"
         assert "essai 2" in _textes(dlg) and "Votre record reste" in dlg.phrase_record.text()
 
+    def test_voir_dans_le_carnet(self, qtbot, tmp_path):
+        """Le bouton n'existe que si la fenêtre sait ouvrir le Carnet ; il ferme le résultat puis l'ouvre."""
+        from PyQt6.QtWidgets import QPushButton
+
+        from src.ui.course_ui import CourseResultat
+        fin = _conclusion(tmp_path)
+        seul = CourseResultat(fin, "HP2", game=_CATALOGUE["hp2"])
+        qtbot.addWidget(seul)
+        assert "Voir dans le Carnet" not in [b.text() for b in seul.findChildren(QPushButton)]
+        ouvert = []
+        dlg = CourseResultat(fin, "HP2", game=_CATALOGUE["hp2"], carnet=lambda: ouvert.append(dlg.isVisible()))
+        qtbot.addWidget(dlg)
+        dlg.show()
+        next(b for b in dlg.findChildren(QPushButton) if b.text() == "Voir dans le Carnet").click()
+        assert ouvert == [False], "le résultat se ferme avant que le Carnet s'ouvre"
+
+    def test_pieces_communes(self, qtbot):
+        from PyQt6.QtGui import QFont
+
+        from src.ui import course_visuel as visuel
+        f = visuel.chiffres(QFont())
+        assert f.featureValue(QFont.Tag("tnum")) == 1 and f.featureValue(QFont.Tag("lnum")) == 1
+        a, b = visuel.rond("Hermione"), visuel.rond("Hermione")
+        assert a.text() == "H" and a.styleSheet() == b.styleSheet(), "le même rond pour le même joueur"
+        assert visuel.rond("<b>", vous=True).text() == "B" and "#d6a72c" in visuel.rond("x", vous=True).styleSheet()
+
     def test_refus_dits(self, qtbot, tmp_path):
         from src.ui.course_ui import CourseResultat, raison
         fin = _conclusion(tmp_path)
@@ -309,7 +336,7 @@ class TestResultat:
         qtbot.addWidget(dlg)
         textes = _textes(dlg)
         assert raison(course.DEPART_CHARGE) in textes and "réessaiera" in textes
-        assert not hasattr(dlg, "phrase_record"), "un temps refusé ne se compare à aucun record"
+        assert dlg.phrase_record is None, "un temps refusé ne se compare à aucun record"
 
     def test_chaque_refus_a_sa_phrase(self):
         from src.ui.course_ui import raison
@@ -396,7 +423,7 @@ class TestCarnet:
         return carnet._courses
 
     def test_classement_sans_course_gardee(self, make_window, monkeypatch, qtbot):
-        from PyQt6.QtWidgets import QLabel, QPushButton
+        from PyQt6.QtWidgets import QFrame, QLabel, QPushButton
 
         from src.ui import courses_page
         from src.ui.carnet_page import COURSES
@@ -411,15 +438,19 @@ class TestCarnet:
         assert time.perf_counter() - debut < _DEMI_SECONDE
         assert [e.joueur for e in page.places] == ["Ludo", "Ronald <b>W</b>"]
         textes = [lbl.text() for lbl in page.findChildren(QLabel)]
-        assert "Ronald <b>W</b>" in textes and "31:04.512" in textes and "2026-12-01 · 7KQ2-M4XP" in textes
+        assert "Ronald <b>W</b>" in textes and "31:04.512" in textes
+        assert any(f.toolTip() == "2026-12-01 · 7KQ2-M4XP" for f in page.findChildren(QFrame, "ligneClassee"))
         nom = next(lbl for lbl in page.findChildren(QLabel) if lbl.text() == "Ronald <b>W</b>")
         assert nom.textFormat() == courses_page.Qt.TextFormat.PlainText, "un nom venu du réseau, en texte brut"
-        videos = [b for b in page.findChildren(QPushButton) if b.toolTip().startswith("https://")]
+        videos = [b for b in page.findChildren(QPushButton) if b.text() == "Vidéo"]
         assert [b.toolTip() for b in videos] == ["https://youtu.be/abc"], "la vidéo d'un hôte inconnu n'a pas de lien"
         ouvertes = []
         monkeypatch.setattr(courses_page, "open_url", ouvertes.append)
         videos[0].click()
         assert ouvertes == ["https://youtu.be/abc"] and page.note_place is None
+        source = next(b for b in page.findChildren(QPushButton) if "speedrun.com" in b.text())
+        source.click()
+        assert ouvertes[-1] == "https://www.speedrun.com/hp2pc", "les records du jeu d'origine"
 
     def test_place_que_prendrait_le_record(self, make_window, monkeypatch, qtbot, tmp_path):
         fin = _conclusion(tmp_path / "jeux")
@@ -453,7 +484,7 @@ class TestCarnet:
         assert len(lectures) == 1, "les journaux sont lus UNE fois par visite du Carnet (règle 140)"
         textes = _textes(page)
         assert "0:34.000" in textes and "Meilleur temps valable" in textes and "0:39.000 en temps réel" in textes
-        assert "1 essai · 1 valable" in textes
+        assert "1 essai · 1 finie" in textes and "Temps valable · record" in textes
         monkeypatch.setattr(courses_page, "message", lambda *a, **k: 1)       # « Annuler »
         page.lignes[0].bouton_supprimer.click()
         assert course.dossier(fin.code).is_dir()
@@ -466,19 +497,20 @@ class TestCarnet:
         seule = _conclusion(tmp_path / "jeux")
         _, carnet = self._carnet(make_window, monkeypatch, qtbot)
         page = self._page(carnet)
-        assert page.pastilles == {}, "une seule catégorie : pas de pastilles"
+        assert list(page.pastilles) == ["Any%", "100%", "Warpless", "Glitchless", "All Wizard Cards"], (
+            "toutes les catégories du jeu, dans l'ordre du catalogue")
         assert [s.carte for s in page.passages] == ["PrivetDr", "Adv1Willow"]
         assert all(s.code == seule.code for s in page.passages)
         carnet._retirer_courses()
         autre = _conclusion(tmp_path / "jeux2", "Warpless")
         _, carnet = self._carnet(make_window, monkeypatch, qtbot)
         page = self._page(carnet)
-        assert list(page.pastilles) == ["Any%", "Warpless"] and page.pastilles["Warpless"].text() == "Sans warp"
+        assert page.pastilles["Warpless"].text() == "Sans warp"
         assert page.categorie == "Warpless" and [li.code for li in page.lignes] == [autre.code], (
             "la catégorie de la course la plus récente d'abord")
         page.pastilles["Any%"].click()
         assert page.categorie == "Any%" and [li.code for li in page.lignes] == [seule.code]
-        assert "Meilleur passage par carte" in _textes(page)
+        assert "MEILLEUR PASSAGE PAR CARTE" in _textes(page)
 
     def test_exporter_pour_livesplit(self, make_window, monkeypatch, qtbot, tmp_path):
         import xml.etree.ElementTree as ET

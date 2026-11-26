@@ -11,8 +11,12 @@ classement Accio de la catégorie, visible sans clic de plus.
 avec un `Choix` : le départ lui-même est l'affaire de `course_ui.lancer`. Fermer la page autrement (retour,
 Échap, une autre page ouverte par-dessus) ne lance rien : `choix` reste None.
 
-L'affichage dans le jeu (Simple ou Complet, coin de l'écran) n'est PAS ici : le correctif ne sait pas encore le
-lire, et un réglage que la DLL ignorerait mentirait (étape 5 du plan de la 1.5).
+Le dessin suit la maquette (pièces communes dans `course_visuel`) : le panneau sombre, les trois tuiles « Le chrono
+part », « Il s'arrête », « Le temps qui compte », les alertes rouges avec leur geste, « Dans le jeu », le grand
+bouton or ; à droite les tuiles « Votre record » et « Course idéale », puis le classement avec le joueur à la place
+que prendrait son record (« Vous (non envoyé) ») et l'envoi par le Discord. L'affichage dans le jeu (Simple ou
+Complet, coin de l'écran) n'y est PAS encore : le correctif ne sait pas le lire, et un réglage que la DLL
+ignorerait mentirait (étape 5 du plan de la 1.5).
 """
 
 from collections.abc import Callable
@@ -26,7 +30,6 @@ from PyQt6.QtWidgets import (
     QFrame,
     QGridLayout,
     QHBoxLayout,
-    QLabel,
     QProgressBar,
     QPushButton,
     QVBoxLayout,
@@ -38,35 +41,29 @@ from src.core.course_regles import Categorie, Regles
 from src.core.game_data import GameData
 from src.core.game_manager import GameManager
 from src.core.i18n import tr, trn
+from src.core.liens import DISCORD_URL
 from src.ui import course_ui
+from src.ui import course_visuel as visuel
 from src.ui.bandeau_jeu import bandeau_du_jeu
 from src.ui.composants import (
     ENCRE,
-    ENCRE_DOUCE,
     MARGES_PAGE,
     TAILLE_MINIMALE_PAGE,
-    Carte,
-    LigneReglage,
-    bouton,
     bouton_retour,
     colonne_centree,
     feuille_de_style,
     filtre,
-    lien,
+    police,
     surtitre,
-    texte,
     transparent,
 )
 from src.ui.entree_focus import entree_suit_le_focus
-from src.ui.fonts import cinzel
 from src.ui.theme import themed
 from src.ui.toggle_switch import ToggleSwitch
-from src.ui.utils import zone_defilable
+from src.ui.utils import open_url, zone_defilable
 
-_OR = "#d6a72c"
-_ROUGE = "#e07a6a"
-_LARGEUR_DROITE = 380
-_CLASSES_MONTRES = 5
+_LARGEUR_DROITE = 400
+_CLASSES_MONTRES = 6
 _BARRE = ("QProgressBar { background: #141428; border: 1px solid #2a2a48; border-radius: 4px; height: 8px; }"
           "QProgressBar::chunk { background: #d6a72c; border-radius: 3px; }")
 
@@ -104,10 +101,6 @@ def nom_categorie(regles: Regles | None, ident: str) -> str:
     return c.nom if c is not None else ident
 
 
-def _gris(contenu: str, px: int = 13) -> QLabel:
-    return texte(contenu, px, ENCRE_DOUCE, retour=True)
-
-
 class CoursePage(QDialog):
     """La page de départ d'une course. `choix` est posé quand l'empreinte est prête, juste avant `accept`."""
 
@@ -136,7 +129,7 @@ class CoursePage(QDialog):
         self.bloquants = course_ui.bloquants(game, config) if self.ini is not None else []
         self.setWindowTitle(tr("Course : {}").format(game.name))
         self.setMinimumSize(*TAILLE_MINIMALE_PAGE)
-        self.setStyleSheet(themed(_BARRE) + feuille_de_style())
+        self.setStyleSheet(themed(_BARRE) + feuille_de_style() + visuel.STYLE)
         self._construire()
         self._montrer_categorie()
 
@@ -153,9 +146,14 @@ class CoursePage(QDialog):
         groupe = QButtonGroup(self)
         groupe.setExclusive(True)
         for c in self.regles.categories:
-            b = filtre(c.nom, grand=True)
+            # La pastille porte le record de la catégorie (maquette) : on voit d'un coup d'œil où l'on en est.
+            record = course.meilleure(self._courses, c.ident, self.regles.temps)
+            b = filtre(c.nom if record is None else f"{c.nom}   {course.format_temps(record.temps(self.regles.temps))}",
+                       grand=True)
+            b.setFont(visuel.chiffres(b.font()))
             b.setChecked(c.ident == self.categorie)
             b.setToolTip(c.regle)
+            b.setAccessibleName(c.nom)
             b.clicked.connect(lambda _c=False, ident=c.ident: self.choisir(ident))
             groupe.addButton(b)
             self.pastilles[c.ident] = b
@@ -166,43 +164,53 @@ class CoursePage(QDialog):
         corps = QWidget()
         transparent(corps, "corpsCourse")
         lay = QHBoxLayout(corps)
-        lay.setContentsMargins(*MARGES_PAGE)
-        lay.setSpacing(36)
-        lay.addLayout(self._gauche(), 1)
+        lay.setContentsMargins(MARGES_PAGE[0], 20, MARGES_PAGE[2], 24)
+        lay.setSpacing(24)
+        lay.addWidget(self._panneau(), 1)
         droite = QWidget()
         transparent(droite, "droiteCourse")
         droite.setFixedWidth(_LARGEUR_DROITE)
         self._droite = QVBoxLayout(droite)
         self._droite.setContentsMargins(0, 0, 0, 0)
-        self._droite.setSpacing(8)
-        lay.addWidget(droite, alignment=Qt.AlignmentFlag.AlignTop)
+        self._droite.setSpacing(12)
+        lay.addWidget(droite)
         colonne_centree(corps)
         racine.addWidget(zone_defilable(corps), 1)
 
-    def _gauche(self) -> QVBoxLayout:
-        gauche = QVBoxLayout()
-        gauche.setSpacing(10)
-        self._regle = texte("", 16, ENCRE, retour=True)
+    def _panneau(self) -> QFrame:
+        """Le panneau de gauche : la catégorie, départ, arrivée et temps qui compte, les règles, ce qui bloque,
+        ce qui s'affiche dans le jeu, et « Partir »."""
+        panneau, gauche = visuel.cadre("panneauCourse", (24, 20, 24, 20), 14)
+        tete = QHBoxLayout()
+        tete.setSpacing(14)
+        self._nom_categorie = visuel.grand_titre("", 26, visuel.OR_CLAIR)
+        self._nom_categorie.setWordWrap(False)
+        tete.addWidget(self._nom_categorie, alignment=Qt.AlignmentFlag.AlignBottom)
+        self._regle = visuel.libelle("", 14, visuel.GRIS_CLAIR, retour=True)
         self._regle.setObjectName("regleCategorie")
-        gauche.addWidget(self._regle)
-        self._note = _gris("")
+        tete.addWidget(self._regle, 1, Qt.AlignmentFlag.AlignBottom)
+        gauche.addLayout(tete)
+        self._note = visuel.libelle("", 13, visuel.GRIS, retour=True)
         self._note.setObjectName("noteCategorie")
         gauche.addWidget(self._note)
-        gauche.addSpacing(6)
-        carte = Carte()
-        carte.ajouter(LigneReglage(tr("Départ du chrono"), self.regles.depart))
-        carte.ajouter(LigneReglage(tr("Arrivée"), self.regles.arrivee))
-        carte.ajouter(LigneReglage(tr("Temps qui classe"), phrase_du_temps(self.regles)))
-        gauche.addWidget(carte)
 
-        self.bouton_regles = lien(tr("Règles détaillées"), discret=True)
+        tuiles = QGridLayout()
+        tuiles.setSpacing(10)
+        for col, (titre, valeur) in enumerate(((tr("Le chrono part"), self.regles.depart),
+                                               (tr("Il s'arrête"), self.regles.arrivee),
+                                               (tr("Le temps qui compte"), phrase_du_temps(self.regles)))):
+            tuiles.addWidget(visuel.tuile(titre, valeur)[0], 0, col)
+            tuiles.setColumnStretch(col, 1)
+        gauche.addLayout(tuiles)
+
+        self.bouton_regles = visuel.lien_or(tr("Règles détaillées ›"))
         self.bouton_regles.setCheckable(True)
         self.bouton_regles.toggled.connect(self._deplier_regles)
         gauche.addWidget(self.bouton_regles, alignment=Qt.AlignmentFlag.AlignLeft)
         self.regles_detaillees = QFrame()
         transparent(self.regles_detaillees, "reglesDetaillees")
         detail = QVBoxLayout(self.regles_detaillees)
-        detail.setContentsMargins(4, 0, 0, 4)
+        detail.setContentsMargins(4, 0, 0, 0)
         detail.setSpacing(4)
         for regle in (
                 tr("Une course se fait d'une traite : le jeu ne doit être ni fermé ni relancé avant l'arrivée."),
@@ -216,79 +224,90 @@ class CoursePage(QDialog):
                 tr("Une ligne ACCIO reste en bas de l'image toute la course, avec le chrono sans chargements"
                    " et les images par seconde : elle doit se lire sur votre vidéo, entière. C'est la vidéo,"
                    " jugée par une personne, qui prouve la course.")):
-            detail.addWidget(_gris("•  " + regle))
+            detail.addWidget(visuel.libelle("•  " + regle, 13, visuel.GRIS_CLAIR, retour=True))
         self.regles_detaillees.hide()
         gauche.addWidget(self.regles_detaillees)
 
-        fantome = Carte()
+        gauche.addWidget(self._ce_qui_bloque())
+        notes = []
+        if self.game.id == "hp1":
+            notes.append(visuel.libelle(tr(
+                "HP1 : une course Accio ne compte pas sur le classement speedrun.com du jeu tant que ses "
+                "modérateurs n'ont pas accepté la limite d'images d'Accio."), 13, visuel.GRIS, retour=True))
+        if mode_course.plateforme() != "win32":
+            notes.append(visuel.libelle(course_ui.raison(course.SOUS_WINE), 13, visuel.GRIS, retour=True))
+        if self.ini is not None and (ecarts := mode_course.ecarts(self.game.id, self.ini)):
+            note = visuel.libelle(trn(len(ecarts), "{} réglage sera remis le temps de la course, puis rendu.",
+                                      "{} réglages seront remis le temps de la course, puis rendus.").format(
+                len(ecarts)), 13, visuel.GRIS, retour=True)
+            note.setToolTip("\n".join(f"{e.cle} : {e.valeur if e.valeur is not None else '—'} → {e.posee or '—'}"
+                                      for e in ecarts))
+            notes.append(note)
+        for note in notes:
+            gauche.addWidget(note)
+
+        gauche.addWidget(visuel.filet())
+        gauche.addWidget(surtitre(tr("Dans le jeu")))
+        fantome = QHBoxLayout()
+        fantome.setSpacing(12)
         self.bascule_fantome = ToggleSwitch(self.fantome)
         self.bascule_fantome.setAccessibleName(tr("Fantôme"))
         self.bascule_fantome.toggled.connect(self._basculer_fantome)
-        self._ligne_fantome = LigneReglage(tr("Fantôme"), "", self.bascule_fantome)
-        fantome.ajouter(self._ligne_fantome)
-        gauche.addWidget(fantome)
+        fantome.addWidget(self.bascule_fantome, alignment=Qt.AlignmentFlag.AlignTop)
+        mots = QVBoxLayout()
+        mots.setSpacing(2)
+        mots.addWidget(visuel.libelle(tr("Fantôme"), 14, ENCRE))
+        self._phrase_fantome = visuel.libelle("", 13, visuel.GRIS, retour=True)
+        mots.addWidget(self._phrase_fantome)
+        fantome.addLayout(mots, 1)
+        gauche.addLayout(fantome)
 
-        if self.game.id == "hp1":
-            gauche.addWidget(_gris(tr(
-                "HP1 : une course Accio ne compte pas sur le classement speedrun.com du jeu tant que ses "
-                "modérateurs n'ont pas accepté la limite d'images d'Accio.")))
-        if mode_course.plateforme() != "win32":
-            gauche.addWidget(_gris(course_ui.raison(course.SOUS_WINE)))
-        if self.ini is not None and (ecarts := mode_course.ecarts(self.game.id, self.ini)):
-            note = _gris(trn(len(ecarts), "{} réglage sera remis le temps de la course, puis rendu.",
-                             "{} réglages seront remis le temps de la course, puis rendus.").format(len(ecarts)))
-            note.setToolTip("\n".join(f"{e.cle} : {e.valeur if e.valeur is not None else '—'} → {e.posee or '—'}"
-                                      for e in ecarts))
-            gauche.addWidget(note)
-        gauche.addLayout(self._ce_qui_bloque())
-
-        gauche.addSpacing(6)
+        gauche.addStretch()
         pied = QHBoxLayout()
-        self._partir = bouton("", principal=True)
+        pied.setSpacing(16)
+        self._partir = visuel.bouton_partir()
         self._partir.setEnabled(self.ini is not None and not self.bloquants)
         self._partir.clicked.connect(self._calculer)
-        self._partir.setAutoDefault(False)
         pied.addWidget(self._partir)
-        pied.addStretch()
-        gauche.addLayout(pied)
+        attente = QVBoxLayout()
+        attente.setSpacing(4)
         self._barre = QProgressBar()
         self._barre.setRange(0, 1000)
         self._barre.setTextVisible(False)
         self._barre.hide()
-        gauche.addWidget(self._barre)
-        self._etat = _gris("", 12)
+        attente.addWidget(self._barre)
+        self._etat = visuel.libelle("", 13, visuel.GRIS, retour=True)
         self._etat.hide()
-        gauche.addWidget(self._etat)
-        gauche.addStretch()
-        return gauche
+        attente.addWidget(self._etat)
+        pied.addLayout(attente, 1)
+        gauche.addLayout(pied)
+        return panneau
 
-    def _ce_qui_bloque(self) -> QVBoxLayout:
-        """Le correctif trop ancien, ou la difficulté : la phrase, et le geste qui le règle quand il existe."""
-        bloc = QVBoxLayout()
-        bloc.setSpacing(4)
+    def _ce_qui_bloque(self) -> QWidget:
+        """Le correctif trop ancien, ou la difficulté : une alerte chacun, avec le geste qui le règle quand il
+        existe."""
         self._bloque = QWidget()
         transparent(self._bloque, "ceQuiBloque")
         lay = QVBoxLayout(self._bloque)
-        lay.setContentsMargins(0, 4, 0, 0)
-        lay.setSpacing(4)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(8)
         if self.ini is None:
             minimum = ".".join(map(str, self.regles.correctif_min))
-            lay.addWidget(texte(tr("Le correctif installé ne sait pas encore chronométrer ce jeu : la course "
-                                   "demande le correctif {} ou plus récent.").format(minimum),
-                                13, _ROUGE, retour=True))
+            geste = None
             if self._actions.mettre_a_jour is not None and self._manager.has_update(self.game.id):
-                geste = lien(tr("Mettre à jour le jeu"))
+                geste = visuel.lien_or(tr("Mettre à jour le jeu"))
                 geste.clicked.connect(self._actions.mettre_a_jour)
-                lay.addWidget(geste, alignment=Qt.AlignmentFlag.AlignLeft)
+            lay.addWidget(visuel.alerte(tr("Le correctif installé ne sait pas encore chronométrer ce jeu : la "
+                                           "course demande le correctif {} ou plus récent.").format(minimum),
+                                        geste))
         for phrase in self.bloquants:
-            lay.addWidget(texte(phrase, 13, _ROUGE, retour=True))
+            geste = None
             if self._actions.difficulte is not None:
-                geste = lien(tr("Choisir la difficulté"))
+                geste = visuel.lien_or(tr("Choisir la difficulté"))
                 geste.clicked.connect(self._actions.difficulte)
-                lay.addWidget(geste, alignment=Qt.AlignmentFlag.AlignLeft)
+            lay.addWidget(visuel.alerte(phrase, geste))
         self._bloque.setVisible(self.ini is None or bool(self.bloquants))
-        bloc.addWidget(self._bloque)
-        return bloc
+        return self._bloque
 
     # ── La colonne de droite : record, idéale, essais, classement ──
 
@@ -297,68 +316,100 @@ class CoursePage(QDialog):
             if (w := item.widget()) is not None:
                 w.hide()
                 w.deleteLater()
-        lay = self._droite
+        contenu = QWidget()
+        transparent(contenu)
+        lay = QVBoxLayout(contenu)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(12)
+        self._droite.addWidget(contenu)
         temps = self.regles.temps
         du_jeu = [c for c in self._courses if c.categorie == self.categorie]
         record = course.meilleure(du_jeu, self.categorie, temps)
-        lay.addWidget(surtitre(tr("Votre record")))
-        self.temps_record = QLabel(course.format_temps(record.temps(temps)) if record is not None else "—")
+        ideale = course.ideale(du_jeu, self.categorie, temps) if record is not None else None
+        tuiles = QGridLayout()
+        tuiles.setSpacing(8)
+        carte_record, self.temps_record = visuel.tuile(
+            tr("Votre record"), course.format_temps(record.temps(temps)) if record is not None else "—",
+            valeur_temps=True, valeur_px=19, encre=visuel.OR_CLAIR if record is not None else visuel.GRIS,
+            nom="tuileOr")
         self.temps_record.setObjectName("tempsRecord")
-        self.temps_record.setFont(cinzel(24, bold=True))
-        self.temps_record.setStyleSheet(themed(f"color: {_OR if record is not None else ENCRE_DOUCE};"
-                                               " background: transparent;"))
-        lay.addWidget(self.temps_record)
-        if record is None:
-            lay.addWidget(_gris(tr("Pas encore de temps valable dans cette catégorie.")))
-        else:
-            autre = (tr("{} sans chargements").format(course.format_temps(record.net_us)) if temps == course.REEL
-                     else tr("{} en temps réel").format(course.format_temps(record.total_us)))
-            lay.addWidget(_gris(f"{autre} · {record.jour}"))
-            ideale = course.ideale(du_jeu, self.categorie, temps)
-            if ideale is not None and ideale.a_gagner_us > 0:
-                lay.addWidget(_gris(tr("Course idéale : {} sans chargements, encore {} à gagner.").format(
-                    course.format_temps(ideale.net_us), course.format_temps(ideale.a_gagner_us))))
+        if record is not None:
+            carte_record.setToolTip(f"{self._autre_temps(record)} · {record.jour}")
+        tuiles.addWidget(carte_record, 0, 0)
+        carte_ideale, _v = visuel.tuile(tr("Course idéale"),
+                                        course.format_temps(ideale.temps_us) if ideale is not None else "—",
+                                        valeur_temps=True, valeur_px=19)
+        carte_ideale.setToolTip(tr("Votre record, moins ce que vos meilleurs passages de chaque carte peuvent encore "
+                                   "y gagner."))
+        tuiles.addWidget(carte_ideale, 0, 1)
+        lay.addLayout(tuiles)
+        sous_titre = []
+        if record is not None:
+            sous_titre.append(f"{self._autre_temps(record)} · {record.jour}")
         if du_jeu:
             valables = sum(c.valable for c in du_jeu)
-            lay.addWidget(_gris(trn(len(du_jeu), "{} essai", "{} essais").format(len(du_jeu)) + " · "
-                                + trn(valables, "{} valable", "{} valables").format(valables)))
-        lay.addSpacing(18)
-        lay.addWidget(surtitre(tr("Classement Accio")))
-        self.places = list(self._classement.de(self.game.id, self.categorie))
-        if self.places:
-            lay.addWidget(self._grille(self.places[:_CLASSES_MONTRES]))
+            sous_titre.append(trn(len(du_jeu), "{} essai", "{} essais").format(len(du_jeu)) + " · "
+                              + trn(valables, "{} valable", "{} valables").format(valables))
         else:
-            lay.addWidget(_gris(tr("Personne n'y est encore classé.")))
-        self.note_place: QLabel | None = None
-        if record is not None and record.code not in {e.code for e in self.places}:
-            place = classement.rang(tuple(self.places), record.temps(temps))
-            self.note_place = texte(tr("Votre record y prendrait la place {}.").format(place), 13, ENCRE,
-                                    retour=True)
-            lay.addWidget(self.note_place)
-        if self._actions.carnet is not None and (self._courses or self._classement.categories(self.game.id)):
-            carnet = lien(tr("Toutes vos courses et le classement complet"), discret=True)
-            carnet.clicked.connect(self._actions.carnet)
-            lay.addWidget(carnet, alignment=Qt.AlignmentFlag.AlignLeft)
+            sous_titre.append(tr("Aucune course lancée dans cette catégorie."))
+        lay.addWidget(visuel.libelle("\n".join(sous_titre), 12, visuel.GRIS, retour=True))
+        lay.addWidget(self._tableau(record), 1)
 
-    @staticmethod
-    def _grille(entrees: list[classement.Entree]) -> QFrame:
-        """Les premiers du classement : rang, joueur (texte BRUT : il vient du réseau), temps."""
-        cadre = QFrame()
-        cadre.setObjectName("carte")
-        grille = QGridLayout(cadre)
-        grille.setContentsMargins(16, 10, 16, 10)
-        grille.setHorizontalSpacing(12)
-        grille.setVerticalSpacing(4)
-        grille.setColumnStretch(1, 1)
-        droite = Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
-        for i, e in enumerate(entrees):
-            rang = QLabel(str(i + 1))
-            rang.setFont(cinzel(11, bold=True))
-            rang.setStyleSheet(themed(f"color: {_OR if i < 3 else ENCRE_DOUCE}; background: transparent;"))
-            grille.addWidget(rang, i, 0, droite)
-            grille.addWidget(texte(e.joueur, 13, ENCRE), i, 1)
-            grille.addWidget(texte(course.format_temps(e.temps_us), 13, ENCRE), i, 2, droite)
-        return cadre
+    def _autre_temps(self, record: course.Passee) -> str:
+        if self.regles.temps == course.REEL:
+            return tr("{} sans chargements").format(course.format_temps(record.net_us))
+        return tr("{} en temps réel").format(course.format_temps(record.total_us))
+
+    def _tableau(self, record: course.Passee | None) -> QFrame:
+        """Le classement Accio de la catégorie : les premiers, et le joueur à la place que prendrait son record
+        s'il n'y est pas encore ; l'envoi passe par le Discord."""
+        temps = self.regles.temps
+        panneau, lay = visuel.cadre("panneauCourse", (14, 12, 14, 12), 6)
+        tete = QHBoxLayout()
+        tete.addWidget(surtitre(tr("Classement Accio") + " · " + nom_categorie(self.regles, self.categorie)), 1)
+        if self._actions.carnet is not None and (self._courses or self._classement.categories(self.game.id)):
+            tout = visuel.lien_or(tr("Tout voir ›"))
+            tout.setFont(police(12))
+            tout.setToolTip(tr("Toutes vos courses et le classement complet, dans le Carnet."))
+            tout.clicked.connect(self._actions.carnet)
+            tete.addWidget(tout)
+        lay.addLayout(tete)
+        self.places = list(self._classement.de(self.game.id, self.categorie))
+        self.place_record: int | None = None
+        if record is not None and record.code not in {e.code for e in self.places}:
+            self.place_record = classement.rang(tuple(self.places), record.temps(temps))
+        lignes: list[tuple[int, str, int, bool]] = [(i + 1, e.joueur, e.temps_us, False)
+                                                    for i, e in enumerate(self.places)]
+        if self.place_record is not None and record is not None:
+            lignes.insert(self.place_record - 1, (self.place_record, tr("Vous (non envoyé)"),
+                                                  record.temps(temps), True))
+            lignes = [(i + 1, j, t, v) for i, (_r, j, t, v) in enumerate(lignes)]
+        if not self.places:
+            lay.addStretch()
+            vide = visuel.libelle(tr("Personne n'est encore classé en {}.").format(
+                nom_categorie(self.regles, self.categorie)), 15, visuel.CREME, retour=True)
+            vide.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            lay.addWidget(vide)
+            suite = visuel.libelle(tr("La première course valable envoyée prend la place 1."), 13, visuel.GRIS,
+                                   retour=True)
+            suite.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            lay.addWidget(suite)
+            lay.addStretch()
+        else:
+            montrees = lignes[:_CLASSES_MONTRES]
+            vous = next((ligne for ligne in lignes if ligne[3]), None)
+            if vous is not None and vous not in montrees:
+                montrees[-1] = vous
+            for rang, joueur, us, est_vous in montrees:
+                lay.addWidget(visuel.ligne_classee(rang, joueur, course.format_temps(us), vous=est_vous))
+            lay.addStretch()
+        if self.place_record is not None:
+            envoyer = visuel.bouton_nomme(tr("Envoyer mon record sur le Discord"), "boutonCadreOr")
+            envoyer.setToolTip(tr("Publiez la vidéo de la course et son course.json sur le Discord : une fois "
+                                  "validée, elle entre au classement."))
+            envoyer.clicked.connect(lambda: open_url(DISCORD_URL))
+            lay.addWidget(envoyer)
+        return panneau
 
     # ── Gestes ──
 
@@ -373,6 +424,7 @@ class CoursePage(QDialog):
             return
         if not self.pastilles[c.ident].isChecked():
             self.pastilles[c.ident].setChecked(True)
+        self._nom_categorie.setText(c.nom)
         self._regle.setText(c.regle)
         self._note.setText(c.note)
         self._note.setVisible(bool(c.note))
@@ -382,7 +434,7 @@ class CoursePage(QDialog):
 
     def _deplier_regles(self, ouvert: bool) -> None:
         self.regles_detaillees.setVisible(ouvert)
-        self.bouton_regles.setText(tr("Masquer les règles détaillées") if ouvert else tr("Règles détaillées"))
+        self.bouton_regles.setText(tr("Masquer les règles détaillées") if ouvert else tr("Règles détaillées ›"))
 
     def _basculer_fantome(self, coche: bool) -> None:
         self.fantome = coche
@@ -400,7 +452,7 @@ class CoursePage(QDialog):
             # un jeu qui se classe au temps réel.
             phrase = tr("L'écart à votre record en {} ({} sans chargements) suit le chrono à chaque carte "
                         "quittée.").format(nom, course.format_temps(record.net_us))
-        self._ligne_fantome.decrire(phrase)
+        self._phrase_fantome.setText(phrase)
         self.note_fantome = phrase
 
     def _figer(self, oui: bool) -> None:

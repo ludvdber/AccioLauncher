@@ -779,6 +779,10 @@ class Ideale:
     chargements : le seul que le journal découpe par carte)."""
     net_us: int
     a_gagner_us: int              # ce qui sépare le record (sans chargements) de la course idéale
+    # La même, au temps qui CLASSE le jeu : le record moins ce qui reste à gagner (les chargements du record
+    # restent). À côté d'un record en temps réel (HP4 à HP6), c'est ce nombre-là qui se montre : le temps sans
+    # chargements y paraissait plus court que le record d'un écart qui n'est pas à gagner.
+    temps_us: int = 0
 
 
 def ideale(courses_du_jeu: Iterable[Passee], categorie: str, temps: str = SANS_CHARGEMENTS) -> Ideale | None:
@@ -792,7 +796,8 @@ def ideale(courses_du_jeu: Iterable[Passee], categorie: str, temps: str = SANS_C
     parcours = [s.carte for s in record.segments]
     memes = [c for c in valables if [s.carte for s in c.segments] == parcours]
     total = sum(min(c.segments[i].net_us for c in memes) for i in range(len(parcours)))
-    return Ideale(total, max(0, record.net_us - total))
+    a_gagner = max(0, record.net_us - total)
+    return Ideale(total, a_gagner, record.temps(temps) - a_gagner)
 
 
 def passages_d_avant(courses_du_jeu: Iterable[Passee], code: str, categorie: str,

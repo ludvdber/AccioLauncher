@@ -379,6 +379,15 @@ class TestTempsQuiClasse:
         seule = course.ideale([a], "Any%")
         assert seule is not None and seule.a_gagner_us == 0
 
+    def test_course_ideale_au_temps_qui_classe(self):
+        """En temps réel, l'idéale garde les chargements du record : seul le temps à gagner s'en retire."""
+        a = _gardee("AAAA-AAAA", 30, ("PrivetDr", 10, False), ("Adv1Willow", 20, False), reel=40, ecrite=1)
+        b = _gardee("BBBB-BBBB", 31, ("PrivetDr", 8, False), ("Adv1Willow", 23, False), reel=41, ecrite=2)
+        reel = course.ideale([a, b], "Any%", course.REEL)
+        assert reel is not None and (reel.net_us, reel.a_gagner_us, reel.temps_us) == (28, 2, 38)
+        net = course.ideale([a, b], "Any%")
+        assert net is not None and net.temps_us == net.net_us == 28
+
     def test_passages_d_avant(self):
         a = _gardee("AAAA-AAAA", 30, ("PrivetDr", 10, False), ("Adv1Willow", 20, False))
         b = _gardee("BBBB-BBBB", 31, ("PrivetDr", 12, False), ("Adv1Willow", 19, False))
@@ -481,6 +490,19 @@ class TestReglesDuCatalogue:
         r = course_regles.lire(self._bloc(categories=[{"id": "Any%", "rule": "a"}, {"id": "Any%", "rule": "b"},
                                                       {"id": "x" * 30, "rule": "c"}, {"id": "100%", "rule": "d"}]))
         assert r is not None and r.idents == ("Any%", "100%") and r.categorie("Any%").regle == "a"
+
+    @pytest.mark.parametrize(("page", "lue"), [("hp1pc", "hp1pc"), (None, ""), ("../hp4", ""), ("HP4", ""),
+                                               (4, ""), ("a" * 41, "")])
+    def test_page_speedrun(self, page, lue):
+        """L'identifiant finit dans une adresse : mal formé, pas de lien, mais la course reste."""
+        from src.core import course_regles
+        r = course_regles.lire(self._bloc(speedrun=page))
+        assert r is not None and r.speedrun == lue
+
+    def test_page_speedrun_de_chaque_jeu(self):
+        from src.core.game_data import load_catalog
+        pages = {g.id: g.course.speedrun for g in load_catalog().games if g.course is not None}
+        assert pages == {"hp1": "hp1pc", "hp2": "hp2pc", "hp3": "hp3pc", "hp4": "hp4", "hp5": "hp5", "hp6": "hp6"}
 
 
 class TestParCarte:

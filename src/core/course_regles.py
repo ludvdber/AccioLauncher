@@ -6,7 +6,7 @@ sans chargements pour HP1 à HP3, comme speedrun.com), le départ et l'arrivée 
 correctif qui sait chronométrer. Une règle lue un mardi s'ouvre le mardi, traduite, sans republier l'exe.
 
     "race": {
-      "fix_min": "2.5.0", "timing": "real",
+      "fix_min": "2.5.0", "timing": "real", "speedrun": "hp4",
       "start": "…", "end": "…",
       "categories": [{"id": "Any%", "rule": "…"},
                      {"id": "All Shields", "name": "Tous les boucliers", "rule": "…", "note": "…"}],
@@ -16,7 +16,8 @@ correctif qui sait chronométrer. Une règle lue un mardi s'ouvre le mardi, trad
 `id` est écrit TEL QUEL dans la ligne ACCIO que le correctif dessine (ASCII, `course.ligne_id`) et nomme la
 catégorie dans `classement.json` ; `name` est ce que l'interface montre (l'`id` à défaut) ; `note` dit, quand il
 y en a un, l'écart entre le chrono d'Accio et celui de speedrun.com pour cette catégorie. Chaque catégorie porte
-son propre bloc `i18n`. Le catalogue est DISTANT : tout est contrôlé, une catégorie mal formée est sautée, un
+son propre bloc `i18n`. `speedrun` est l'identifiant de la page du jeu sur speedrun.com (`hp1pc`, `hp4`…) : le
+Carnet y renvoie pour les records du jeu d'origine ; absent ou mal formé, pas de lien. Le catalogue est DISTANT : tout est contrôlé, une catégorie mal formée est sautée, un
 bloc sans catégorie valable n'existe pas (le jeu n'a pas de course).
 """
 
@@ -28,6 +29,8 @@ from src.core.catalogue_blocs import _loc
 
 REEL = "reel"                           # temps réel, chargements compris
 SANS_CHARGEMENTS = "sans_chargements"
+# L'identifiant d'une page de speedrun.com : il finit dans une adresse, rien d'autre n'y passe.
+_PAGE = re.compile(r"[a-z0-9_]{1,40}")
 _TEMPS = {"real": REEL, "loadless": SANS_CHARGEMENTS}
 # Un nom de catégorie de la ligne ACCIO : 23 signes au plus (la ligne en fait 63, `race::IsRaceId`), sans
 # point-virgule ni tabulation (l'ini et le journal du correctif les liraient comme des séparateurs).
@@ -64,6 +67,7 @@ class Regles:
     depart: str
     arrivee: str
     categories: tuple[Categorie, ...]
+    speedrun: str = ""                  # la page du jeu sur speedrun.com (`hp1pc`) ; vide : pas de lien
 
     def categorie(self, ident: str) -> Categorie | None:
         return next((c for c in self.categories if c.ident == ident), None)
@@ -104,4 +108,6 @@ def lire(brut: object) -> Regles | None:
     for c in map(_categorie, liste[:CATEGORIES_MAX]):
         if c is not None and all(c.ident != d.ident for d in categories):
             categories.append(c)
-    return Regles(correctif_min, temps, depart, arrivee, tuple(categories)) if categories else None
+    page = brut.get("speedrun")
+    speedrun = page if isinstance(page, str) and _PAGE.fullmatch(page) else ""
+    return Regles(correctif_min, temps, depart, arrivee, tuple(categories), speedrun) if categories else None
