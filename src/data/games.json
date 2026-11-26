@@ -1261,7 +1261,7 @@
         "timing": "loadless",
         "speedrun": "hp2pc",
         "start": "Le launcher ouvre une nouvelle partie à Privet Drive : le chrono part quand elle se charge.",
-        "end": "Quand le générique de fin commence à se charger.",
+        "end": "Au chargement de la cérémonie de la Coupe des Quatre Maisons, après le Basilic.",
         "categories": [
           {
             "id": "Any%",
@@ -1333,11 +1333,11 @@
         "i18n": {
           "en": {
             "start": "The launcher opens a new game at Privet Drive: the timer starts when it loads.",
-            "end": "When the end credits start loading."
+            "end": "When the House Cup ceremony starts loading, after the Basilisk."
           },
           "es": {
             "start": "El launcher abre una partida nueva en Privet Drive: el cronómetro arranca cuando se carga.",
-            "end": "Cuando los créditos finales empiezan a cargarse."
+            "end": "Cuando empieza a cargarse la ceremonia de la Copa de las Casas, tras el basilisco."
           }
         }
       },
@@ -2118,7 +2118,7 @@
         "timing": "loadless",
         "speedrun": "hp3pc",
         "start": "Quand la nouvelle partie commence.",
-        "end": "Quand le dernier script ouvre le générique de fin.",
+        "end": "À la première image de la cinématique du train, après le « oui » à Dumbledore.",
         "categories": [
           {
             "id": "Any%",
@@ -2148,17 +2148,17 @@
             "id": "All Requirements",
             "name": "Toutes les conditions",
             "rule": "Sans sauter les conditions : les 5 cartes des 3 mini-jeux, 10 boucliers dans les 3 épreuves de sorts, et les 8 mots de passe des tableaux.",
-            "note": "speedrun.com arrête ce temps quand on ferme la liste des conditions remplies de Dumbledore ; le chrono d'Accio, au générique de fin.",
+            "note": "speedrun.com arrête ce temps quand on ferme la liste des conditions remplies de Dumbledore ; le chrono d'Accio, à la cinématique du train, avant le générique.",
             "i18n": {
               "en": {
                 "name": "All Requirements",
                 "rule": "With no requirements skip: all 5 cards of the 3 minigames, 10 shields in the 3 spell challenges, and all 8 portrait passwords.",
-                "note": "speedrun.com stops this time when Dumbledore's completed requirements list is closed; Accio's timer, at the end credits."
+                "note": "speedrun.com stops this time when Dumbledore's completed requirements list is closed; Accio's timer, at the cutscene on the train, before the credits."
               },
               "es": {
                 "name": "Todos los requisitos",
                 "rule": "Sin saltar los requisitos: los 5 cromos de los 3 minijuegos, 10 escudos en los 3 desafíos de hechizos, y las 8 contraseñas de los cuadros.",
-                "note": "speedrun.com detiene este tiempo al cerrar la lista de requisitos cumplidos de Dumbledore; el cronómetro de Accio, en los créditos finales."
+                "note": "speedrun.com detiene este tiempo al cerrar la lista de requisitos cumplidos de Dumbledore; el cronómetro de Accio, en la cinemática del tren, antes de los créditos."
               }
             }
           },
@@ -2181,11 +2181,11 @@
         "i18n": {
           "en": {
             "start": "When the new game starts.",
-            "end": "When the last script opens the end credits."
+            "end": "On the first frame of the cutscene on the train, after saying yes to Dumbledore."
           },
           "es": {
             "start": "Cuando empieza la partida nueva.",
-            "end": "Cuando el último script abre los créditos finales."
+            "end": "En el primer fotograma de la cinemática del tren, tras decir que sí a Dumbledore."
           }
         }
       },
