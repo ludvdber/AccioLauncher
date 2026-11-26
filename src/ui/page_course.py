@@ -76,6 +76,8 @@ class Choix:
     categorie: str
     empreinte: course.Empreinte
     fantome: bool
+    complet: bool = False
+    coin: int = 4
 
 
 @dataclass(frozen=True)
@@ -119,6 +121,8 @@ class CoursePage(QDialog):
         self._install_path = Path(config.install_path)
         self.ini = mode_course.ini(game, self._install_path)
         self.fantome = config.course_fantome
+        self.complet = config.course_complet
+        self.coin = config.course_coin
         self.choix: Choix | None = None
         self.empreinte: course.Empreinte | None = None
         self._fil: course_ui.EmpreinteThread | None = None
@@ -180,7 +184,7 @@ class CoursePage(QDialog):
     def _panneau(self) -> QFrame:
         """Le panneau de gauche : la catégorie, départ, arrivée et temps qui compte, les règles, ce qui bloque,
         ce qui s'affiche dans le jeu, et « Partir »."""
-        panneau, gauche = visuel.cadre("panneauCourse", (24, 20, 24, 20), 14)
+        panneau, gauche = visuel.cadre("panneauCourse", (24, 14, 24, 14), 8)
         tete = QHBoxLayout()
         tete.setSpacing(14)
         self._nom_categorie = visuel.grand_titre("", 26, visuel.OR_CLAIR)
@@ -247,7 +251,25 @@ class CoursePage(QDialog):
             gauche.addWidget(note)
 
         gauche.addWidget(visuel.filet())
-        gauche.addWidget(surtitre(tr("Dans le jeu")))
+        dans_le_jeu = QHBoxLayout()
+        dans_le_jeu.setSpacing(18)
+        jeu = QVBoxLayout()
+        jeu.setSpacing(6)
+        jeu.addWidget(surtitre(tr("Dans le jeu")))
+        details = QHBoxLayout()
+        details.setSpacing(8)
+        self._groupe_details = QButtonGroup(self)
+        self.details: dict[bool, QPushButton] = {}
+        for complet, nom, texte_ in ((False, tr("Simple"), tr("une ligne : chrono, écart, images/s")),
+                                     (True, tr("Complet"), tr("en plus, les cartes et leurs écarts"))):
+            b = visuel.tuile_choix(nom, texte_)
+            b.setChecked(complet == self.complet)
+            b.toggled.connect(lambda oui, c=complet: oui and self._choisir_detail(c))
+            self._groupe_details.addButton(b)
+            self.details[complet] = b
+            details.addWidget(b)
+        details.addStretch()
+        jeu.addLayout(details)
         fantome = QHBoxLayout()
         fantome.setSpacing(12)
         self.bascule_fantome = ToggleSwitch(self.fantome)
@@ -260,7 +282,19 @@ class CoursePage(QDialog):
         self._phrase_fantome = visuel.libelle("", 13, visuel.GRIS, retour=True)
         mots.addWidget(self._phrase_fantome)
         fantome.addLayout(mots, 1)
-        gauche.addLayout(fantome)
+        jeu.addLayout(fantome)
+        dans_le_jeu.addLayout(jeu, 1)
+        coin = QVBoxLayout()
+        coin.setSpacing(6)
+        coin.addWidget(surtitre(tr("Coin de l'écran")))
+        self.ecran = visuel.EcranCoins(self.coin, self.complet)
+        self.ecran.coin_choisi.connect(self._choisir_coin)
+        coin.addWidget(self.ecran)
+        self._nom_coin = visuel.libelle(visuel.nom_coin(self.coin), 12, visuel.GRIS)
+        coin.addWidget(self._nom_coin)
+        coin.addStretch()
+        dans_le_jeu.addLayout(coin)
+        gauche.addLayout(dans_le_jeu)
 
         gauche.addStretch()
         pied = QHBoxLayout()
@@ -436,6 +470,14 @@ class CoursePage(QDialog):
         self.regles_detaillees.setVisible(ouvert)
         self.bouton_regles.setText(tr("Masquer les règles détaillées") if ouvert else tr("Règles détaillées ›"))
 
+    def _choisir_detail(self, complet: bool) -> None:
+        self.complet = complet
+        self.ecran.montrer_detail(complet)
+
+    def _choisir_coin(self, coin: int) -> None:
+        self.coin = coin
+        self._nom_coin.setText(visuel.nom_coin(coin))
+
     def _basculer_fantome(self, coche: bool) -> None:
         self.fantome = coche
         self._decrire_fantome()
@@ -456,7 +498,7 @@ class CoursePage(QDialog):
         self.note_fantome = phrase
 
     def _figer(self, oui: bool) -> None:
-        for b in (*self.pastilles.values(), self.bascule_fantome):
+        for b in (*self.pastilles.values(), *self.details.values(), self.bascule_fantome, self.ecran):
             b.setEnabled(not oui)
         self._partir.setEnabled(not oui and self.ini is not None and not self.bloquants)
 
@@ -485,7 +527,7 @@ class CoursePage(QDialog):
         self._lacher_fil(sur_sa_fin=True)
         self.empreinte = emp
         if self.ini is not None:
-            self.choix = Choix(self.game.id, self.ini, self.categorie, emp, self.fantome)
+            self.choix = Choix(self.game.id, self.ini, self.categorie, emp, self.fantome, self.complet, self.coin)
         self.accept()
 
     def _echec(self, texte_: str) -> None:

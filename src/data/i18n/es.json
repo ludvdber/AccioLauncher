@@ -1858,6 +1858,15 @@
     "À gagner": "Por ganar",
     "À {} de la place {}.": "A {} del puesto {}.",
     "Nouveau meilleur passage à cette place.": "Nuevo mejor tramo en este lugar.",
-    "Votre record, moins ce que vos meilleurs passages de chaque carte peuvent encore y gagner.": "Tu récord, menos lo que tus mejores tramos de cada mapa aún pueden ganarle."
+    "Votre record, moins ce que vos meilleurs passages de chaque carte peuvent encore y gagner.": "Tu récord, menos lo que tus mejores tramos de cada mapa aún pueden ganarle.",
+    "Simple": "Simple",
+    "Complet": "Completo",
+    "une ligne : chrono, écart, images/s": "una línea: cronómetro, diferencia, imágenes/s",
+    "en plus, les cartes et leurs écarts": "además, los mapas y sus diferencias",
+    "Coin de l'écran": "Esquina de la pantalla",
+    "En haut à gauche": "Arriba a la izquierda",
+    "En haut à droite": "Arriba a la derecha",
+    "En bas à gauche": "Abajo a la izquierda",
+    "En bas à droite": "Abajo a la derecha"
   }
 }

@@ -9,7 +9,8 @@ image, fenêtre, son, manette, champ de vision (S7.6), et les réparations (`Lum
 `TextMeasureCache` de HP3, `SPEEDRUN_PLAN.md` § 9). La difficulté de la 1.4 n'est pas réglée ici : elle doit
 être « Normal » (`difficulte_presets`), sinon la course est refusée avant le lancement, raison dite.
 
-**Les clés de la course** (`[Accio.Game] RaceLog=1`, `[Accio.Overlay] RaceId=<ligne>`, et pour HP4 à HP6
+**Les clés de la course** (`[Accio.Game] RaceLog=1`, `[Accio.Overlay] RaceId=<ligne>`, ce qui se montre dans
+le jeu, `RaceCorner`, `RaceDetail`, `RaceClock`, `RaceRecord`, `RaceLauncher` (`Affichage`), et pour HP4 à HP6
 `[Accio.Game] RaceSaves=<dossier vide>`) sont posées par le launcher au départ et retirées après. **Elles ne
 sont dans AUCUN ini livré** (règle du correctif : `settings_test.cpp` les y refuse). La course est donc proposée
 selon la VERSION de la DLL du correctif (`version_dll`, sa ressource de version), comparée à celle que le
@@ -35,6 +36,7 @@ from typing import Any
 
 from src.core import course, une_vie
 from src.core import reglages_correctif as rc
+from src.core.config import APP_VERSION
 from src.core.ecriture_atomique import ecrire_atomique
 from src.core.game_data import GameData
 
@@ -45,6 +47,13 @@ JEU, FENETRE, APERCU, SHADERS, TEST, DURETE = (
 CLE_JOURNAL = (JEU, "RaceLog")
 CLE_ID = (APERCU, "RaceId")
 CLE_SAUVEGARDES = (JEU, "RaceSaves")
+# Ce que le correctif montre de la course (`race::Display`, correctif 2.5.0) : le coin, Simple ou Complet, le
+# chrono en temps réel ou sans chargements (le temps qui classe le jeu), le record, la version du launcher.
+CLE_COIN = (APERCU, "RaceCorner")
+CLE_DETAIL = (APERCU, "RaceDetail")
+CLE_HORLOGE = (APERCU, "RaceClock")
+CLE_RECORD = (APERCU, "RaceRecord")
+CLE_LAUNCHER = (APERCU, "RaceLauncher")
 REPLI_SAUVEGARDES = "Accio_Courses"      # <AppData\Local>\Accio_Courses\<code> quand le chemin est trop long
 
 
@@ -280,16 +289,36 @@ def en_cours(game_id: str | None = None) -> list[EnCours]:
 
 # ── Entrer, sortir ──
 
+@dataclass(frozen=True)
+class Affichage:
+    """Ce que le joueur a choisi de voir dans le jeu (page Course) : Complet ou Simple, le coin (1 haut gauche,
+    2 haut droite, 3 bas gauche, 4 bas droite) ; et son record de la catégorie au temps qui classe le jeu
+    (None : aucun), que Complet montre."""
+    complet: bool = False
+    coin: int = 4
+    record_us: int | None = None
+
+
+def _cles_affichage(game: GameData, affichage: Affichage) -> list[tuple[str, str, str]]:
+    reel = game.course is not None and game.course.temps == course.REEL
+    cles = [(*CLE_COIN, str(affichage.coin if affichage.coin in (1, 2, 3, 4) else 4)),
+            (*CLE_DETAIL, "1" if affichage.complet else "0"), (*CLE_HORLOGE, "1" if reel else "0"),
+            (*CLE_LAUNCHER, APP_VERSION)]
+    if affichage.record_us is not None and affichage.record_us >= 0:
+        cles.append((*CLE_RECORD, str(affichage.record_us)))
+    return cles
+
+
 class CourseRefusee(Exception):
     """La course ne peut pas partir ; `args[0]` est le code de la raison (l'interface la dit)."""
 
 
 def entrer(game: GameData, chemin_ini: Path, categorie: str, empreinte: course.Empreinte, difficulte: str,
-           jour: date | None = None, fantome: str | None = None) -> EnCours:
+           jour: date | None = None, fantome: str | None = None, affichage: Affichage | None = None) -> EnCours:
     """Tire le code, crée le dossier NEUF de la course, retient puis pose les clés tenues et celles de la
-    course, retire le journal d'une course passée et pose le fantôme (`course.fantome` ; None : aucun, et
-    celui d'une course passée est retiré). `RaceLog` est posée en DERNIER : un échec en route
-    laisse le correctif sans course, et ce qui a été posé est rendu aussitôt."""
+    course (dont ce qui se montre dans le jeu, `affichage`), retire le journal d'une course passée et pose le
+    fantôme (`course.fantome` ; None : aucun, et celui d'une course passée est retiré). `RaceLog` est posée
+    en DERNIER : un échec en route laisse le correctif sans course, et ce qui a été posé est rendu aussitôt."""
     jour = jour or date.today()
     code = course.tirer_code()
     ligne = course.ligne_id(code, jour, empreinte.courte, game.id, categorie)
@@ -302,7 +331,8 @@ def entrer(game: GameData, chemin_ini: Path, categorie: str, empreinte: course.E
         trouve[0].mkdir(parents=True, exist_ok=True)
         sauvegardes = trouve[1]
     restes = ecarts(game.id, chemin_ini)
-    a_poser = [(x.section, x.cle, x.posee) for x in restes] + [(*CLE_ID, ligne)]
+    a_poser = ([(x.section, x.cle, x.posee) for x in restes] + [(*CLE_ID, ligne)]
+               + _cles_affichage(game, affichage or Affichage()))
     if sauvegardes:
         a_poser.append((*CLE_SAUVEGARDES, sauvegardes))
     a_poser.append((*CLE_JOURNAL, "1"))

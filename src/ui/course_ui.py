@@ -192,11 +192,15 @@ def lancer(view: GameDetailView, choix: Choix) -> None:
     game, config = view.game, view.manager.config
     if game is None or game.id != choix.jeu or game.course is None or view.partie_en_cours():
         return
-    if choix.fantome != config.course_fantome:
-        config.course_fantome = choix.fantome
+    if (choix.fantome, choix.complet, choix.coin) != (config.course_fantome, config.course_complet,
+                                                      config.course_coin):
+        config.course_fantome, config.course_complet, config.course_coin = choix.fantome, choix.complet, choix.coin
         config.save()
-    fantome = (course.fantome(course.passees(game.id), choix.categorie, game.course.temps)
-               if choix.fantome else None)
+    passees = course.passees(game.id)
+    fantome = course.fantome(passees, choix.categorie, game.course.temps) if choix.fantome else None
+    record = course.meilleure(passees, choix.categorie, game.course.temps)
+    affichage = mode_course.Affichage(choix.complet, choix.coin,
+                                      record.temps(game.course.temps) if record is not None else None)
     native = ""
     if game.difficulte is not None:
         from src.core import difficulte_jeu
@@ -204,7 +208,7 @@ def lancer(view: GameDetailView, choix: Choix) -> None:
         native = f";native={rang}" if rang is not None else ""
     try:
         etat = mode_course.entrer(game, choix.ini, choix.categorie, choix.empreinte, "normal" + native,
-                                  fantome=fantome)
+                                  fantome=fantome, affichage=affichage)
     except (mode_course.CourseRefusee, OSError, ValueError) as exc:
         code = str(exc.args[0]) if isinstance(exc, mode_course.CourseRefusee) and exc.args else "ini"
         message(view, QMessageBox.Icon.Warning, tr("Course"), raison(code))

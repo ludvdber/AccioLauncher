@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from src.core import course, mode_course
+from src.core.config import APP_VERSION
 from src.core.game_data import GameData, load_catalog
 
 
@@ -127,6 +128,26 @@ def test_ecarts(tmp_path):
         ("FPSLimit", "0", "60"), ("QuidditchDifficulty", "2", "0"), ("DamageTaken", "3", "1")}
 
 
+def test_affichage_choisi_pose_puis_rendu(tmp_path):
+    jeu, ini = _installer(tmp_path, "hp2", "HP2/system/Game.exe", "winmm.ini", INI_HP2)
+    avant = ini.read_bytes()
+    etat = mode_course.entrer(jeu, ini, "Any%", EMPREINTE, "normal",
+                              affichage=mode_course.Affichage(complet=True, coin=2, record_us=4_580_000_000))
+    texte = ini.read_text(encoding="utf-8")
+    assert all(c in texte for c in ("RaceCorner=2", "RaceDetail=1", "RaceRecord=4580000000"))
+    assert mode_course.sortir(etat) and ini.read_bytes() == avant
+    hors = mode_course.entrer(jeu, ini, "Any%", EMPREINTE, "normal", affichage=mode_course.Affichage(coin=9))
+    assert "RaceCorner=4" in ini.read_text(encoding="utf-8"), "un coin inconnu : en bas à droite"
+    mode_course.sortir(hors)
+
+
+@pytest.mark.parametrize(("game_id", "horloge"), [("hp2", "0"), ("hp3", "0"), ("hp4", "1"), ("hp5", "1"), ("hp6", "1")])
+def test_horloge_du_temps_qui_classe(game_id, horloge):
+    cles = dict(((s, c), v) for s, c, v in mode_course._cles_affichage(_jeu(game_id, "x/x.exe"),
+                                                                       mode_course.Affichage()))
+    assert cles[mode_course.CLE_HORLOGE] == horloge, "temps réel pour HP4 à HP6, sans chargements avant"
+
+
 def test_entrer_puis_sortir_rend_l_ini_a_l_octet(tmp_path):
     jeu, ini = _installer(tmp_path, "hp2", "HP2/system/Game.exe", "winmm.ini", INI_HP2)
     avant = ini.read_bytes()
@@ -135,6 +156,9 @@ def test_entrer_puis_sortir_rend_l_ini_a_l_octet(tmp_path):
     assert mode_course.actif(ini) and mode_course.ecarts("hp2", ini) == []
     texte = ini.read_text(encoding="utf-8")
     assert f"RaceId={etat.ligne_id}" in texte and "RaceLog=1" in texte and "RaceSaves" not in texte
+    # Ce qui se montre dans le jeu, par défaut : Simple, en bas à droite, sans chargements (HP2), sans record.
+    assert all(c in texte for c in ("RaceCorner=4", "RaceDetail=0", "RaceClock=0", f"RaceLauncher={APP_VERSION}"))
+    assert "RaceRecord" not in texte
     assert etat.ligne_id.startswith(f"ACCIO {etat.code} ") and etat.ligne_id.endswith(" abababab HP2 Any%")
     assert not (ini.parent / course.FICHIER).exists()
     assert mode_course.arguments(jeu, tmp_path / "jeux") == ("PrivetDr.unr", "-SAVESLOT=7")

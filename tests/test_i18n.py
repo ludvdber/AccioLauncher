@@ -27,6 +27,8 @@ IDENTIQUES_TOLEREES = {
     "Discord", "Version {}", "Catalogue {}", "Catalogue", "Menus", "Versions de {}", "Versions", "Halloween",
     "Accio Launcher {}", "Folio", "Folio de {}", "Badges", "Collections",
     "Quidditch", "Gryffindor", "Slytherin", "Ravenclaw", "Hufflepuff",
+    # Ce que la course montre dans le jeu (page Course) : « Simple » en anglais comme en espagnol.
+    "Simple",
     # « Gris » (vert des montagnes) s'écrit pareil en espagnol.
     "Gris",
     # Les mots techniques des fiches de la page Image (refonte B) : des sigles.

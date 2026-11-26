@@ -12,10 +12,20 @@ comme la police à chasse fixe de la maquette, sans charger une police de plus.
 
 import zlib
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QIcon
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import (
+    QButtonGroup,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
+)
 
+from src.core.i18n import tr
 from src.ui.composants import ENCRE, lien, police, transparent
 from src.ui.fonts import cinzel
 from src.ui.icon_button import pixmap_icone
@@ -67,6 +77,19 @@ QPushButton#boutonCadreOr {{
     background: transparent; border: 1px solid #d6a72c; color: #f0d060;
 }}
 QPushButton#boutonCadreOr:hover {{ background: rgba(214, 167, 44, 0.12); }}
+QPushButton#tuileChoix {{
+    padding: 0; border-radius: 6px;
+    background: #11111f; border: 1px solid #2a2a48;
+}}
+QPushButton#tuileChoix:checked {{ background: rgba(214, 167, 44, 0.12); border-color: #d6a72c; }}
+QPushButton#tuileChoix:hover {{ border-color: #d6a72c; }}
+QFrame#ecranCoins {{ background: #1b1b33; border: 1px solid #3a3a58; border-radius: 4px; }}
+QPushButton#coinEcran {{
+    padding: 0; border-radius: 2px; background: rgba(255, 255, 255, 0.06);
+    border: 1px dashed rgba(255, 255, 255, 0.35);
+}}
+QPushButton#coinEcran:hover {{ border-color: #f0d060; }}
+QPushButton#coinEcran:checked {{ background: rgba(0, 0, 0, 0.78); border: 1px solid #f0d060; }}
 """)
 
 # Les fonds des ronds à initiale : ceux de la maquette, choisis par le nom du joueur (toujours le même rond pour
@@ -178,6 +201,72 @@ def bouton_partir() -> QPushButton:
     icone.addPixmap(pixmap_icone("chrono", 18, QColor("#6f6d8e")), QIcon.Mode.Disabled)
     b.setIcon(icone)
     return b
+
+
+_LARGEUR_CHOIX = 190
+
+
+def tuile_choix(nom: str, texte_: str) -> QPushButton:
+    """Une tuile qu'on coche (Simple, Complet) : le nom clair, sa phrase grise dessous."""
+    b = QPushButton()
+    b.setObjectName("tuileChoix")
+    b.setCheckable(True)
+    b.setCursor(Qt.CursorShape.PointingHandCursor)
+    b.setAutoDefault(False)
+    b.setAccessibleName(nom)
+    b.setAccessibleDescription(texte_)
+    lay = QVBoxLayout(b)
+    lay.setContentsMargins(12, 8, 12, 8)
+    lay.setSpacing(2)
+    for contenu, px, encre in ((nom, 14, CREME), (texte_, 12, GRIS)):
+        lbl = libelle(contenu, px, encre, retour=True)
+        lbl.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        lay.addWidget(lbl)
+    # Un bouton ne prend pas la taille de ce qu'il contient : la sienne vient de ses deux lignes, à sa largeur.
+    b.setFixedWidth(_LARGEUR_CHOIX)
+    b.setMinimumHeight(lay.totalHeightForWidth(_LARGEUR_CHOIX))
+    return b
+
+
+def nom_coin(coin: int) -> str:
+    """Le coin de l'écran, en mots (1 haut gauche, 2 haut droite, 3 bas gauche, 4 bas droite)."""
+    return {1: tr("En haut à gauche"), 2: tr("En haut à droite"), 3: tr("En bas à gauche")}.get(
+        coin, tr("En bas à droite"))
+
+
+class EcranCoins(QFrame):
+    """L'écran du jeu en petit et ses quatre coins : le coin coché porte la boîte de la course, à la taille de
+    ce qu'elle montre (une bande en Simple, un pavé en Complet)."""
+
+    coin_choisi = pyqtSignal(int)
+    _LARGEUR, _HAUTEUR, _BORD = 160, 90, 5   # 16:9, l'écran du jeu
+
+    def __init__(self, coin: int, complet: bool) -> None:
+        super().__init__()
+        self.setObjectName("ecranCoins")
+        self.setFixedSize(self._LARGEUR, self._HAUTEUR)
+        self._groupe = QButtonGroup(self)
+        self.coins: dict[int, QPushButton] = {}
+        for n in (1, 2, 3, 4):
+            b = QPushButton(self)
+            b.setObjectName("coinEcran")
+            b.setCheckable(True)
+            b.setChecked(n == coin)
+            b.setCursor(Qt.CursorShape.PointingHandCursor)
+            b.setAutoDefault(False)
+            b.setAccessibleName(nom_coin(n))
+            b.setToolTip(nom_coin(n))
+            b.toggled.connect(lambda oui, n=n: oui and self.coin_choisi.emit(n))
+            self._groupe.addButton(b)
+            self.coins[n] = b
+        self.montrer_detail(complet)
+
+    def montrer_detail(self, complet: bool) -> None:
+        large, haut = (44, 37) if complet else (62, 11)
+        for n, b in self.coins.items():
+            x = self._LARGEUR - large - self._BORD if n in (2, 4) else self._BORD
+            y = self._HAUTEUR - haut - self._BORD if n in (3, 4) else self._BORD
+            b.setGeometry(x, y, large, haut)
 
 
 def rond(joueur: str, *, vous: bool = False, taille: int = 26) -> QLabel:

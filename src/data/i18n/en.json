@@ -1857,6 +1857,15 @@
     "À gagner": "To gain",
     "À {} de la place {}.": "{} behind place {}.",
     "Nouveau meilleur passage à cette place.": "New best segment at this place.",
-    "Votre record, moins ce que vos meilleurs passages de chaque carte peuvent encore y gagner.": "Your record, minus what your best segment on each map can still gain on it."
+    "Votre record, moins ce que vos meilleurs passages de chaque carte peuvent encore y gagner.": "Your record, minus what your best segment on each map can still gain on it.",
+    "Simple": "Simple",
+    "Complet": "Full",
+    "une ligne : chrono, écart, images/s": "one line: timer, gap, frames per second",
+    "en plus, les cartes et leurs écarts": "plus the maps and their gaps",
+    "Coin de l'écran": "Screen corner",
+    "En haut à gauche": "Top left",
+    "En haut à droite": "Top right",
+    "En bas à gauche": "Bottom left",
+    "En bas à droite": "Bottom right"
   }
 }

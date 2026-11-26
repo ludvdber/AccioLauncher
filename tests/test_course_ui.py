@@ -136,9 +136,15 @@ class TestFiche:
         from src.core.config import Config                          # une dataclass, pas un objet Qt (règle 12)
         monkeypatch.setattr(Config, "save", lambda cfg: sauvees.append(cfg.course_fantome))
         lancees.clear()
-        course_ui.lancer(win._detail, Choix("hp2", ini, "Any%", emp, False))
+        course_ui.lancer(win._detail, Choix("hp2", ini, "Any%", emp, False, True, 2))
         assert not (ini.parent / course.FANTOME).exists() and win.manager.config.course_fantome is False
         assert sauvees == [False], "la préférence changée s'enregistre, une fois"
+        config = win.manager.config
+        assert config.course_complet and config.course_coin == 2, "Complet et le coin, retenus avec le fantôme"
+        record = course.meilleure(course.passees("hp2"), "Any%", _CATALOGUE["hp2"].course.temps)
+        texte = ini.read_text(encoding="utf-8")
+        assert record is not None and f"RaceRecord={record.net_us}" in texte, "HP2 se classe sans chargements"
+        assert "RaceDetail=1" in texte and "RaceCorner=2" in texte
 
     def test_jeu_qui_ne_part_pas_rend_les_reglages(self, make_window, monkeypatch):
         from src.ui import course_ui
@@ -185,6 +191,25 @@ class TestPage:
         page.pastilles["Warpless"].click()
         assert page.categorie == "Warpless" and page._regle.text() == regles.categorie("Warpless").regle
         assert page._partir.text() == "Partir en Sans warp"
+
+    def test_simple_complet_et_coin_de_l_ecran(self, make_window, monkeypatch, qtbot):
+        win, page = self._page(make_window, monkeypatch, qtbot)
+        assert page.details[False].isChecked() and not page.complet and page.coin == 4
+        assert page.ecran.coins[4].isChecked() and page._nom_coin.text() == "En bas à droite"
+        bande = page.ecran.coins[1].size()
+        page.details[True].click()
+        assert page.complet and page.ecran.coins[1].height() > bande.height(), "Complet : un pavé, plus une bande"
+        page.ecran.coins[2].click()
+        assert page.coin == 2 and page._nom_coin.text() == "En haut à droite"
+        assert [page.ecran.coins[n].isChecked() for n in (1, 2, 3, 4)] == [False, True, False, False]
+        # Le choix part avec la course ; la page se fige pendant l'empreinte.
+        page._figer(True)
+        assert not page.ecran.isEnabled() and not page.details[False].isEnabled()
+        page._figer(False)
+        page._prete(course.Empreinte("cd" * 32, "cdcdcdcd", ()))
+        assert page.choix is not None and page.choix.complet and page.choix.coin == 2
+        x = page.ecran.coins[2].geometry()
+        assert x.right() > page.ecran.width() // 2 and x.top() < page.ecran.height() // 2, "en haut à droite"
 
     def test_regles_detaillees_repliees(self, make_window, monkeypatch, qtbot):
         _, page = self._page(make_window, monkeypatch, qtbot)
