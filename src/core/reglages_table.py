@@ -49,6 +49,10 @@ SORTS_RETIRES = (
 # valeur par défaut du correctif.
 COULEURS_CIEL = (("5a9eef", ""), ("ff9a5a", "Orange"), ("f2c14e", "Doré"), ("b48ce6", "Mauve"),
                  ("e07a8f", "Rose"), ("7fd6c2", "Turquoise"), ("c9ced6", "Gris"))
+# La ligne des images par seconde du panneau ([Accio.Overlay] Color, correctif 2.6.0) : l'or du launcher
+# d'abord, celui que le correctif prend sans la clé. Des teintes claires : le texte a une ombre, pas de fond.
+COULEURS_COMPTEUR = (("d6a72c", ""), ("f0f0f4", "Blanc"), ("7ee07e", "Vert"), ("6ec8ff", "Bleu"),
+                     ("ffe14d", "Jaune"), ("ff9a5a", "Orange"), ("ff7ab8", "Rose"))
 LANGUES_MENU = (
     ("auto", ""), ("en", "English"), ("fr", "Français"), ("es", "Español"), ("de", "Deutsch"),
     ("it", "Italiano"), ("nl", "Nederlands"), ("pt", "Português"), ("pt-br", "Português (Brasil)"),
@@ -132,6 +136,10 @@ class Reglage:
     # Le mot technique (clé tr()), dans la fiche seulement : la ligne porte un nom simple, et
     # le connaisseur retrouve « FXAA » ou « suréchantillonnage » (refonte B, Ludo 2026-11-13).
     technique: str = ""
+    # La version de la DLL du correctif qui lit cette clé, quand sa SECTION existait avant elle (« Écran du
+    # jeu », `[Accio.Window] Monitor`, 2.5.0) : `reglages_correctif.portes_par` ne la montre pas sous une DLL
+    # plus ancienne, qui l'ignorerait (séance d'essais du 2026-11-27 : archives 1.4.2 en 2.4.0, sans la clé).
+    correctif_min: tuple[int, ...] = ()
 
 
 # L'ordre est celui de l'affichage. L'aide est une description COMPLÈTE : elle
@@ -198,7 +206,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "Windows. Un écran choisi passe avant « Toujours sur l'écran principal ». « Celui de Windows » "
             "laisse Windows décider ; un écran débranché aussi.",
             choix=(0, 1, 2, 3, 4), zero="Celui de Windows", format_choix="Écran {}",
-            onglet="affichage"),
+            onglet="affichage", correctif_min=(2, 5)),
     Reglage("ecran_principal", "Accio.Window", "UsePrimaryMonitor",
             "Toujours sur l'écran principal",
             "Avec plusieurs écrans, ouvre toujours le jeu sur l'écran principal de Windows. "
@@ -702,7 +710,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             onglet="image", se_voit=True, depend_de="ciel", depend_de_valeur=4),
     Reglage("compteur_fps", "Accio.Overlay", "ShowFPS",
             "Compteur d'images (FPS)",
-            "Affiche les images par seconde en haut à gauche. En jeu, F10 le masque ou le "
+            "Affiche les images par seconde dans le coin choisi. En jeu, F10 le masque ou le "
             "remet.",
             defaut=False, onglet="perfs"),
     # Le même pour HP3 (dinput8.ini, panneau F10 VU le 2026-10-21), sous un AUTRE identifiant, comme
@@ -711,7 +719,7 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
     # et le graphe, F10 les montre.
     Reglage("compteur_fps_hp3", "Accio.Overlay", "ShowFPS",
             "Compteur d'images (FPS)",
-            "Affiche les images par seconde en haut à gauche. En jeu, F10 le masque ou le "
+            "Affiche les images par seconde dans le coin choisi. En jeu, F10 le masque ou le "
             "remet.",
             defaut=False, onglet="perfs"),
     Reglage("panneau_perfs", "Accio.Overlay", "",
@@ -720,6 +728,20 @@ REGLAGES: dict[str, Reglage] = {r.ident: r for r in (
             "vive, latence. En jeu, F11 lance une mesure des performances et F11 à nouveau l'arrête ;"
             " elle est enregistrée dans le dossier « benchmarks » du jeu.",
             defaut=False, onglet="perfs", cout=(("CPU", 1),)),
+    # Le coin du panneau, compteur et performances ensemble ([Accio.Overlay] Position) : les trois moteurs du
+    # correctif le lisent depuis 2026-09-25, HP3 compris, sous le même identifiant. Pas de `depend_de` : F10
+    # montre le panneau même sans ligne cochée. La boîte de la course passe au-delà s'ils partagent un coin.
+    Reglage("coin_compteur", "Accio.Overlay", "Position",
+            "Coin du compteur",
+            "Le coin de l'image où s'affichent le compteur d'images et le panneau de performances.",
+            choix=(1, 2, 3, 4), zero="En haut à gauche",
+            etiquettes=((2, "En haut à droite"), (3, "En bas à gauche"), (4, "En bas à droite")),
+            onglet="perfs"),
+    Reglage("couleur_compteur", "Accio.Overlay", "Color",
+            "Couleur du compteur",
+            "La couleur des images par seconde, en tête du panneau.",
+            choix=tuple(v for v, _ in COULEURS_COMPTEUR), zero="Or", noms_choix=COULEURS_COMPTEUR,
+            onglet="perfs", correctif_min=(2, 6)),
     # HP6, vu en jeu le 2026-09-26 : son menu de langue s'ouvre sur la langue
     # de Windows, mais le jeu ne connaît qu'une variante de chaque langue — un
     # Windows en français de Belgique le faisait partir en ANGLAIS (le menu se

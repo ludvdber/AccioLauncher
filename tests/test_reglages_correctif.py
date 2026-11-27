@@ -12,6 +12,7 @@ from src.core.game_data import GameData
 from src.core.i18n import tr
 from src.core.reglages_table import SORTS_RETIRES
 from tests.rubriques import pages
+from tests.test_mode_course import dll_versionnee
 
 # Extrait fidèle de l'ini du NOUVEAU correctif (tools/make_ini.py), en CRLF.
 INI_V2 = "\r\n".join([
@@ -455,6 +456,17 @@ class TestModeDifficile:
         assert [r.ident for r in rc.portes_par(ini, declares)] == ["arriere_plan"]
         ini.write_bytes(ini.read_bytes() + b"[Accio.Hardcore]\r\n")
         assert rc.portes_par(ini, declares) == declares
+
+    @pytest.mark.parametrize("version, montre", [((2, 5, 0, 0), True), ((2, 6, 1, 0), True),
+                                                 ((2, 4, 0, 0), False), (None, False)])
+    def test_ecran_du_jeu_suit_la_version_de_la_dll(self, ini, version, montre):
+        """`[Accio.Window] Monitor` est né dans une section ancienne : l'ini ne dit pas si la DLL le lit, sa
+        version le dit (2.5.0 ; séance d'essais du 2026-11-27 : les archives 1.4.2 en 2.4.0 l'ignorent)."""
+        if version is not None:
+            dll_versionnee(ini.with_suffix(".dll"), version)
+        declares = rc.reglages_du_jeu(["arriere_plan", "ecran_jeu"])
+        attendus = ["ecran_jeu", "arriere_plan"] if montre else ["arriere_plan"]   # ordre de la table
+        assert [r.ident for r in rc.portes_par(ini, declares)] == attendus
 
     def test_sans_ini_ou_avec_l_ancien_correctif_tout_reste(self, tmp_path):
         declares = rc.reglages_du_jeu(["arriere_plan", "degats_recus"])
@@ -2059,3 +2071,53 @@ class TestPrereglagesSansMotTechnique:
     def test_aucune_phrase_de_prereglage_ne_parle_technique(self):
         for _i, nom, texte, _v in rc.PREREGLAGES:
             assert "échantillonnage" not in texte and "×" not in texte, nom
+
+
+class TestCoinEtCouleurDuCompteur:
+    """Le coin du panneau (`Position`, lu par les trois moteurs depuis 2026-09-25) et la couleur de sa ligne
+    d'images par seconde (`Color`, correctif 2.6.0), demandés par Ludo le 2026-11-27 : le compteur recouvrait
+    l'éclair de vie de HP1 et HP2, en haut à gauche."""
+
+    def test_le_coin_s_ecrit_dans_position(self, ini):
+        r = rc.REGLAGES["coin_compteur"]
+        assert rc.lire(ini, r) == rc.Etat(1)
+        rc.ecrire(ini, r, 4)
+        assert "Position=4" in ini.read_text(encoding="ascii").splitlines()
+        assert rc.lire(ini, r) == rc.Etat(4)
+        assert [rc.libelle_choix(r, v) for v in r.choix] == [
+            tr("En haut à gauche"), tr("En haut à droite"), tr("En bas à gauche"), tr("En bas à droite")]
+
+    def test_le_coin_se_montre_sous_toute_dll(self, ini):
+        """Toutes les DLL publiées lisent `Position` : aucune version demandée."""
+        assert rc.REGLAGES["coin_compteur"].correctif_min == ()
+        declares = rc.reglages_du_jeu(["coin_compteur"])
+        assert rc.portes_par(ini, declares) == declares
+
+    def test_la_couleur_livree_se_lit_or(self, ini):
+        """L'ini livré écrit `Color=D6A72C` en majuscules : c'est l'or, le premier choix."""
+        r = rc.REGLAGES["couleur_compteur"]
+        assert rc.lire(ini, r) == rc.Etat("d6a72c")   # clé absente : l'or aussi
+        rc.poser_valeur(ini, "Accio.Overlay", "Color", "D6A72C")
+        assert rc.lire(ini, r) == rc.Etat("d6a72c")
+        assert rc.libelle_choix(r, "d6a72c") == tr("Or")
+
+    def test_la_couleur_s_ecrit_dans_color(self, ini):
+        r = rc.REGLAGES["couleur_compteur"]
+        rc.ecrire(ini, r, "6ec8ff")
+        assert "Color=6ec8ff" in ini.read_text(encoding="ascii").splitlines()
+        assert rc.lire(ini, r) == rc.Etat("6ec8ff")
+        assert rc.libelle_choix(r, "6ec8ff") == tr("Bleu")
+
+    @pytest.mark.parametrize("version, montre", [((2, 6, 0, 0), True), ((2, 5, 0, 0), False), (None, False)])
+    def test_la_couleur_suit_la_version_de_la_dll(self, ini, version, montre):
+        """`Color` est née en 2.6.0 dans une section ancienne : sous une DLL plus vieille, rien ne la lirait."""
+        if version is not None:
+            dll_versionnee(ini.with_suffix(".dll"), version)
+        declares = rc.reglages_du_jeu(["coin_compteur", "couleur_compteur"])
+        attendus = ["coin_compteur", "couleur_compteur"] if montre else ["coin_compteur"]
+        assert [r.ident for r in rc.portes_par(ini, declares)] == attendus
+
+    def test_les_huit_jeux_les_declarent(self):
+        catalogue = json.loads(Path("src/data/games.json").read_text(encoding="utf-8"))
+        for jeu in catalogue["games"]:
+            assert {"coin_compteur", "couleur_compteur"} <= set(jeu["fix_settings"]), jeu["id"]

@@ -10,6 +10,7 @@ import pytest
 from src.core import resolution_jeu as rj
 from src.core.catalogue_blocs import Resolution, _parse_resolution
 from src.core.config import Config
+from tests.test_mode_course import dll_versionnee
 
 GAME_INI = (
     "[Engine.Engine]\r\nGameRenderDevice=D3D11Drv.D3D11RenderDevice\r\n"
@@ -300,6 +301,7 @@ class TestCorrectifHp4AHp6:
         dossier.mkdir(parents=True)
         ini = dossier / "d3d9.ini"
         ini.write_bytes(D3D9_INI.encode("utf-8"))
+        dll_versionnee(dossier / "d3d9.dll")       # 2.5.0 : celle qui lit Monitor
         game = SimpleNamespace(id="hp6", name="HP6", executable="HP6/hp6.exe",
                                resolution=_parse_resolution(BLOC_HP6))
         return game, Config(install_path=tmp_path / "Jeux"), ini
@@ -366,6 +368,19 @@ class TestCorrectifHp4AHp6:
         ini.write_bytes(D3D9_INI.replace("WindowStyle=1\r\n", "WindowStyle=1\r\n" + ligne).encode("utf-8"))
         assert rj.ecran_du_jeu(game, config) == numero
 
+    @pytest.mark.parametrize("version", [(2, 4, 0, 0), None])
+    def test_une_dll_qui_ignore_monitor_garde_l_ecran_de_windows(self, hp6, version):
+        """Séance d'essais du 2026-11-27 : les archives 1.4.2 portent la DLL 2.4.0, qui ne lit pas Monitor et
+        ouvre le jeu sur l'écran de Windows. Prendre les modes de l'écran 2 y écrirait une 4K sur un écran 1440p."""
+        game, config, ini = hp6
+        ini.write_bytes(D3D9_INI.replace("WindowStyle=1\r\n", "WindowStyle=1\r\nMonitor=2\r\n").encode("utf-8"))
+        dll = ini.with_suffix(".dll")
+        if version is None:
+            dll.unlink()
+        else:
+            dll_versionnee(dll, version)
+        assert rj.ecran_du_jeu(game, config) == 0
+
     def test_sans_correctif_ni_ini_l_ecran_est_celui_de_windows(self, hp6, jeu):
         game, config, ini = hp6
         ini.unlink()
@@ -388,6 +403,33 @@ class TestCorrectifHp4AHp6:
     def test_le_nom_windows_de_l_ecran(self):
         assert rj._nom_ecran(0) is None
         assert rj._nom_ecran(2) == "\\\\.\\DISPLAY2"
+
+    @staticmethod
+    def _ecrans(monkeypatch, *ecrans):
+        from PyQt6.QtGui import QGuiApplication
+        monkeypatch.setattr(QGuiApplication, "screens", staticmethod(lambda: list(ecrans)))
+        monkeypatch.setattr(QGuiApplication, "primaryScreen", staticmethod(lambda: ecrans[0]))
+
+    @staticmethod
+    def _ecran(nom, x, y):
+        from PyQt6.QtCore import QRect
+        return SimpleNamespace(name=lambda: nom, geometry=lambda: QRect(x, y, 2194, 1234))
+
+    def test_l_ecran_se_retrouve_par_sa_position(self, qapp, monkeypatch):
+        """Séance du 2026-11-27 : Qt 6.11 nomme l'écran par son modèle ; chercher « DISPLAY2 » dans le nom
+        rendait toujours l'écran principal, et le jeu envoyé sur la 4K prenait la place de l'écran 1440p."""
+        principal, quatre_k = self._ecran("ARZOPA-27", 0, 0), self._ecran("PHL 276E8V", -3840, 0)
+        self._ecrans(monkeypatch, principal, quatre_k)
+        monkeypatch.setattr(rj, "_origine_ecran", lambda numero: (-3840, 0) if numero == 2 else None)
+        assert rj._ecran_qt(2) is quatre_k
+        assert rj._ecran_qt(0) is principal
+        assert rj._ecran_qt(3) is principal          # écran absent : celui de Windows, comme le correctif
+
+    def test_sans_position_le_nom_windows_sert_encore(self, qapp, monkeypatch):
+        principal, second = self._ecran("\\\\.\\DISPLAY1", 0, 0), self._ecran("\\\\.\\DISPLAY2", 2560, 0)
+        self._ecrans(monkeypatch, principal, second)
+        monkeypatch.setattr(rj, "_origine_ecran", lambda numero: None)
+        assert rj._ecran_qt(2) is second
 
 
 def test_les_modes_de_l_ecran_se_demandent_une_fois(monkeypatch):

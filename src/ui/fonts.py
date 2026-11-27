@@ -1,8 +1,11 @@
 """Chargement des polices embarquées et helpers typographiques.
 
 Les TROIS polices de l'interface sont embarquées : Cinzel (titres secondaires,
-boutons, méta), Cinzel Decorative (titre principal) et **Gelasio** (texte
-courant). Gelasio remplace Georgia, qui était appelée par son nom : une police
+boutons, méta), Accio Titres (titre principal) et **Gelasio** (texte
+courant). Accio Titres est Cinzel Decorative dont le « h » est le H de Cinzel à la
+même graisse : celui d'origine porte un crochet qui mordait sur la lettre d'avant
+(« LAUNCHER », 2026-11-27, comme le titre du site) ; renommée, l'OFL réserve le nom
+Cinzel. Gelasio remplace Georgia, qui était appelée par son nom : une police
 Microsoft, présente sous Windows mais **absente sous Linux** et jamais garantie
 nulle part. Gelasio est sous licence OFL et dessinée sur les proportions de
 Georgia, sans leur être identique : sous offscreen, Georgia chargée depuis son
@@ -38,7 +41,7 @@ _REPLI_CORPS = "Georgia"
 
 
 def load_fonts() -> None:
-    """Charge les polices Cinzel et Cinzel Decorative depuis assets/fonts/."""
+    """Charge les polices Cinzel, Accio Titres et Gelasio depuis assets/fonts/."""
     global _cinzel_family, _cinzel_deco_family, _body_family, _loaded
     if _loaded:
         return
@@ -55,9 +58,8 @@ def load_fonts() -> None:
                     _cinzel_family = families[0]
                     log.info("Police Cinzel chargée : %s", _cinzel_family)
 
-    # Cinzel Decorative
-    for name in ("CinzelDecorative-Black.ttf", "CinzelDecorative-Bold.ttf",
-                 "CinzelDecorative-Regular.ttf"):
+    # Accio Titres (Cinzel Decorative au « h » refait)
+    for name in ("AccioTitres-Black.ttf", "AccioTitres-Bold.ttf", "AccioTitres-Regular.ttf"):
         path = FONTS_DIR / name
         if path.exists():
             fid = QFontDatabase.addApplicationFont(str(path))
@@ -65,7 +67,7 @@ def load_fonts() -> None:
                 families = QFontDatabase.applicationFontFamilies(fid)
                 if families and _cinzel_deco_family is None:
                     _cinzel_deco_family = families[0]
-                    log.info("Police Cinzel Decorative chargée : %s", _cinzel_deco_family)
+                    log.info("Police Accio Titres chargée : %s", _cinzel_deco_family)
 
     # Gelasio — police de corps (variable : Regular → Bold)
     path = FONTS_DIR / "Gelasio-Variable.ttf"
@@ -83,7 +85,7 @@ def load_fonts() -> None:
     if not _cinzel_family:
         log.warning("Cinzel non trouvée, repli sur %s", _REPLI_CORPS)
     if not _cinzel_deco_family:
-        log.warning("Cinzel Decorative non trouvée, repli sur %s", _REPLI_CORPS)
+        log.warning("Accio Titres non trouvée, repli sur %s", _REPLI_CORPS)
     if not _body_family:
         log.warning("Gelasio non trouvée, repli sur %s (absente sous Linux)",
                     _REPLI_CORPS)
@@ -115,7 +117,7 @@ def cinzel(size: int, bold: bool = False) -> QFont:
 
 
 def cinzel_decorative(size: int, weight: QFont.Weight = QFont.Weight.Black) -> QFont:
-    """Police Cinzel Decorative pour titres principaux.
+    """Police Accio Titres (Cinzel Decorative au « h » refait) pour titres principaux.
 
     Crénage coupé : la police porte une paire « o-o » à −560 unités pour un
     « o » large de 900, et « Notebook » s'affichait « NOTEB∞K », les deux o

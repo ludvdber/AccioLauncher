@@ -129,6 +129,8 @@ _PLACES: dict[str, tuple[str, str]] = {
     "compteur_fps": ("fluidite", "Compteurs"),
     "compteur_fps_hp3": ("fluidite", "Compteurs"),
     "panneau_perfs": ("fluidite", "Compteurs"),
+    "coin_compteur": ("fluidite", "Compteurs"),
+    "couleur_compteur": ("fluidite", "Compteurs"),
 }
 # L'ordre des lignes dans leur groupe : celui de la maquette (le suréchantillonnage, qui se voit le
 # plus, en tête des contours), puis celui de la table pour un réglage qu'elle ne nomme pas.

@@ -690,7 +690,9 @@
         "degats_recus",
         "degats_infliges",
         "compteur_fps",
-        "panneau_perfs"
+        "panneau_perfs",
+        "coin_compteur",
+        "couleur_compteur"
       ]
     },
     {
@@ -1348,7 +1350,9 @@
         "degats_recus",
         "degats_infliges",
         "compteur_fps",
-        "panneau_perfs"
+        "panneau_perfs",
+        "coin_compteur",
+        "couleur_compteur"
       ]
     },
     {
@@ -2193,7 +2197,9 @@
         "son_arriere_plan_hp3",
         "degats_recus",
         "degats_infliges",
-        "compteur_fps_hp3"
+        "compteur_fps_hp3",
+        "coin_compteur",
+        "couleur_compteur"
       ]
     },
     {
@@ -2287,6 +2293,8 @@
         "touches_zqsd",
         "compteur_fps",
         "panneau_perfs",
+        "coin_compteur",
+        "couleur_compteur",
         "surechantillonnage",
         "lissage",
         "smaa",
@@ -2720,6 +2728,8 @@
         "surechantillonnage",
         "compteur_fps",
         "panneau_perfs",
+        "coin_compteur",
+        "couleur_compteur",
         "lissage",
         "smaa",
         "filtrage",
@@ -3254,6 +3264,8 @@
         "langue_menu",
         "compteur_fps",
         "panneau_perfs",
+        "coin_compteur",
+        "couleur_compteur",
         "surechantillonnage",
         "lissage",
         "smaa",
@@ -3626,6 +3638,8 @@
         "synchro_verticale",
         "compteur_fps",
         "panneau_perfs",
+        "coin_compteur",
+        "couleur_compteur",
         "mode_fenetre",
         "ecran_jeu",
         "ecran_principal",
@@ -3901,6 +3915,8 @@
         "synchro_verticale",
         "compteur_fps",
         "panneau_perfs",
+        "coin_compteur",
+        "couleur_compteur",
         "mode_fenetre",
         "ecran_jeu",
         "ecran_principal",

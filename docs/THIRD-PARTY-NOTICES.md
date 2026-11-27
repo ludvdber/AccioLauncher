@@ -195,12 +195,15 @@ Le code source de chacune est disponible dans les dépôts d'Ubuntu 22.04
 ## Cinzel & Cinzel Decorative — Natanael Gama
 
 Fichiers : `assets/fonts/Cinzel-Variable.ttf`,
-`assets/fonts/CinzelDecorative-{Regular,Bold,Black}.ttf`
+`assets/fonts/AccioTitres-{Regular,Bold,Black}.ttf`
 Licence : SIL Open Font License 1.1
 Texte : <https://openfontlicense.org>
 Source : <https://fonts.google.com/specimen/Cinzel>
 
-Polices utilisées sans modification. L'OFL autorise la redistribution embarquée
+Cinzel est utilisée sans modification. **Accio Titres** est Cinzel Decorative
+modifiée : son « h » est remplacé par le H de Cinzel à la même graisse, mis à la
+hauteur des autres lettres. Comme l'OFL le demande pour une police modifiée,
+elle ne porte plus le nom réservé « Cinzel ». L'OFL autorise la redistribution embarquée
 dans un logiciel, y compris commercial, à condition que les polices ne soient pas
 vendues seules et que la licence accompagne la distribution.
 

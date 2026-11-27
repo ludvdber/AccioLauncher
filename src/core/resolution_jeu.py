@@ -25,6 +25,7 @@ Règles (mesures et récit : ARCHITECTURE_CORE.md) :
   comme le fait le correctif : un jeu envoyé sur l'écran 4K y prend la 4K et ses modes.
 """
 
+import ctypes
 import logging
 import re
 import sys
@@ -40,6 +41,7 @@ from src.core.catalogue_blocs import ChoixRegistre, IniPatch, Resolution
 from src.core.game_data import GameData
 from src.core.lecture_ini import lire_lignes
 from src.core.pre_launch import ecrire_cle_ini, resolve_safe_path
+from src.core.reglages_table import REGLAGES
 
 if TYPE_CHECKING:
     from PyQt6.QtGui import QScreen
@@ -119,25 +121,7 @@ def modes_ecran(numero: int = 0) -> list[tuple[int, int]] | None:
     if sys.platform != "win32":
         return None
     try:
-        import ctypes
-        from ctypes import wintypes
-
-        class _DevMode(ctypes.Structure):
-            # DEVMODEW jusqu'à dmDisplayFrequency : assez pour la taille et la profondeur.
-            _fields_ = [("dmDeviceName", wintypes.WCHAR * 32), ("dmSpecVersion", wintypes.WORD),
-                        ("dmDriverVersion", wintypes.WORD), ("dmSize", wintypes.WORD),
-                        ("dmDriverExtra", wintypes.WORD), ("dmFields", wintypes.DWORD),
-                        ("dmPosition", wintypes.LONG * 2), ("dmDisplayOrientation", wintypes.DWORD),
-                        ("dmDisplayFixedOutput", wintypes.DWORD), ("dmColor", ctypes.c_short),
-                        ("dmDuplex", ctypes.c_short), ("dmYResolution", ctypes.c_short),
-                        ("dmTTOption", ctypes.c_short), ("dmCollate", ctypes.c_short),
-                        ("dmFormName", wintypes.WCHAR * 32), ("dmLogPixels", wintypes.WORD),
-                        ("dmBitsPerPel", wintypes.DWORD), ("dmPelsWidth", wintypes.DWORD),
-                        ("dmPelsHeight", wintypes.DWORD), ("dmDisplayFlags", wintypes.DWORD),
-                        ("dmDisplayFrequency", wintypes.DWORD)]
-
-        mode = _DevMode()
-        mode.dmSize = ctypes.sizeof(_DevMode)
+        mode = _devmode()
         tailles: set[tuple[int, int]] = set()
         i = 0
         nom = _nom_ecran(numero)
@@ -152,14 +136,55 @@ def modes_ecran(numero: int = 0) -> list[tuple[int, int]] | None:
     return sorted(tailles, reverse=True) or None
 
 
+def _devmode() -> ctypes.Structure:
+    """Un DEVMODEW vide, prêt pour EnumDisplaySettingsW (Windows seulement)."""
+    from ctypes import wintypes
+
+    class _DevMode(ctypes.Structure):
+        # DEVMODEW jusqu'à dmDisplayFrequency : assez pour la position, la taille et la profondeur.
+        _fields_ = [("dmDeviceName", wintypes.WCHAR * 32), ("dmSpecVersion", wintypes.WORD),
+                    ("dmDriverVersion", wintypes.WORD), ("dmSize", wintypes.WORD),
+                    ("dmDriverExtra", wintypes.WORD), ("dmFields", wintypes.DWORD),
+                    ("dmPosition", wintypes.LONG * 2), ("dmDisplayOrientation", wintypes.DWORD),
+                    ("dmDisplayFixedOutput", wintypes.DWORD), ("dmColor", ctypes.c_short),
+                    ("dmDuplex", ctypes.c_short), ("dmYResolution", ctypes.c_short),
+                    ("dmTTOption", ctypes.c_short), ("dmCollate", ctypes.c_short),
+                    ("dmFormName", wintypes.WCHAR * 32), ("dmLogPixels", wintypes.WORD),
+                    ("dmBitsPerPel", wintypes.DWORD), ("dmPelsWidth", wintypes.DWORD),
+                    ("dmPelsHeight", wintypes.DWORD), ("dmDisplayFlags", wintypes.DWORD),
+                    ("dmDisplayFrequency", wintypes.DWORD)]
+
+    mode = _DevMode()
+    mode.dmSize = ctypes.sizeof(_DevMode)
+    return mode
+
+
+def _origine_ecran(numero: int) -> tuple[int, int] | None:
+    """Le coin haut gauche de `\\\\.\\DISPLAY<numero>` sur le bureau, en pixels réels, tel que Windows l'affiche
+    (ENUM_CURRENT_SETTINGS) ; None hors Windows, pour l'écran principal ou un écran absent."""
+    if sys.platform != "win32" or numero <= 0:
+        return None
+    try:
+        mode = _devmode()
+        if not ctypes.windll.user32.EnumDisplaySettingsW(_nom_ecran(numero), -1, ctypes.byref(mode)):
+            return None
+    except (AttributeError, OSError):
+        return None
+    return int(mode.dmPosition[0]), int(mode.dmPosition[1])
+
+
 def _nom_ecran(numero: int) -> str | None:
     """Le nom Windows de l'écran choisi (`\\\\.\\DISPLAY2`), None pour l'écran principal."""
     return f"\\\\.\\DISPLAY{numero}" if numero > 0 else None
 
 
 def _ecran_qt(numero: int) -> QScreen | None:
-    """Le QScreen de l'écran choisi (son nom finit par DISPLAY<numero>), l'écran principal sinon ;
-    None sans application Qt."""
+    """Le QScreen de l'écran choisi, l'écran principal sinon ; None sans application Qt.
+
+    Retrouvé par la position que Windows donne à `\\\\.\\DISPLAY<numero>` : Qt garde le coin haut gauche de
+    chaque écran en pixels réels. Le nom ne suffit pas : Qt 6.11 nomme l'écran par son modèle (« PHL
+    276E8V »), pas « \\\\.\\DISPLAY2 » (séance du 2026-11-27 : l'écran 4K rendait la place de l'écran 1440p).
+    """
     try:
         from PyQt6.QtGui import QGuiApplication
     except ImportError:
@@ -167,8 +192,14 @@ def _ecran_qt(numero: int) -> QScreen | None:
     if QGuiApplication.instance() is None:
         return None
     if numero > 0:
+        ecrans = QGuiApplication.screens()
+        if (origine := _origine_ecran(numero)) is not None:
+            for ecran in ecrans:
+                coin = ecran.geometry().topLeft()
+                if (coin.x(), coin.y()) == origine:
+                    return ecran
         fin = f"DISPLAY{numero}"
-        for ecran in QGuiApplication.screens():
+        for ecran in ecrans:
             if ecran.name().upper().endswith(fin):
                 return ecran
     return QGuiApplication.primaryScreen()
@@ -188,7 +219,9 @@ def ecran_du_jeu(game: GameData, config: Config) -> int:
     except OSError:
         return 0
     m = _MONITOR.search(texte)
-    return min(int(m.group(1)), 16) if m else 0
+    if m is None or not reglages_correctif.dll_connait(ini, REGLAGES["ecran_jeu"]):
+        return 0                          # une DLL plus ancienne ignore Monitor : le jeu reste sur l'écran de Windows
+    return min(int(m.group(1)), 16)
 
 
 def oublier_les_modes() -> None:
@@ -213,7 +246,6 @@ def cadre(dpi: int) -> tuple[int, int]:
     """
     if sys.platform == "win32":
         try:
-            import ctypes
             from ctypes import wintypes
             r = wintypes.RECT(0, 0, 1000, 1000)
             if ctypes.windll.user32.AdjustWindowRectExForDpi(

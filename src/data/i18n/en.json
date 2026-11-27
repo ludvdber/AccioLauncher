@@ -723,7 +723,6 @@
     "Ravive les couleurs ternes sans saturer celles qui le sont déjà. Seulement avec « Couleurs retravaillées ».": "Brings dull colours to life without oversaturating the others. Only with \"Reworked colours\".",
     "Creuse l'écart entre zones claires et sombres. Seulement avec « Couleurs retravaillées ».": "Widens the gap between light and dark areas. Only with \"Reworked colours\".",
     "Le voile vert dans lequel le jeu noie le décor au loin. Éteint : collines et paysages nets et contrastés, la scène un peu plus sombre.": "The green haze the game drowns distant scenery in. Off: sharp, contrasted hills and landscapes, the scene a little darker.",
-    "Affiche les images par seconde en haut à gauche. En jeu, F10 le masque ou le remet.": "Shows frames per second in the top-left corner. In game, F10 hides or shows it.",
     "Temps par image et son graphe, processeur, carte graphique, mémoire vidéo et vive, latence. En jeu, F11 lance une mesure des performances et F11 à nouveau l'arrête ; elle est enregistrée dans le dossier « benchmarks » du jeu.": "Frame time and its graph, processor, graphics card, video and system memory, latency. In game, F11 starts a benchmark and F11 again stops it; it is saved in the game's “benchmarks” folder.",
     "La langue sur laquelle s'ouvre le menu du jeu, qui la prend tout seul après quelques secondes. « Celle de Windows » corrige un défaut du jeu : un Windows en français de Belgique, de Suisse ou du Canada, ou en espagnol, le faisait démarrer en anglais.": "The language the game's menu opens on; the game takes it by itself after a few seconds. “Windows language” fixes a flaw in the game: Windows set to French from Belgium, Switzerland or Canada, or to Spanish, made it start in English.",
     "Branchez la manette avant de lancer le jeu : sans elle, il repasse au clavier. Se règle aussi dans les options du jeu.": "Plug in the controller before starting the game: without it, the game falls back to the keyboard. Can also be set in the game's options.",
@@ -1866,6 +1865,14 @@
     "En haut à gauche": "Top left",
     "En haut à droite": "Top right",
     "En bas à gauche": "Bottom left",
-    "En bas à droite": "Bottom right"
+    "En bas à droite": "Bottom right",
+    "Affiche les images par seconde dans le coin choisi. En jeu, F10 le masque ou le remet.": "Shows frames per second in the chosen corner. In game, F10 hides or shows it.",
+    "Coin du compteur": "Counter corner",
+    "Le coin de l'image où s'affichent le compteur d'images et le panneau de performances.": "The corner of the picture where the frame counter and the performance panel appear.",
+    "Couleur du compteur": "Counter colour",
+    "La couleur des images par seconde, en tête du panneau.": "The colour of the frames per second, at the top of the panel.",
+    "Or": "Gold",
+    "Blanc": "White",
+    "Jaune": "Yellow"
   }
 }

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from src.core import course, mode_course
+from src.core import course, mode_course, reglages_correctif
 from src.core.config import APP_VERSION
 from src.core.game_data import GameData, load_catalog
 
@@ -112,13 +112,13 @@ def test_la_course_suit_la_version_du_correctif(tmp_path):
 
 
 def test_version_dll(tmp_path):
-    assert mode_course.version_dll(dll_versionnee(tmp_path / "a.dll", (2, 5, 1, 3))) == (2, 5, 1, 3)
+    assert reglages_correctif.version_dll(dll_versionnee(tmp_path / "a.dll", (2, 5, 1, 3))) == (2, 5, 1, 3)
     (tmp_path / "b.dll").write_bytes(b"MZ" + bytes(100))
-    assert mode_course.version_dll(tmp_path / "b.dll") is None
-    assert mode_course.version_dll(tmp_path / "absente.dll") is None
+    assert reglages_correctif.version_dll(tmp_path / "b.dll") is None
+    assert reglages_correctif.version_dll(tmp_path / "absente.dll") is None
     faux = tmp_path / "c.dll"
     faux.write_bytes(b"MZ" + bytes(14) + b"\0" * 6 + "VS_VERSION_INFO\0".encode("utf-16-le") + bytes(40))
-    assert mode_course.version_dll(faux) is None, "la clé sans la signature de VS_FIXEDFILEINFO"
+    assert reglages_correctif.version_dll(faux) is None, "la clé sans la signature de VS_FIXEDFILEINFO"
 
 
 def test_ecarts(tmp_path):

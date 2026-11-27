@@ -79,7 +79,7 @@ def verifier() -> list[str]:
     from src.ui.fonts import load_fonts
     load_fonts()
     familles = set(QFontDatabase.families())
-    for famille in ("Cinzel", "Cinzel Decorative", "Gelasio"):
+    for famille in ("Cinzel", "Accio Titres", "Gelasio"):
         if not any(f.startswith(famille) for f in familles):
             lignes.append(f"ÉCHEC police {famille} : non chargée")
 

@@ -13,7 +13,7 @@ image, fenêtre, son, manette, champ de vision (S7.6), et les réparations (`Lum
 le jeu, `RaceCorner`, `RaceDetail`, `RaceClock`, `RaceRecord`, `RaceLauncher` (`Affichage`), et pour HP4 à HP6
 `[Accio.Game] RaceSaves=<dossier vide>`) sont posées par le launcher au départ et retirées après. **Elles ne
 sont dans AUCUN ini livré** (règle du correctif : `settings_test.cpp` les y refuse). La course est donc proposée
-selon la VERSION de la DLL du correctif (`version_dll`, sa ressource de version), comparée à celle que le
+selon la VERSION de la DLL du correctif (`reglages_correctif.version_dll`, sa ressource de version), comparée à celle que le
 catalogue demande pour ce jeu (`fix_min` du bloc `race`, `course_regles`) : un correctif plus ancien ne sait
 pas chronométrer, et la page de la course le dit.
 
@@ -124,42 +124,6 @@ def propose(game: GameData) -> bool:
     return game.course is not None and game.id in A_TENIR
 
 
-_SIGNATURE_VERSION = (0xFEEF04BD).to_bytes(4, "little")
-_CLE_VERSION = "VS_VERSION_INFO".encode("utf-16-le")
-_DLL_MAX = 16 << 20
-_VERSIONS_LUES: dict[str, tuple[tuple[int, int], tuple[int, ...] | None]] = {}
-
-
-def version_dll(chemin: Path) -> tuple[int, ...] | None:
-    """La version d'une DLL, lue dans sa ressource de version (`VS_FIXEDFILEINFO`, `FileVersion`) : (2, 5, 0, 0).
-    None sans fichier, au-delà de 16 Mo, ou sans ressource lisible. Le correctif écrit la même dans l'ini de tous
-    les jeux (`version.h`) ; elle se lit d'un octet à l'autre, sans Windows. Gardée par (taille, date) : la fiche
-    la demande à chaque jeu montré."""
-    try:
-        etat = chemin.stat()
-        if etat.st_size > _DLL_MAX:
-            return None
-        cle = (etat.st_size, etat.st_mtime_ns)
-        if (deja := _VERSIONS_LUES.get(str(chemin))) is not None and deja[0] == cle:
-            return deja[1]
-        octets = chemin.read_bytes()
-    except OSError:
-        return None
-    lue: tuple[int, ...] | None = None
-    debut = octets.find(_CLE_VERSION)
-    while debut >= 6 and lue is None:
-        # VS_VERSIONINFO : wLength, wValueLength, wType, la clé (UTF-16, nul final), du bourrage jusqu'à 4 octets.
-        apres_cle = debut + len(_CLE_VERSION) + 2
-        fixe = (debut - 6) + -(-(apres_cle - (debut - 6)) // 4) * 4
-        if octets[fixe:fixe + 4] == _SIGNATURE_VERSION and len(octets) >= fixe + 16:
-            haut = int.from_bytes(octets[fixe + 8:fixe + 12], "little")
-            bas = int.from_bytes(octets[fixe + 12:fixe + 16], "little")
-            lue = (haut >> 16, haut & 0xFFFF, bas >> 16, bas & 0xFFFF)
-        debut = octets.find(_CLE_VERSION, debut + 1)
-    _VERSIONS_LUES[str(chemin)] = (cle, lue)
-    return lue
-
-
 def ini(game: GameData, install_path: Path) -> Path | None:
     """L'ini du correctif de ce jeu s'il sait chronométrer : un jeu qui a une course (`propose`), le nouveau
     correctif installé, et sa DLL à la version que demande le catalogue (`fix_min`) ou plus récente. None
@@ -175,7 +139,7 @@ def correctif_a_jour(game: GameData, chemin_ini: Path) -> bool:
     """Le correctif de cet ini sait-il chronométrer ce jeu ? (sa DLL, à côté, porte le même nom)."""
     if game.course is None or not chemin_ini.is_file() or not rc.est_nouveau_correctif(chemin_ini):
         return False
-    lue = version_dll(chemin_ini.with_suffix(".dll"))
+    lue = rc.version_dll(chemin_ini.with_suffix(".dll"))
     minimum = game.course.correctif_min
     return lue is not None and lue[:len(minimum)] >= minimum
 

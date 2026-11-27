@@ -432,12 +432,51 @@ def _par_lua(ini: Path, reglage: Reglage, lignes: list[str]) -> bool:
             and difficulte_lua.pret(ini.parent, reglage.ident, _valeur(lignes, *_DOSSIER_LUA)))
 
 
+_SIGNATURE_VERSION = (0xFEEF04BD).to_bytes(4, "little")
+_CLE_VERSION = "VS_VERSION_INFO".encode("utf-16-le")
+_DLL_MAX = 16 << 20
+_VERSIONS_LUES: dict[str, tuple[tuple[int, int], tuple[int, ...] | None]] = {}
+
+
+def version_dll(chemin: Path) -> tuple[int, ...] | None:
+    """La version d'une DLL, lue dans sa ressource de version (`VS_FIXEDFILEINFO`, `FileVersion`) : (2, 5, 0, 0).
+    None sans fichier, au-delà de 16 Mo, ou sans ressource lisible. Le correctif écrit la même dans l'ini de tous
+    les jeux (`version.h`) ; elle se lit d'un octet à l'autre, sans Windows. Gardée par (taille, date) : la fiche
+    la demande à chaque jeu montré."""
+    try:
+        etat = chemin.stat()
+        if etat.st_size > _DLL_MAX:
+            return None
+        cle = (etat.st_size, etat.st_mtime_ns)
+        if (deja := _VERSIONS_LUES.get(str(chemin))) is not None and deja[0] == cle:
+            return deja[1]
+        octets = chemin.read_bytes()
+    except OSError:
+        return None
+    lue: tuple[int, ...] | None = None
+    debut = octets.find(_CLE_VERSION)
+    while debut >= 6 and lue is None:
+        # VS_VERSIONINFO : wLength, wValueLength, wType, la clé (UTF-16, nul final), du bourrage jusqu'à 4 octets.
+        apres_cle = debut + len(_CLE_VERSION) + 2
+        fixe = (debut - 6) + -(-(apres_cle - (debut - 6)) // 4) * 4
+        if octets[fixe:fixe + 4] == _SIGNATURE_VERSION and len(octets) >= fixe + 16:
+            haut = int.from_bytes(octets[fixe + 8:fixe + 12], "little")
+            bas = int.from_bytes(octets[fixe + 12:fixe + 16], "little")
+            lue = (haut >> 16, haut & 0xFFFF, bas >> 16, bas & 0xFFFF)
+        debut = octets.find(_CLE_VERSION, debut + 1)
+    _VERSIONS_LUES[str(chemin)] = (cle, lue)
+    return lue
+
+
 def portes_par(ini: Path | None, reglages: tuple[Reglage, ...]) -> tuple[Reglage, ...]:
     """Les réglages dont l'ini du nouveau correctif porte la section.
 
     Une section que la DLL installée ne connaît pas encore ([Accio.Hardcore]
-    avant le correctif 2.2.0) ne s'affiche pas : son écriture échouerait. Sans
-    ini lisible ou avec l'ancien correctif, tout reste, et la page dit pourquoi.
+    avant le correctif 2.2.0) ne s'affiche pas : son écriture échouerait. Une clé
+    neuve dans une section ANCIENNE ne se voit pas dans l'ini : le réglage qui la
+    porte déclare la version de DLL qui la lit (`Reglage.correctif_min`,
+    `dll_connait`). Sans ini lisible ou avec l'ancien correctif, tout reste, et la
+    page dit pourquoi.
     """
     if ini is None or not est_nouveau_correctif(ini):
         return reglages
@@ -445,7 +484,18 @@ def portes_par(ini: Path | None, reglages: tuple[Reglage, ...]) -> tuple[Reglage
         lignes, _ = _lire(ini)
     except OSError:
         return reglages
-    return tuple(r for r in reglages if _bornes(lignes, r.section) is not None or _par_lua(ini, r, lignes))
+    return tuple(r for r in reglages
+                 if (_bornes(lignes, r.section) is not None or _par_lua(ini, r, lignes)) and dll_connait(ini, r))
+
+
+def dll_connait(ini: Path, reglage: Reglage) -> bool:
+    """La DLL du correctif à côté de cet ini lit-elle la clé de ce réglage ? Vrai sans
+    `correctif_min` ; sinon sa version (ressource) doit l'atteindre, et une DLL
+    illisible ne la lit pas."""
+    if not reglage.correctif_min:
+        return True
+    lue = version_dll(ini.with_suffix(".dll"))
+    return lue is not None and lue[:len(reglage.correctif_min)] >= reglage.correctif_min
 
 
 def lire(ini: Path, reglage: Reglage) -> Etat:

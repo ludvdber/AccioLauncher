@@ -723,7 +723,6 @@
     "Ravive les couleurs ternes sans saturer celles qui le sont déjà. Seulement avec « Couleurs retravaillées ».": "Aviva los colores apagados sin saturar los que ya lo están. Solo con «Colores retocados».",
     "Creuse l'écart entre zones claires et sombres. Seulement avec « Couleurs retravaillées ».": "Acentúa la diferencia entre zonas claras y oscuras. Solo con «Colores retocados».",
     "Le voile vert dans lequel le jeu noie le décor au loin. Éteint : collines et paysages nets et contrastés, la scène un peu plus sombre.": "El velo verde en el que el juego ahoga el paisaje lejano. Apagado: colinas y paisajes nítidos y contrastados, la escena algo más oscura.",
-    "Affiche les images par seconde en haut à gauche. En jeu, F10 le masque ou le remet.": "Muestra los fotogramas por segundo arriba a la izquierda. En el juego, F10 lo oculta o lo vuelve a mostrar.",
     "Temps par image et son graphe, processeur, carte graphique, mémoire vidéo et vive, latence. En jeu, F11 lance une mesure des performances et F11 à nouveau l'arrête ; elle est enregistrée dans le dossier « benchmarks » du jeu.": "Tiempo por fotograma y su gráfica, procesador, tarjeta gráfica, memoria de vídeo y RAM, latencia. En el juego, F11 inicia un benchmark y F11 de nuevo lo detiene; se guarda en la carpeta «benchmarks» del juego.",
     "La langue sur laquelle s'ouvre le menu du jeu, qui la prend tout seul après quelques secondes. « Celle de Windows » corrige un défaut du jeu : un Windows en français de Belgique, de Suisse ou du Canada, ou en espagnol, le faisait démarrer en anglais.": "El idioma con el que se abre el menú del juego, que lo elige solo tras unos segundos. «El de Windows» corrige un fallo del juego: un Windows en francés de Bélgica, Suiza o Canadá, o en español, lo hacía arrancar en inglés.",
     "Branchez la manette avant de lancer le jeu : sans elle, il repasse au clavier. Se règle aussi dans les options du jeu.": "Conecta el mando antes de iniciar el juego: sin él, vuelve al teclado. También se ajusta en las opciones del juego.",
@@ -1867,6 +1866,14 @@
     "En haut à gauche": "Arriba a la izquierda",
     "En haut à droite": "Arriba a la derecha",
     "En bas à gauche": "Abajo a la izquierda",
-    "En bas à droite": "Abajo a la derecha"
+    "En bas à droite": "Abajo a la derecha",
+    "Affiche les images par seconde dans le coin choisi. En jeu, F10 le masque ou le remet.": "Muestra los fotogramas por segundo en la esquina elegida. En el juego, F10 lo oculta o lo vuelve a mostrar.",
+    "Coin du compteur": "Esquina del contador",
+    "Le coin de l'image où s'affichent le compteur d'images et le panneau de performances.": "La esquina de la imagen donde aparecen el contador de fotogramas y el panel de rendimiento.",
+    "Couleur du compteur": "Color del contador",
+    "La couleur des images par seconde, en tête du panneau.": "El color de los fotogramas por segundo, en la parte superior del panel.",
+    "Or": "Oro",
+    "Blanc": "Blanco",
+    "Jaune": "Amarillo"
   }
 }
