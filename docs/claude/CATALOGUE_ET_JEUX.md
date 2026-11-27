@@ -119,7 +119,7 @@ Le launcher **range après extraction** plutôt que de republier 12 Go : `post_i
 
 ## Assets de marque
 
-Source unique : **`accio-launcher-site/_local/brand-pack/`** (pack de marque : `accio-launcher.ico`, logos et marques en SVG et PNG ; dossier LOCAL, ignoré par git du site). Ce qui est embarqué en est une copie réduite au strict nécessaire — un utilisateur sans connexion doit avoir un launcher complet : `accio_launcher.ico` (112 Ko, 7 tailles dessinées), `accio_launcher.png` (9,5 Ko, repli hors Windows), `accio_logo_horizontal.png` (32 Ko, splash).
+Source unique : **`accio-launcher-site/_local/brand-pack/`** (pack de marque : `accio-launcher.ico`, logos et marques en SVG et PNG ; dossier LOCAL, ignoré par git du site). Ce qui est embarqué en est une copie réduite au strict nécessaire — un utilisateur sans connexion doit avoir un launcher complet : `accio_launcher.ico` (20 Ko, 7 tailles en PNG : 16-32 depuis la version épaissie `accio-launcher-mark-petit.svg`, 48-256 depuis le symbole), `accio_launcher.png` (9 Ko, repli hors Windows), `accio_logo_horizontal.png` (30 Ko, splash, centré sur son encre). Logo retouché le 2026-11-27 (queue de l'arc dans l'axe de la barre, étoile centrée et détourée) ; générateurs dans `brand-pack/generateurs/`.
 
 **L'icône n'est plus générée** : `build/create_icon.py` la VÉRIFIE. La reconstruire en réduisant un PNG au LANCZOS rendait les tailles 16 et 24 molles — celles qu'on voit le plus.
 

@@ -198,11 +198,9 @@ class TestRendu:
             set_language("fr")
 
     def test_le_logo_est_centre_sur_son_encre(self, qtbot):
-        """Le PNG a des marges asymétriques (52 px à gauche, 112 à droite).
-
-        Le centrer tel quel décalait visiblement le logo vers la gauche.
+        """L'ancien PNG avait des marges asymétriques et décalait le logo vers la
+        gauche ; celui du 2026-11-27 est centré sur son encre (110 → 914 sur 1024).
         """
-        assert sp._LOGO_DECALAGE > 0
         load_fonts()
         s = sp.AccioSplash()
         qtbot.addWidget(s)

@@ -7,7 +7,7 @@ version en bas à droite.
 
 Le pack de marque impose une règle : « ne pas intégrer le statut dans une image
 fixe : il doit pouvoir évoluer pendant le chargement » (règle 123). L'écran est
-donc PEINT ; seul le logo horizontal est une image (32 Ko). Les étapes sont
+donc PEINT ; seul le logo horizontal est une image (30 Ko). Les étapes sont
 annoncées par ceux qui les font (`src/core/demarrage.py`) : rien n'est simulé.
 
 Les positions sont des fractions de la maquette 1280×720 ; les corps de texte,
@@ -58,11 +58,6 @@ _CORPS_ETAPES = 0.030
 _CORPS_PHRASE = 0.036
 _CORPS_FAIT = 0.033
 _CORPS_VERSION = 0.029
-
-# Le logo horizontal n'est pas centré dans son PNG : l'encre occupe x 52→912
-# sur 1024, donc son milieu est 30 px à gauche du milieu de l'image. Centrer
-# l'image telle quelle décalerait visiblement le logo vers la gauche.
-_LOGO_DECALAGE = 30 / 1024
 
 
 def libelle_etape(etape: str) -> str:
@@ -224,7 +219,7 @@ class AccioSplash(QWidget):
             return
         larg = self._w * _LOGO_LARGEUR
         haut = larg * self._logo.height() / self._logo.width()
-        x = (self._w - larg) / 2 + larg * _LOGO_DECALAGE
+        x = (self._w - larg) / 2   # le PNG est centré sur son encre (110 → 914 sur 1024)
         y = self._h * _LOGO_CENTRE_Y - haut / 2
         p.drawPixmap(QRectF(x, y, larg, haut), self._logo,
                      QRectF(self._logo.rect()))
